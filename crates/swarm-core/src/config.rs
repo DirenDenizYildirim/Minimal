@@ -214,8 +214,7 @@ pub struct SimConfig {
     pub noise: NoiseConfig,
     pub occlusion: OcclusionConfig,
     pub terrain: TerrainConfig,
-    /// Idea B. Not implemented yet; rejected by `validate` so a config cannot
-    /// quietly produce pursuer-free results under a pursuer filename.
+    /// Idea B. Absent means no pursuer at all — the base task alone.
     pub pursuer: Option<PursuerConfig>,
     pub metrics: MetricsConfig,
 }
@@ -273,12 +272,34 @@ impl SimConfig {
                     .into(),
             );
         }
-        if self.pursuer.is_some() {
-            return err(
-                "pursuer is configured but Idea B is not implemented yet (weeks 7-11); \
-                 refusing to run so results cannot be mislabelled"
-                    .into(),
-            );
+        if let Some(p) = self.pursuer {
+            if p.count == 0 {
+                return err("pursuer.count must be at least 1; omit [pursuer] for none".into());
+            }
+            if p.speed_ratio <= 0.0 || !p.speed_ratio.is_finite() {
+                return err(format!(
+                    "pursuer.speed_ratio must be positive and finite, got {}",
+                    p.speed_ratio
+                ));
+            }
+            if p.confusion < 0.0 || !p.confusion.is_finite() {
+                return err(format!(
+                    "pursuer.confusion must be non-negative and finite, got {}",
+                    p.confusion
+                ));
+            }
+            if p.capture_distance <= 0.0 {
+                return err("pursuer.capture_distance must be positive".into());
+            }
+            if p.range.is_some_and(|r| r <= 0.0) {
+                return err("pursuer.range must be positive; omit it for unlimited".into());
+            }
+            if self.sensor.encoding == crate::sensor::SensorEncoding::Binary
+                && self.controller.provenance() == crate::controller::Provenance::Enumerated
+            {
+                // Not an error: row B0 is the blind Gauci baseline, and running it
+                // against a pursuer is the point of the comparison.
+            }
         }
         let encoding = self.sensor.encoding;
         self.controller
@@ -349,13 +370,27 @@ mod tests {
     }
 
     #[test]
-    fn a_configured_pursuer_is_refused_rather_than_ignored() {
+    fn pursuer_parameters_are_validated() {
         let cfg = SimConfig {
             pursuer: Some(PursuerConfig::default()),
             ..Default::default()
         };
-        let e = cfg.validate().unwrap_err().to_string();
-        assert!(e.contains("Idea B is not implemented"), "{e}");
+        cfg.validate().unwrap();
+
+        let bad = |f: fn(&mut PursuerConfig)| {
+            let mut p = PursuerConfig::default();
+            f(&mut p);
+            let c = SimConfig {
+                pursuer: Some(p),
+                ..Default::default()
+            };
+            assert!(c.validate().is_err());
+        };
+        bad(|p| p.count = 0);
+        bad(|p| p.speed_ratio = 0.0);
+        bad(|p| p.confusion = -1.0);
+        bad(|p| p.capture_distance = 0.0);
+        bad(|p| p.range = Some(0.0));
     }
 
     #[test]

@@ -17,9 +17,10 @@ use crate::controller::{Capability, Provenance, TableController};
 use crate::geom::Vec2;
 use crate::metrics;
 use crate::occlusion::{Occlusion, OcclusionTally};
+use crate::pursuer::Pursuer;
 use crate::rng::{rng_from, split_seed, Rng};
 use crate::robot::{integrate, turn_radius, Pose};
-use crate::sensor::{cast, AgentKind, Target};
+use crate::sensor::{cast, Target};
 use crate::terrain::Terrain;
 use rand::Rng as _;
 use rand_distr::{Distribution, Normal};
@@ -77,6 +78,40 @@ pub struct RunRecord {
     pub fraction_time_single_cluster: f64,
     pub realised_fn_rate: f64,
     pub realised_fp_rate: f64,
+    pub pursuers: usize,
+    pub captures: u64,
+    pub survivors: usize,
+    /// Share of the swarm still alive at tau.
+    pub survival_fraction: f64,
+    /// **Idea B's primary metric**: captures per unit time, normalised by swarm
+    /// size.
+    ///
+    /// Not survival at tau. For rho > 1 a locked robot cannot escape, so
+    /// survival at tau collapses into a travel-time quantity and stops measuring
+    /// anything about the swarm's behaviour. Capture rate keeps measuring how
+    /// hard the swarm is to hunt.
+    ///
+    /// **It saturates.** Once the swarm is wiped out the rate is pinned at
+    /// `1/tau` regardless of how much harder the swarm made the hunt, and every
+    /// configuration scores the same. Any Idea B sweep must pick tau short
+    /// enough that the most dangerous cell in the grid still leaves survivors —
+    /// check `survivors > 0` across the grid before reading the surface — or use
+    /// `time_to_wipeout` instead, which does not saturate.
+    ///
+    /// This is not hypothetical: at rho = 1.5 with unlimited range the pursuer
+    /// takes a swarm of 20 in under 20 s, while the base task needs ~600 s to
+    /// aggregate at all. The two timescales do not overlap, so an Idea B design
+    /// has to lower rho, shrink the capture distance, or score the hunt by its
+    /// timing rather than its total.
+    pub capture_rate: f64,
+    /// When the first robot was taken.
+    pub time_to_first_capture: Option<f64>,
+    /// When the last robot was taken, if the swarm was wiped out.
+    ///
+    /// The non-saturating counterpart to `capture_rate`: in the lethal regime
+    /// where every configuration loses every robot, how *long* it took is still
+    /// a measure of how hard the swarm was to hunt.
+    pub time_to_wipeout: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub series: Option<Vec<Sample>>,
     /// Sweep-cell coordinates, attached by the CLI.
@@ -88,6 +123,7 @@ pub struct RunRecord {
 /// the terrain and changing the terrain does not reshuffle the sensor dropouts.
 const TERRAIN_SEED_STREAM: u64 = 0xE1;
 const OCCLUSION_SEED_STREAM: u64 = 0xE2;
+const PURSUER_SEED_STREAM: u64 = 0xE3;
 
 pub struct World {
     cfg: SimConfig,
@@ -99,6 +135,14 @@ pub struct World {
     terrain: Terrain,
     occlusion: Occlusion,
     tally: OcclusionTally,
+    pursuers: Vec<Pursuer>,
+    /// Scratch buffer for what the robots' sensors can see: the robots
+    /// themselves (indices aligned with `targets`) followed by the pursuers.
+    /// Reused each step so the sensor loop allocates nothing.
+    scene: Vec<Target>,
+    captures: u64,
+    first_capture: Option<f64>,
+    last_capture: Option<f64>,
     rng: Rng,
     seed: u64,
     run_index: u64,
@@ -123,6 +167,7 @@ impl World {
 
         let n = cfg.swarm.n;
         let targets = place_robots(&cfg, n, &mut rng);
+        let pursuers = place_pursuers(&cfg, &targets, split_seed(seed, PURSUER_SEED_STREAM));
 
         Ok(Self {
             controller,
@@ -133,6 +178,11 @@ impl World {
             terrain,
             occlusion,
             tally: OcclusionTally::default(),
+            scene: Vec::with_capacity(n + pursuers.len()),
+            captures: 0,
+            first_capture: None,
+            last_capture: None,
+            pursuers,
             rng,
             seed,
             run_index,
@@ -145,6 +195,8 @@ impl World {
         self.t
     }
 
+    /// All robot positions, captured ones included. Use `alive_positions` for
+    /// anything that scores the swarm.
     pub fn positions(&self) -> Vec<Vec2> {
         self.targets.iter().map(|t| t.pose.p).collect()
     }
@@ -158,7 +210,7 @@ impl World {
     }
 
     pub fn sample(&self) -> Sample {
-        let p = self.positions();
+        let p = self.alive_positions();
         let link = self.link_distance();
         Sample {
             t: self.t,
@@ -174,12 +226,23 @@ impl World {
         let axle = self.cfg.robot.axle_length;
         let dt = self.cfg.sim.dt;
 
-        // 1-3: read, corrupt, look up. All readings are taken before any motion.
+        // Scene the robots' sensors read: the robots themselves, index-aligned,
+        // followed by the pursuers. Built before anything moves, so all readings
+        // are taken from the same instant.
+        self.scene.clear();
+        self.scene.extend_from_slice(&self.targets);
+        self.scene
+            .extend(self.pursuers.iter().map(|p| p.as_target()));
+
+        // 1-3: read, corrupt, look up.
         let mut commands = vec![[0.0f64; 2]; n];
         let mut next_memory = vec![0u32; n];
         for i in 0..n {
             let observer = self.targets[i];
-            let hit = cast(&observer, i, &self.targets, &self.cfg.sensor);
+            if !observer.alive {
+                continue;
+            }
+            let hit = cast(&observer, i, &self.scene, &self.cfg.sensor);
             let hit = self
                 .occlusion
                 .corrupt(hit, observer.pose.p, &mut self.rng, &mut self.tally);
@@ -195,6 +258,9 @@ impl World {
         let slip = (wheel_noise > 0.0)
             .then(|| Normal::new(0.0, wheel_noise).expect("sigma is finite and positive"));
         for i in 0..n {
+            if !self.targets[i].alive {
+                continue;
+            }
             let pose = self.targets[i].pose;
             let mut realised = self.terrain.apply(&pose, axle, commands[i], &mut self.rng);
             if let Some(slip) = slip {
@@ -213,7 +279,44 @@ impl World {
         if self.cfg.sim.collisions {
             self.resolve_contacts();
         }
+
+        // 7: the pursuers move last, against the robots' updated positions.
+        for k in 0..self.pursuers.len() {
+            let mut p = std::mem::replace(
+                &mut self.pursuers[k],
+                Pursuer::new(
+                    Pose::default(),
+                    0.0,
+                    crate::pursuer::PursuerConfig::default(),
+                ),
+            );
+            if let Some(victim) = p.step(&self.targets, dt, axle, vmax, &mut self.rng) {
+                self.targets[victim].alive = false;
+                self.captures += 1;
+                self.first_capture.get_or_insert(self.t);
+                self.last_capture = Some(self.t);
+            }
+            self.pursuers[k] = p;
+        }
         self.t += dt;
+    }
+
+    /// Positions of the robots still in play. Every metric uses this: a captured
+    /// robot is out of the swarm, not a member sitting at its last position.
+    fn alive_positions(&self) -> Vec<Vec2> {
+        self.targets
+            .iter()
+            .filter(|t| t.alive)
+            .map(|t| t.pose.p)
+            .collect()
+    }
+
+    pub fn survivors(&self) -> usize {
+        self.targets.iter().filter(|t| t.alive).count()
+    }
+
+    pub fn captures(&self) -> u64 {
+        self.captures
     }
 
     fn robot_vmax(&self) -> f64 {
@@ -333,6 +436,13 @@ impl World {
             fraction_time_single_cluster: samples_single as f64 / samples_taken as f64,
             realised_fn_rate: self.tally.realised_fn_rate(),
             realised_fp_rate: self.tally.realised_fp_rate(),
+            pursuers: self.pursuers.len(),
+            captures: self.captures,
+            survivors: self.survivors(),
+            survival_fraction: self.survivors() as f64 / self.cfg.swarm.n as f64,
+            capture_rate: self.captures as f64 / (self.cfg.sim.duration * self.cfg.swarm.n as f64),
+            time_to_first_capture: self.first_capture,
+            time_to_wipeout: (self.survivors() == 0).then_some(()).and(self.last_capture),
             series,
             cell: serde_json::Map::new(),
         }
@@ -352,14 +462,13 @@ fn place_robots(cfg: &SimConfig, n: usize, rng: &mut Rng) -> Vec<Target> {
         let p = Vec2::new(d * a.cos(), d * a.sin());
         attempts += 1;
         if out.iter().all(|t| (t.pose.p - p).norm() >= 2.0 * r) {
-            out.push(Target {
-                pose: Pose {
+            out.push(Target::robot(
+                Pose {
                     p,
                     theta: rng.gen::<f64>() * std::f64::consts::TAU,
                 },
-                radius: r,
-                kind: AgentKind::Robot,
-            });
+                r,
+            ));
             attempts = 0;
         } else if attempts > 2000 {
             // Too dense to place by rejection: grow the disk rather than
@@ -369,6 +478,33 @@ fn place_robots(cfg: &SimConfig, n: usize, rng: &mut Rng) -> Vec<Target> {
         }
     }
     out
+}
+
+/// Pursuers start on the far edge of the swarm's start disk, facing inward.
+///
+/// Not at the centre: a pursuer that begins inside the swarm has already solved
+/// the search problem, which is one of the two mechanisms the experiment is
+/// about. Starting outside means finite `r_p` costs it something from the first
+/// step.
+fn place_pursuers(cfg: &SimConfig, robots: &[Target], seed: u64) -> Vec<Pursuer> {
+    let Some(pcfg) = cfg.pursuer else {
+        return Vec::new();
+    };
+    let mut rng = rng_from(seed);
+    let start_radius = cfg.swarm.init.start_radius(cfg.swarm.n, cfg.robot.radius);
+    let centre = crate::metrics::centroid(&robots.iter().map(|t| t.pose.p).collect::<Vec<_>>());
+    (0..pcfg.count)
+        .map(|_| {
+            let a = rng.gen::<f64>() * std::f64::consts::TAU;
+            let p = centre + Vec2::from_angle(a) * start_radius;
+            // Facing the swarm centre.
+            let pose = Pose {
+                p,
+                theta: (centre - p).angle(),
+            };
+            Pursuer::new(pose, cfg.robot.radius, pcfg)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -625,6 +761,305 @@ mod tests {
             loose_frac > tight_frac + 0.15,
             "cluster fraction barely moved: {tight_frac} vs {loose_frac}"
         );
+    }
+
+    fn with_pursuer(n: usize, duration: f64, p: crate::pursuer::PursuerConfig) -> SimConfig {
+        SimConfig {
+            pursuer: Some(p),
+            ..short(n, duration)
+        }
+    }
+
+    #[test]
+    fn wipeout_timing_is_recorded_and_does_not_saturate() {
+        use crate::pursuer::PursuerConfig;
+        let v1 = PursuerConfig {
+            range: None,
+            confusion: 0.0,
+            speed_ratio: 1.5,
+            ..Default::default()
+        };
+        let wipeout = |p: PursuerConfig| {
+            let cfg = with_pursuer(20, 300.0, p);
+            let recs: Vec<_> = (0..6)
+                .map(|i| World::new(cfg.clone(), i).unwrap().run())
+                .collect();
+            // Both configurations wipe the swarm out, so capture_rate is pinned...
+            assert!(recs.iter().all(|r| r.survivors == 0));
+            let rates: Vec<f64> = recs.iter().map(|r| r.capture_rate).collect();
+            assert!(
+                rates.windows(2).all(|w| w[0] == w[1]),
+                "capture_rate should be saturated"
+            );
+            // ...but the timing still separates them.
+            recs.iter().map(|r| r.time_to_wipeout.unwrap()).sum::<f64>() / 6.0
+        };
+        let fast = wipeout(v1);
+        let slow = wipeout(PursuerConfig {
+            confusion: 3.0,
+            confusion_radius: 0.5,
+            ..v1
+        });
+        assert!(
+            slow > fast * 1.5,
+            "confusion did not slow the hunt: {slow} vs {fast}"
+        );
+    }
+
+    #[test]
+    fn a_pursuer_captures_and_the_swarm_shrinks() {
+        use crate::pursuer::PursuerConfig;
+        let cfg = with_pursuer(
+            20,
+            600.0,
+            PursuerConfig {
+                range: None,
+                confusion: 0.0,
+                speed_ratio: 1.5,
+                ..Default::default()
+            },
+        );
+        let rec = World::new(cfg.clone(), 0).unwrap().run();
+        assert_eq!(rec.pursuers, 1);
+        assert!(
+            rec.captures > 0,
+            "an unlimited faster pursuer caught nobody"
+        );
+        assert_eq!(rec.survivors, cfg.swarm.n - rec.captures as usize);
+        assert!((rec.survival_fraction - rec.survivors as f64 / 20.0).abs() < 1e-12);
+        assert!((rec.capture_rate - rec.captures as f64 / (600.0 * 20.0)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn no_pursuer_means_no_captures() {
+        let rec = World::new(short(20, 300.0), 0).unwrap().run();
+        assert_eq!(rec.pursuers, 0);
+        assert_eq!(rec.captures, 0);
+        assert_eq!(rec.survivors, 20);
+        assert_eq!(rec.capture_rate, 0.0);
+    }
+
+    #[test]
+    #[ignore = "calibration probe, run explicitly"]
+    fn probe_pursuer_lethality() {
+        use crate::pursuer::PursuerConfig;
+        for tau in [10.0f64, 20.0, 30.0, 60.0, 120.0] {
+            for (label, p) in [
+                (
+                    "v1 (inf range, k=0)",
+                    PursuerConfig {
+                        range: None,
+                        confusion: 0.0,
+                        speed_ratio: 1.5,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    "r_p=0.3",
+                    PursuerConfig {
+                        range: Some(0.3),
+                        confusion: 0.0,
+                        speed_ratio: 1.5,
+                        ..Default::default()
+                    },
+                ),
+                (
+                    "kappa=5",
+                    PursuerConfig {
+                        range: None,
+                        confusion: 5.0,
+                        confusion_radius: 0.5,
+                        speed_ratio: 1.5,
+                        ..Default::default()
+                    },
+                ),
+            ] {
+                let cfg = with_pursuer(20, tau, p);
+                let recs: Vec<_> = (0..8)
+                    .map(|i| World::new(cfg.clone(), i).unwrap().run())
+                    .collect();
+                let cap: f64 = recs.iter().map(|r| r.captures as f64).sum::<f64>() / 8.0;
+                let minsurv = recs.iter().map(|r| r.survivors).min().unwrap();
+                println!(
+                    "tau={tau:5.0} {label:22} mean captures {cap:5.2}  min survivors {minsurv:3}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn confusion_reduces_the_capture_rate() {
+        // tau = 60 s: long enough for the counts to separate, short enough that
+        // even the v1 corner leaves survivors. capture_rate saturates once the
+        // swarm is wiped out — see the note on `RunRecord::capture_rate`.
+        use crate::pursuer::PursuerConfig;
+        let runs = |p: PursuerConfig| {
+            let cfg = with_pursuer(20, 60.0, p);
+            let recs: Vec<_> = (0..12)
+                .map(|i| World::new(cfg.clone(), i).unwrap().run())
+                .collect();
+            assert!(
+                recs.iter().all(|r| r.survivors > 0),
+                "swarm wiped out; shorten tau or this comparison is vacuous"
+            );
+            recs
+        };
+        let v1 = PursuerConfig {
+            range: None,
+            confusion: 0.0,
+            speed_ratio: 1.5,
+            ..Default::default()
+        };
+        let mean =
+            |rs: &[RunRecord]| rs.iter().map(|r| r.capture_rate).sum::<f64>() / rs.len() as f64;
+        let worst = mean(&runs(v1));
+        let confused = mean(&runs(PursuerConfig {
+            confusion: 5.0,
+            confusion_radius: 0.5,
+            ..v1
+        }));
+        assert!(worst > 0.0);
+        assert!(
+            confused < worst * 0.8,
+            "confusion did not cost the pursuer: {confused} vs {worst}"
+        );
+    }
+
+    #[test]
+    fn finite_range_costs_the_pursuer_a_search_after_every_capture() {
+        // Search cost is **recurring**, which was not obvious in advance.
+        //
+        // The expected story was that finite range costs the pursuer one search
+        // at the start and nothing afterwards, since inside a packed cluster the
+        // neighbours are closer than any plausible r_p. Measured, that is wrong:
+        // the post-discovery rate is still halved. The reason is handling time —
+        // every capture drops the lock and puts the pursuer back into search for
+        // the handling period, and with a short range it has to re-find a target
+        // each time rather than simply turning to the next one.
+        //
+        // So the two protective mechanisms are not as separable as the build doc
+        // implies: handling time converts a one-off search cost into a per-capture
+        // one, and the pursuer's range interacts with its handling time. An Idea B
+        // sweep must vary them together rather than treating r_p as a pure
+        // find-the-swarm dial.
+        use crate::pursuer::PursuerConfig;
+        let v1 = PursuerConfig {
+            range: None,
+            confusion: 0.0,
+            speed_ratio: 1.5,
+            ..Default::default()
+        };
+        let tau = 60.0;
+        let stats = |p: PursuerConfig| {
+            let cfg = with_pursuer(20, tau, p);
+            let recs: Vec<_> = (0..12)
+                .map(|i| World::new(cfg.clone(), i).unwrap().run())
+                .collect();
+            let first: Vec<f64> = recs
+                .iter()
+                .filter_map(|r| r.time_to_first_capture)
+                .collect();
+            let mean_first = first.iter().sum::<f64>() / first.len() as f64;
+            let overall = recs.iter().map(|r| r.capture_rate).sum::<f64>() / recs.len() as f64;
+            // Rate measured from the opening capture, which removes the search.
+            let after: f64 = recs
+                .iter()
+                .filter_map(|r| {
+                    r.time_to_first_capture
+                        .map(|t| r.captures as f64 / ((tau - t).max(1e-9) * r.n as f64))
+                })
+                .sum::<f64>()
+                / first.len() as f64;
+            (mean_first, overall, after)
+        };
+        let (t_inf, overall_inf, after_inf) = stats(v1);
+        let (t_short, overall_short, after_short) = stats(PursuerConfig {
+            range: Some(0.1),
+            ..v1
+        });
+
+        assert!(
+            t_short > t_inf * 1.5,
+            "a short range did not delay the first capture: {t_short} vs {t_inf}"
+        );
+        assert!(
+            overall_short < overall_inf * 0.8,
+            "the delay should show up in the whole-trial rate: {overall_short} vs {overall_inf}"
+        );
+        assert!(
+            after_short < after_inf * 0.8,
+            "the range cost should persist after discovery, via handling: \
+             {after_short} vs {after_inf}"
+        );
+    }
+
+    #[test]
+    fn captured_robots_leave_the_swarm_entirely() {
+        // A captured robot must stop sensing, stop moving, stop occluding and
+        // stop counting towards the metrics. If it kept its last position it
+        // would sit inside the cluster inflating the aggregation score forever.
+        use crate::pursuer::PursuerConfig;
+        let cfg = with_pursuer(
+            10,
+            300.0,
+            PursuerConfig {
+                range: None,
+                confusion: 0.0,
+                speed_ratio: 2.0,
+                ..Default::default()
+            },
+        );
+        let mut w = World::new(cfg, 0).unwrap();
+        for _ in 0..3000 {
+            w.step();
+        }
+        assert!(w.captures() > 0);
+        assert_eq!(w.survivors(), 10 - w.captures() as usize);
+        assert_eq!(w.alive_positions().len(), w.survivors());
+        assert_eq!(
+            w.positions().len(),
+            10,
+            "dead bodies stay in the array, out of the metrics"
+        );
+        // Frozen: a captured robot's pose must not change again.
+        let dead: Vec<Vec2> = w
+            .targets
+            .iter()
+            .filter(|t| !t.alive)
+            .map(|t| t.pose.p)
+            .collect();
+        for _ in 0..200 {
+            w.step();
+        }
+        let dead_after: Vec<Vec2> = w
+            .targets
+            .iter()
+            .filter(|t| !t.alive)
+            .map(|t| t.pose.p)
+            .collect();
+        for (a, b) in dead.iter().zip(&dead_after) {
+            assert!((*a - *b).norm() < 1e-12, "a captured robot moved");
+        }
+    }
+
+    #[test]
+    fn robots_can_see_the_pursuer_when_the_sensor_can_tell_it_apart() {
+        // Row B1 needs the ternary sensor to distinguish robot from pursuer.
+        // Here we only check the plumbing: the pursuer is in the scene the
+        // robots' rays are cast against.
+        use crate::pursuer::PursuerConfig;
+        use crate::sensor::{cast, AgentKind};
+        let cfg = with_pursuer(4, 10.0, PursuerConfig::default());
+        let w = World::new(cfg, 0).unwrap();
+        let mut scene: Vec<Target> = w.targets.clone();
+        scene.extend(w.pursuers.iter().map(|p| p.as_target()));
+        assert_eq!(scene.len(), 5);
+        // Point robot 0 straight at the pursuer and it must see a Pursuer.
+        let mut scene2 = scene.clone();
+        let to_pursuer = (scene[4].pose.p - scene[0].pose.p).angle();
+        scene2[0].pose.theta = to_pursuer;
+        let hit = cast(&scene2[0], 0, &scene2, &w.cfg.sensor);
+        assert_eq!(hit.map(|h| h.kind), Some(AgentKind::Pursuer));
     }
 
     #[test]

@@ -1,8 +1,9 @@
 # Corrections to the build doc
 
-Points where `docs/build-doc-v2.md` needs amending in light of sources checked
-while building this repository. Each is a citation matter, not a design change;
-the doc's structure and framing survive all of them.
+Points where `docs/build-doc-v2.md` needs amending — some from sources checked
+while building this repository, some from results it produced. The doc's
+structure and framing survive all of them; §5 is the only one that changes a
+prediction rather than a citation.
 
 ## 1. The Gauci n = 2 proof has been disproven
 
@@ -74,3 +75,53 @@ From the Gauci et al. setup, all verified and now pinned by a test:
 
 * Steinberg, R. & Solovey, K. (2024/2025). *Impossibility of Self-Organized
   Aggregation without Computation*. arXiv:2501.00390.
+
+## 5. H1 should be withdrawn, or narrowed to a mechanism this model does not have
+
+**Build doc, Idea A, H1:** "small α and θ_m help, as motion noise did in Daymude
+et al."
+
+Three independent tests, all null:
+
+| test | design | result |
+|---|---|---|
+| Actuation noise | per-wheel Gaussian noise, 0–20% of max wheel speed, 50 runs/cell | no benefit at any n; n = 20 mildly harmed |
+| Coarse terrain grid | α to 15°, θ_m to 0.5, 100 runs/cell | monotone degradation on both dials |
+| Fine H1 sweep | α ≤ 3°, θ_m ≤ 0.1, **200 runs/cell** | 0 of 23 cells has a CI disjoint from baseline; whole grid within 1.385–1.430 |
+
+The last of those was designed specifically to give H1 its best chance — a dense
+neighbourhood of zero, double the usual runs — and found nothing.
+
+The likely reason is that the analogy imports a conclusion without its mechanism.
+Daymude et al. are precise about theirs: noise "perturbs the precise balancing of
+forces to allow robots to push past one another". That is a statement about
+breaking a **contact deadlock**, in a discrete model where such deadlocks are
+proven to exist for n > 3. It is not a claim that perturbation aids exploration
+or mixing in general. This continuous model has no proven deadlock, and both the
+noise probe and the terrain sweeps behave as if it has none to break.
+
+**Suggested amendment.** Replace H1 with either:
+
+* *(withdrawn)* — drop the prediction, and note that terrain degrades
+  monotonically on both dials, with the interesting structure in *which* dial
+  and *at what length scale* (H2) rather than in a non-monotonicity; or
+* *(narrowed)* — "if the continuous model exhibits Daymude-style contact
+  deadlocks, small α and θ_m should relieve them" — which is a testable
+  prediction, but requires first showing the deadlocks exist here. Nothing in
+  this repository suggests they do at n = 20.
+
+Either way it should not survive into Paper 1 as written. A hypothesis that has
+failed three times and whose mechanism does not transfer is not a hypothesis the
+paper should be defending.
+
+## 6. Idea A's threshold belongs on dispersion, not on a cluster count
+
+Related, and a measurement point rather than a citation one. Across the whole
+Idea A terrain grid the share of runs that *ever* reach a single cluster is 1.00
+in every cell except the runaway corner. Terrain at n = 20 does not stop the
+swarm aggregating; it makes the cluster looser and harder to hold.
+
+So a threshold `T` set on "did they aggregate" would see almost nothing, while
+one set on dispersion sees a clean monotone signal. The build doc lists
+dispersion first among Idea A's metrics already — this is a reason to make that
+binding rather than a preference.

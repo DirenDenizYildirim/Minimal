@@ -1,0 +1,112 @@
+# IDEA B — the pursuer with imperfect perception.
+#
+# The build doc's capability rows are a SET, not a chain: B3 and B4 are
+# incomparable with B2. Nothing here assumes an ordering between them, and the
+# surface is drawn per row.
+#
+#   row  S  M  K  meaning
+#   B0   2  0  0  Gauci, blind — cannot tell a pursuer from a robot
+#   B1   3  0  0  ternary LOS: nothing / robot / pursuer
+#   B2   5  0  0  ternary + which side of the sensor axis
+#   B3   3  1  0  ternary + one bit, "saw the pursuer last step"
+#   B4   3  0  1  received alarm bit — NOT INCLUDED, see below
+#
+# B4 is missing because communication is not wired: the controller table has an
+# rx axis and the step loop carries a tx value, but `rx` is held at 0, so a K=1
+# row would silently behave as K=0. Adding a row that quietly does nothing is
+# worse than leaving it out.
+#
+# The B1-B3 tables below are HAND-DESIGNED, not searched, so every minimum read
+# off them is an upper bound and the harness stamps them as such. The design is
+# the obvious one: state-0 wheel speeds are already backwards, so "flee" is to
+# back away at full speed from whatever the sensor is pointing at. Whether a
+# search finds something better is Idea C's job; these say whether it is worth
+# looking.
+#
+# TAU AND SATURATION. capture_rate is pinned at 1/tau once a swarm is wiped out,
+# and the v1 corner (r_p = infinity, kappa = 0, rho = 1.5) takes 20 robots in
+# about 120 s even with handling time. tau = 120 s here keeps survivors in most
+# cells; check `survivors > 0` across the grid before reading any surface, and
+# fall back to `time_to_wipeout` where it is not. The calibration probe is
+# `world::tests::probe_pursuer_lethality`.
+#
+# NOT SEPARABLE, and worth knowing before reading the surface: handling time
+# turns the search cost into a per-capture cost rather than a one-off, so r_p and
+# handling_time interact. See
+# `world::tests::finite_range_costs_the_pursuer_a_search_after_every_capture`.
+
+name = "pursuer-idea-b"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "pursuer.range"
+# The last is the v1 adversarial corner, kept deliberately.
+values = [0.2, 0.5, 1.0, 1e9]
+
+[[axis]]
+path = "pursuer.confusion"
+values = [0.0, 1.0, 5.0]
+
+# --- capability rows ---------------------------------------------------------
+
+[[rows]]
+label = "B0-blind"
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "binary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+"pursuer.handling_time" = 5.0
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "B1-ternary"
+# 0 nothing -> circle; 1 robot -> rotate on the spot; 2 pursuer -> back away hard.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+"pursuer.handling_time" = 5.0
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-1.0, -1.0] },
+] }
+
+[[rows]]
+label = "B2-ternary-side"
+# Pursuer to the left or right backs away with a turn away from that side.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary_with_side"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+"pursuer.handling_time" = 5.0
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-1.0, -0.6] },
+  { wheels = [-0.6, -1.0] },
+] }
+
+[[rows]]
+label = "B3-ternary-memory"
+# c = (3, 1, 0, 0). Index is sensor*2 + memory. The bit holds "saw the pursuer"
+# for one extra step, so the robot keeps fleeing through a dropped sighting.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+"pursuer.handling_time" = 5.0
+controller = { kind = "table", memory_bits = 1, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0], next_memory = 0 },
+  { wheels = [-1.0, -1.0], next_memory = 0 },
+  { wheels = [ 1.0, -1.0], next_memory = 0 },
+  { wheels = [-1.0, -1.0], next_memory = 0 },
+  { wheels = [-1.0, -1.0], next_memory = 1 },
+  { wheels = [-1.0, -1.0], next_memory = 1 },
+] }

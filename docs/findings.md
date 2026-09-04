@@ -193,50 +193,147 @@ continuous model has no such deadlock for it to break.
 
 ## 4. Idea A, H2: does the terrain transition scale with R₀?
 
-`configs/sweeps/terrain_h2_r0_scaling.toml` — λ swept 0.0375–0.60 m against R₀
-varied 7.65–48.45 cm via the state-0 wheel constants, 100 runs/cell. Because
-changing those constants also changes speed and turn rate, every row is scored
-**against its own θ_m = 0 cell**; the numbers below are degradation ratios, where
-1.00 means terrain did nothing.
+Two sweeps. The first (`terrain_h2_r0_scaling`) established that terrain does
+nothing once λ > R₀, but at θ_m ≤ 0.4 there was no transition to locate — only a
+40% slope — and it could not separate λ/R₀ from λ/axle, because varying the wheel
+constants varies both together.
 
-At θ_m = 0.4:
+`configs/sweeps/terrain_h2_powered.toml` fixes both: θ_m runs to 1.5, and five
+rows break the confound by holding one length scale fixed while varying the
+other. Every row is scored against its own θ_m = 0 cell at the same λ.
 
-| row | R₀ | λ = 0.0375 | 0.075 | 0.15 | 0.30 | 0.60 |
+### The answer: R₀ controls it, the axle does not
+
+Peak degradation and where it occurs, at θ_m = 0.7:
+
+| row | axle | R₀ | peak λ | **λ/R₀** | λ/axle | peak degradation |
 |---|---|---|---|---|---|---|
-| R0-07.7cm | 7.65 cm | 1.049 | 1.047 | 1.021 | 1.005 | 0.990 |
-| R0-14.5cm | 14.45 cm | 1.105 | 1.140 | 1.055 | 0.985 | 0.991 |
-| R0-23.0cm | 22.95 cm | 1.400 | 1.393 | 1.357 | 0.956 | 0.914 |
-| R0-48.5cm | 48.45 cm | 1.050 | 1.274 | 1.294 | 1.065 | 1.067 |
+| axle-half-R0-same | 2.55 cm | 14.45 cm | 0.100 | **0.69** | 3.92 | 1.40 |
+| base | 5.10 cm | 14.45 cm | 0.100 | **0.69** | 1.96 | 1.58 |
+| axle-x2-R0-same | 10.20 cm | 14.45 cm | 0.100 | **0.69** | 0.98 | 1.34 |
+| R0-half-axle-same | 5.10 cm | 7.22 cm | 0.050 | **0.69** | 0.98 | 1.17 |
+| R0-x2-axle-same | 5.10 cm | 28.90 cm | 0.100 | 0.35 | 1.96 | 2.69 |
 
-**Partially supported, and the sweep was under-powered to say more.**
+The peak sits at **λ/R₀ ≈ 0.7** for four of the five rows, across a four-fold
+range of axle length, while λ/axle over those same rows scatters from 0.98 to
+3.92. The fifth row's peak falls between two grid points (λ/R₀ of 0.35 and 0.69
+score 2.69 and 2.43), so the λ grid, not the physics, sets that entry.
 
-What holds: re-indexed by λ/R₀, every cell with λ/R₀ ≳ 1.3 sits at 0.91–1.07 —
-terrain does nothing once its correlation length exceeds the loop it is meant to
-deform. Every elevated cell has λ/R₀ ≲ 1. So R₀ *is* the scale that decides
-whether terrain bites, which is H2's substantive claim, and swarm size plays no
-part in it.
+The magnitudes settle it. At θ_m = 1.0:
 
-What does not hold: the curves do not collapse onto λ/R₀ alone. Within
-λ/R₀ ≲ 1 the degradation ranges from 1.02 to 1.40, and it is ordered by R₀ —
-the 7.65 cm row is nearly immune while the 22.95 cm row is worst. A second length
-scale is in play, and the obvious candidate is the **axle length** (5.1 cm),
-which is what decides whether the two wheels sample meaningfully different
-traction in the first place. λ/R₀ and λ/ℓ are being varied together here and
-cannot be separated by this design.
+* varying the **axle 4×** at fixed R₀ = 14.45 cm: peak degradation 2.83, 2.97,
+  2.93 — a spread of **5%**;
+* varying **R₀ 4×** at fixed axle = 5.10 cm: peak degradation 1.59, 2.97, 10.46
+  — a spread of **560%**.
 
-The sweep also cannot locate a *transition*, because at θ_m ≤ 0.4 there is not
-one: the largest degradation is 40% in dispersion, and every cell still reaches a
-single cluster. H2 is a statement about where aggregation **fails**, and this grid
-never gets there.
+**H2 is supported.** The terrain transition is set by R₀, the controller's own
+intrinsic length scale, and not by the robot's wheel geometry — and not, as the
+build doc emphasises, by swarm size. The natural reading is that R₀ is the
+distance over which deformation accumulates before the trajectory closes, so
+terrain structure comparable to R₀ has maximum leverage; structure much finer
+averages out along the loop, and structure much coarser looks like a uniform
+offset the whole loop shares.
 
-**Next, and this is the concrete design H2 needs:**
+That the *axle* barely matters is the more surprising half, since the axle is
+what makes the two wheels sample different traction in the first place. Evidently
+that per-step asymmetry is not the limiting factor — what matters is how far the
+robot travels while the terrain stays correlated.
 
-1. Push θ_m to 0.6–1.0, where the coarse grid showed aggregation actually
-   breaking, so there is a transition to locate rather than a slope to measure.
-2. Separate λ/R₀ from λ/ℓ by varying the axle length independently of the wheel
-   constants. Both are config fields, so this costs nothing but runs.
-3. Only then fit the transition and test whether it tracks R₀.
+### Where the model stops being about robots
 
-Until that is done, H2 should be stated as "the effect vanishes for λ > R₀",
-which is supported, rather than "the transition scales with R₀", which is not yet
-tested.
+At θ_m = 1.5 every row degrades 6–14×, and the ordering by R₀ collapses. The
+traction multiplier clamps at zero there, so wheels stall outright and the
+dynamics are dominated by stalling rather than by deformation. Report θ_m ≤ 1.0
+as the terrain regime and 1.5 as its boundary.
+
+One row is not a robot at all: `axle-x2-R0-same` puts the wheel contacts outside
+the 7.4 cm body. It exists to break the R₀/axle confound numerically, and no
+result from it describes a buildable machine. It is what makes the 5% spread
+above meaningful, and it should be described that way in the paper rather than
+quietly included.
+
+Figure: `figures/terrain_h2_powered.png`.
+
+### What this leaves for the anisotropy lemma
+
+The build doc wants a theorem of the form "aggregation holds if the anisotropy
+ratio is below f(R₀, sensor range)". The measurement now says what f should
+depend on: R₀ and the terrain correlation length, in the ratio λ/R₀, with the
+worst case near 0.7. That is a much narrower target than the sweep started with,
+and it is the natural next piece of analysis.
+
+---
+
+## 5. Idea B, first pass: the pursuer with imperfect perception
+
+`configs/sweeps/pursuer_idea_b.toml` — n = 20, **τ = 120 s**, 100 runs/cell,
+ρ = 1.5, handling time 5 s, four capability rows against a grid of `r_p` × `κ`.
+
+**Rows B0–B3 only.** B4 needs a received alarm bit and communication is not
+wired — `rx` is held at 0, so a K = 1 row would silently behave as K = 0.
+B1–B3 are **hand-designed, not searched**: every number below is an upper bound
+on what that capability can do.
+
+### Median survivors out of 20
+
+| κ | r_p | B0 blind | B1 ternary | B2 ternary+side | B3 ternary+memory |
+|---|---|---|---|---|---|
+| 0 | 0.2 | **0.0** | 15.5 | 10.5 | **17.0** |
+| 0 | 0.5 | 0.0 | 4.0 | 1.0 | 4.5 |
+| 0 | ∞ | 0.0 | 3.0 | 0.0 | 3.0 |
+| 1 | 0.2 | 16.5 | 17.5 | 18.0 | 18.0 |
+| 1 | 0.5 | 1.0 | 4.0 | 3.0 | 5.0 |
+| 5 | 0.5 | 13.5 | 15.0 | 15.0 | 16.0 |
+| 5 | ∞ | 8.0 | 8.0 | 8.0 | 8.0 |
+
+### One sensor state is worth more than everything else on the capability axis
+
+Going from S = 2 to S = 3 — being able to tell a pursuer from a robot — is the
+whole story. The blind row loses every robot at κ = 0 whatever the pursuer's
+range; any row that can see the pursuer keeps 3–17. Adding the memory bit on top
+(B3) buys a further robot or two consistently but nothing like as much.
+
+Median survival fraction over the whole grid: B0 0.10, B1 0.35, B2 0.20,
+B3 0.375.
+
+### S = 5 scoring below S = 3 is an upper-bound artefact, not a result
+
+B2 has more sensor states than B1 and does worse almost everywhere — 10.5
+survivors against 15.5 at the easiest cell. That is exactly what the build doc's
+"minima are upper bounds" rule is for. B2's table is a hand-written guess at what
+to do with side information, and a bad one; **it says no good five-state
+controller was found, not that five states cannot beat three.** Reporting it as
+"more sensing hurts" would be the single easiest mistake to make with this data.
+
+This is also a concrete argument for Idea C: the rows most in need of a search
+are the ones whose hand-designed controllers look worst.
+
+### The environment dial dominates the capability rows
+
+At κ = 5, r_p = ∞ every row scores 8 survivors — the capability differences
+vanish entirely. At r_p = 0.2, κ = 5 every row keeps 19. Confusion and range
+move the outcome far more than any capability step does, over the ranges swept.
+
+That is the frontier the project is after, stated the other way round: for much
+of this environment grid, `c*(θ)` is flat, and the interesting structure is
+confined to the corner where the pursuer is dangerous and the swarm is not
+already saved by its perception limits.
+
+### Three design problems this pass exposed
+
+1. **The metric saturates.** 13% of runs lost the whole swarm, mostly in B0, and
+   `capture_rate` is pinned at 1/τ once that happens. τ = 120 s was chosen from a
+   calibration probe and is still too long for the blind row. Either use
+   `time_to_wipeout` for the lethal cells, or set τ per row, and say which.
+2. **Range saturates too.** r_p = 1.0 and r_p = ∞ are identical in every cell,
+   because a 20-robot swarm is inside 1 m anyway. The useful range dial is
+   0.1–0.5 m; anything above is the same corner twice.
+3. **This sweep cannot answer the headline question.** "Does aggregation protect
+   the swarm?" needs aggregating and non-aggregating controllers compared under
+   the same pursuer. All four rows here aggregate identically when no pursuer is
+   in view, so the comparison is between *responses* to a pursuer, not between
+   spatial strategies. Add a deliberately dispersive row — the same table with
+   the state-1 rotation replaced by something that spreads — and the dilution
+   question becomes answerable.
+
+Figure: `figures/pursuer_idea_b_surface.png`.

@@ -1,0 +1,83 @@
+# IDEA A, H2 — properly powered.
+#
+# The first H2 sweep (terrain_h2_r0_scaling) established the substantive claim —
+# terrain does nothing once lambda > R0 — but could not test the sharper one,
+# for two reasons this file fixes.
+#
+# 1. NO TRANSITION TO FIND. At theta_m <= 0.4 the largest degradation was 40% in
+#    dispersion and every cell still reached a single cluster. H2 is a statement
+#    about where aggregation FAILS, so theta_m now runs to 1.5. Above 1.0 the
+#    traction multiplier clamps at zero and wheels stall outright, which is the
+#    far end of the dial and is included deliberately.
+#
+# 2. TWO LENGTH SCALES WERE CONFOUNDED. R0 = k(constants) * axle, so varying the
+#    wheel constants varies lambda/R0 and lambda/axle together. Both are
+#    plausible: R0 is the loop the deformation accumulates over, and the axle is
+#    what decides whether the two wheels sample different traction at all.
+#
+#    The five rows below break that. Within each pair of rows sharing wheel
+#    constants, only the axle differs:
+#
+#      row                  axle     vl0       R0      what it isolates
+#      base                 5.10cm  -0.7000   14.45cm  reference
+#      axle-x2-R0-same     10.20cm  -0.4783   14.45cm  axle up, R0 fixed
+#      axle-half-R0-same    2.55cm  -0.8378   14.45cm  axle down, R0 fixed
+#      R0-x2-axle-same      5.10cm  -0.8378   28.90cm  R0 up, axle fixed
+#      R0-half-axle-same    5.10cm  -0.4783    7.22cm  R0 down, axle fixed
+#
+#    If the transition tracks R0, the three R0=14.45cm rows agree and the other
+#    two do not. If it tracks the axle, the opposite.
+#
+# MODEL LIBERTY, stated plainly: at axle = 10.2 cm the wheel contact points sit
+# outside the 7.4 cm body. That is not a buildable e-puck. It is a numerical
+# experiment to separate two length scales that are otherwise locked together,
+# and no result from those rows describes a real robot.
+#
+# CONFOUND, handled as before: these rows differ on flat ground too (forward
+# speed 9.5-11.8 cm/s, turn rate 0.41-1.31 rad/s), so every row carries its own
+# theta_m = 0 cell and the analysis works in degradation relative to it. Use
+# `swarm-figure surface --baseline-y 0.0`.
+#
+# Slope is left at zero throughout: this sweep is about the traction field alone.
+
+name = "terrain-h2-powered"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.0125, 0.025, 0.05, 0.1, 0.2, 0.4]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.4, 0.7, 1.0, 1.5]
+
+[[rows]]
+label = "base"
+[rows.overrides]
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "axle-x2-R0-same"
+[rows.overrides]
+"robot.axle_length" = 0.102
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "axle-half-R0-same"
+[rows.overrides]
+"robot.axle_length" = 0.0255
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "R0-x2-axle-same"
+[rows.overrides]
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "R0-half-axle-same"
+[rows.overrides]
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }

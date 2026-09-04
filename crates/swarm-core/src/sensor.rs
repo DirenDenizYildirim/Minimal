@@ -120,6 +120,29 @@ pub struct Target {
     pub pose: Pose,
     pub radius: f64,
     pub kind: AgentKind,
+    /// Captured robots are removed from the scene: they neither sense nor are
+    /// sensed, and they are excluded from the metrics.
+    pub alive: bool,
+}
+
+impl Target {
+    pub fn robot(pose: Pose, radius: f64) -> Self {
+        Self {
+            pose,
+            radius,
+            kind: AgentKind::Robot,
+            alive: true,
+        }
+    }
+
+    pub fn pursuer(pose: Pose, radius: f64) -> Self {
+        Self {
+            pose,
+            radius,
+            kind: AgentKind::Pursuer,
+            alive: true,
+        }
+    }
 }
 
 /// Cast the observer's sensor against `targets`, returning the nearest hit.
@@ -137,7 +160,7 @@ pub fn cast(
     let mut best: Option<Hit> = None;
 
     for (j, t) in targets.iter().enumerate() {
-        if j == observer_index {
+        if j == observer_index || !t.alive {
             continue;
         }
         let delta = t.pose.p - origin;
@@ -181,11 +204,7 @@ mod tests {
     use std::f64::consts::PI;
 
     fn robot(x: f64, y: f64, theta: f64) -> Target {
-        Target {
-            pose: Pose::new(x, y, theta),
-            radius: 0.037,
-            kind: AgentKind::Robot,
-        }
+        Target::robot(Pose::new(x, y, theta), 0.037)
     }
 
     #[test]
@@ -221,14 +240,36 @@ mod tests {
     #[test]
     fn nearer_body_occludes_the_further_one() {
         let mut ts = vec![robot(0.0, 0.0, 0.0), robot(1.0, 0.0, 0.0)];
-        ts.push(Target {
-            pose: Pose::new(0.5, 0.0, 0.0),
-            radius: 0.037,
-            kind: AgentKind::Pursuer,
-        });
+        ts.push(Target::pursuer(Pose::new(0.5, 0.0, 0.0), 0.037));
         let hit = cast(&ts[0], 0, &ts, &SensorConfig::default()).unwrap();
         assert_eq!(hit.kind, AgentKind::Pursuer, "nearest body must win");
         assert!((hit.distance - (0.5 - 0.037)).abs() < 0.05);
+    }
+
+    #[test]
+    fn dead_bodies_are_invisible() {
+        // A captured robot must not occlude, and must not be detectable.
+        let mut ts = vec![
+            robot(0.0, 0.0, 0.0),
+            robot(0.5, 0.0, 0.0),
+            robot(1.0, 0.0, 0.0),
+        ];
+        assert!(
+            (cast(&ts[0], 0, &ts, &SensorConfig::default())
+                .unwrap()
+                .distance
+                - 0.463)
+                .abs()
+                < 0.01
+        );
+        ts[1].alive = false;
+        let hit = cast(&ts[0], 0, &ts, &SensorConfig::default()).unwrap();
+        assert!(
+            (hit.distance - 0.963).abs() < 0.01,
+            "should now see the far body"
+        );
+        ts[2].alive = false;
+        assert!(cast(&ts[0], 0, &ts, &SensorConfig::default()).is_none());
     }
 
     #[test]
