@@ -1,0 +1,16 @@
+# WEEK-1 GATE. Reproduce Gauci's aggregation and its scaling in swarm size
+# before adding a single hostility dial.
+#
+# Pass criteria are in docs/validation.md. In short: the swarm must aggregate at
+# every n, final dispersion must stay O(1) (a packed cluster scores ~1 under the
+# normalisation in `metrics::dispersion`), and the curve's shape in n must match
+# the published one. Until this passes, every absolute number from this
+# simulator is provisional.
+
+name = "gauci-scaling"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "swarm.n"
+values = [2, 5, 10, 20, 50, 100]

@@ -1,0 +1,52 @@
+# WEEK-3 SHAKEDOWN — not a paper, a harness test.
+#
+# Question (build doc): at what false-negative rate does the zero-memory Gauci
+# controller fall below the threshold T, and does one bit of hysteresis
+# ("saw a robot last step") restore it?
+#
+# This cell exercises everything Paper 1 needs: a one-dial sweep, the
+# performance surface, and the enumerable-vs-optimised distinction. The M0 row
+# is Gauci's exhaustively-searched four constants and is TIGHT. The M1 row has
+# eight constants; at Gauci's grid resolution that is 20^8 ~ 2.6e10 points, so
+# it is not enumerable, and the hand-written hysteresis below is one specific
+# point in that space. Any minimum read off the M1 row is therefore an UPPER
+# BOUND — a search over those eight constants is the actual week-3 work, and
+# this sweep is what tells us whether it is worth running.
+
+name = "occlusion-shakedown"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "occlusion.fn_rate"
+values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+# Spatially correlated dropout is the regime a real occluder produces; the
+# i.i.d. control (correlation_amplitude = 0) is the second row of the grid.
+[[axis]]
+path = "occlusion.correlation_amplitude"
+values = [0.0, 0.9]
+
+# --- capability rows: a set of vectors, not a chain -------------------------
+
+[[rows]]
+label = "M0-gauci"
+[rows.overrides]
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "M1-hysteresis"
+# c = (S=2, M=1, A=0, K=0). Table index is sensor*2 + memory:
+#   0: (nothing, no memory)   -> state-0 circle,     forget
+#   1: (nothing, remembered)  -> act as if seen,     forget
+#   2: (seen,    no memory)   -> rotate on the spot, remember
+#   3: (seen,    remembered)  -> rotate on the spot, remember
+# The memory bit holds a detection for exactly one extra step, which is the
+# "saw a robot last step" hysteresis the build doc names.
+[rows.overrides]
+controller = { kind = "table", memory_bits = 1, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0], next_memory = 0 },
+  { wheels = [ 1.0, -1.0], next_memory = 0 },
+  { wheels = [ 1.0, -1.0], next_memory = 1 },
+  { wheels = [ 1.0, -1.0], next_memory = 1 },
+] }

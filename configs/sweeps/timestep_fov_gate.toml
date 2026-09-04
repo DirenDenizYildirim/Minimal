@@ -1,0 +1,31 @@
+# WEEK-1 GATE DIAGNOSTIC — angular aliasing of the line-of-sight sensor.
+#
+# Gauci et al. prove aggregation for n = 2, so an implementation where n = 2
+# fails is wrong. The suspect is the sampling rate of the sensor, not the
+# controller: the state-1 wheel constants (1.0, -1.0) spin the body at
+# 2*v_max/axle = 4.83 rad/s, which at dt = 0.1 s is 27.7 degrees per control
+# step. A body at 0.3 m subtends 14 degrees. A zero-width ray therefore steps
+# straight over its target, and the more separated the swarm the worse it gets —
+# which is exactly the n-dependence observed (n >= 10 aggregates, n = 2 does not).
+#
+# Two candidate fixes, both physical:
+#   dt                -- sample the sensor faster than the body sweeps past it;
+#   sensor half-FOV   -- a real e-puck camera is not a zero-width ray.
+# This sweep separates them. 30 runs/cell: a diagnostic, not a result.
+
+name = "timestep-fov-gate"
+base = "../gauci_baseline.toml"
+runs_per_cell = 30
+
+[[axis]]
+path = "swarm.n"
+values = [2, 5, 20]
+
+[[axis]]
+path = "sim.dt"
+values = [0.1, 0.05, 0.02, 0.01]
+
+[[axis]]
+path = "sensor.fov_half_angle"
+# radians: 0 (bare ray), 2.9, 5.7, 11.5 degrees
+values = [0.0, 0.05, 0.1, 0.2]

@@ -1,0 +1,14 @@
+[package]
+name = "swarm-core"
+description = "Tier-1 simulator for minimal swarms in hostile environments"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand.workspace = true
+rand_distr.workspace = true
+rand_pcg.workspace = true
+serde.workspace = true
+serde_json.workspace = true

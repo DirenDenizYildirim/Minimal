@@ -1,0 +1,27 @@
+# WEEK-1 GATE DIAGNOSTIC 2 — is small-n failure a time budget, not a bug?
+#
+# Diagnostic 1 (timestep_fov_gate) ruled out angular aliasing: a 10x finer
+# timestep only moves n = 2 from dispersion 14.2 to 6.5, and widening the sensor
+# FOV makes it worse, not better.
+#
+# The mechanism suggests why. A robot that sees nothing traces a *closed* circle
+# and never translates; the only thing that relocates it is rotating on the spot,
+# which moves the centre of its next circle. So displacement accumulates one
+# sighting at a time. With n = 20 there is almost always something in view; with
+# n = 2 a robot may circle for a long time before its ray crosses the other, so
+# the same mechanism needs far more wall-clock. Gauci et al. prove aggregation
+# for n = 2, but a proof is asymptotic and tau = 600 s is not.
+#
+# This sweep asks whether small n aggregates given time, or is genuinely stuck.
+
+name = "small-n-time-gate"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "swarm.n"
+values = [2, 3, 4, 5, 10]
+
+[[axis]]
+path = "sim.duration"
+values = [600.0, 3000.0, 12000.0, 48000.0]

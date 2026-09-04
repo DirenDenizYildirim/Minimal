@@ -1,0 +1,58 @@
+# Week-1 gate: the clean arena.
+#
+# Gauci, Chen, Li, Dodd & Gross (2014), IJRR, "Self-organized aggregation
+# without computation": one binary line-of-sight sensor, no memory, no
+# arithmetic, four wheel constants found by exhaustive grid search.
+#
+# This is the only row in the project whose minimum is TIGHT rather than an
+# upper bound, and it is the reference every hostility dial is measured against.
+# Nothing here may be changed to make a later result look better; see
+# docs/validation.md.
+
+[robot]
+# e-puck. VERIFY against Gauci et al. Table 1 before quoting absolute numbers.
+radius = 0.037
+axle_length = 0.053
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[swarm.init]
+shape = "disk"
+# Start radius derived from coverage, so initial density is constant across n
+# and the scaling curve in n is interpretable.
+coverage = 0.05
+
+[sim]
+dt = 0.1
+duration = 600.0
+seed = 20260904
+collisions = true
+
+[sensor]
+# Unlimited range with a zero-width ray, as in Gauci's simulation. Occlusion by
+# nearer bodies is inherent: the nearest body in the cone is what is returned.
+fov_half_angle = 0.0
+encoding = "binary"
+
+[controller]
+kind = "gauci"
+constants = [-0.7, -1.0, 1.0, -1.0]
+# Gauci's four-constant grid was exhaustive at its resolution, so this row —
+# alone in the project — reports a tight minimum rather than an upper bound.
+provenance = "enumerated"
+
+[occlusion]
+# Clean arena.
+fn_rate = 0.0
+fp_rate = 0.0
+
+[terrain]
+# Flat board.
+slope_angle = 0.0
+friction_amplitude = 0.0
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 10.0

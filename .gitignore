@@ -1,0 +1,23 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Experiment output: regenerate from configs, never commit
+/results/*
+!/results/.gitkeep
+/figures/*
+!/figures/.gitkeep
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  simulator:
+    name: swarm-core / swarm-cli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --all
+      - name: Build release
+        run: cargo build --release
+      - name: Every config and sweep file still parses
+        # A sweep file that no longer matches the config schema is a broken
+        # experiment, and it should fail here rather than 900 cells into a run.
+        run: |
+          set -e
+          for f in configs/*.toml; do
+            echo "== $f"
+            ./target/release/swarm describe --config "$f"
+          done
+          for f in configs/sweeps/*.toml; do
+            echo "== $f"
+            ./target/release/swarm sweep --config "$f" --out /dev/null --dry-run > /dev/null
+          done
+      - name: Smoke run
+        run: |
+          ./target/release/swarm run --config configs/gauci_baseline.toml \
+            --runs 4 --no-series --out results/ci-smoke.jsonl
+          test -s results/ci-smoke.jsonl
+
+  harness:
+    name: analysis harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e harness
+      - name: Test
+        run: python -m unittest discover -s harness/tests -v

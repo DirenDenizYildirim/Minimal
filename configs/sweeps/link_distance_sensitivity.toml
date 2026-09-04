@@ -1,0 +1,16 @@
+# How sensitive are the cluster metrics to the link distance?
+#
+# `cluster_link_radii` decides when two bodies count as being in the same
+# cluster. It has no canonical value, and the boolean "is the swarm exactly one
+# cluster?" turns out to depend on it strongly: an aggregated swarm keeps a
+# robot hovering near the threshold. Run this before quoting any cluster-count
+# result, and report the value used. Dispersion is included as a control — it
+# does not depend on this parameter at all.
+
+name = "link-distance-sensitivity"
+base = "../gauci_baseline.toml"
+runs_per_cell = 30
+
+[[axis]]
+path = "metrics.cluster_link_radii"
+values = [2.2, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0]

@@ -1,0 +1,41 @@
+# IDEA A — aggregation under terrain (weeks 4-7).
+#
+# Two dials, per the corrected model in `swarm_core::terrain`:
+#   alpha   — slope angle; the gravity term is heading-dependent, so the state-0
+#             circle is stretched downhill and compressed uphill.
+#   theta_m — per-wheel traction heterogeneity; the two wheels sample the field
+#             at their own contact points, so curvature changes.
+# Neither is a Galilean shift, and neither is a scalar speed field: both deform
+# one robot's path relative to another's, which is what the v1 model could not do.
+#
+# lambda is fixed at 0.15 m here, which is R0 for the baseline constants. H2
+# says the transition should scale with R0, not with swarm size, so the
+# companion sweep varies the four wheel constants (and hence R0) at fixed
+# lambda; do not read an H2 result off this file alone.
+#
+# The slope angles bracket the hardware track's tiltable board (0, 5, 10 deg).
+
+name = "terrain-idea-a"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.slope_angle"
+# radians: 0, 2.5, 5, 7.5, 10, 15 degrees
+values = [0.0, 0.043633, 0.087266, 0.130900, 0.174533, 0.261799]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.1, 0.2, 0.3, 0.5]
+
+[[rows]]
+label = "M0-gauci"
+[rows.overrides]
+"terrain.slope_gain" = 0.4
+"terrain.correlation_length" = 0.15
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+# H3: past the transition, a fifth sensor state ("on slope / not") with a second
+# lookup row should recover T where re-tuning the original four constants does
+# not. That row needs a slope-detecting sensor, which the sensor module does not
+# have yet — it is week-4 work, and this file will grow a third row for it.
