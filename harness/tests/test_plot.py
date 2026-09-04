@@ -1,7 +1,25 @@
 import json
 import unittest
 
+import numpy as np
+from matplotlib.collections import QuadMesh
+
 from swarm_harness.load import load_jsonl
+
+
+def _mesh_values(fig, xlabel):
+    """The pcolormesh data from each data panel.
+
+    Filters on the panel's x label, because `fig.axes` also holds the colorbar,
+    which is itself a QuadMesh full of interpolated colour-scale values.
+    """
+    return [
+        m.get_array().compressed()
+        for a in fig.axes
+        if a.get_xlabel() == xlabel
+        for m in a.collections
+        if isinstance(m, QuadMesh) and m.get_array() is not None
+    ]
 from swarm_harness import plot
 
 
@@ -57,6 +75,53 @@ class TestPlot(unittest.TestCase):
                            metric="final_largest_cluster_fraction", thresholds=[0.1])
         panel = [a for a in fig.axes if a.get_xlabel() == "occlusion.fn_rate"][0]
         self.assertTrue(any("no contour" in t.get_text() for t in panel.texts))
+
+
+class TestBaselineNormalisation(unittest.TestCase):
+    def _records(self):
+        # Two rows with very different clean-ground performance but the SAME
+        # relative response to the dial. Raw, they look nothing alike.
+        import json
+
+        out = []
+        for row, scale in (("cheap", 1.0), ("expensive", 10.0)):
+            for x in (0.1, 0.2):
+                for y in (0.0, 0.5):
+                    for _ in range(3):
+                        out.append(
+                            json.dumps(
+                                {
+                                    "minimum_is_tight": True,
+                                    "final_dispersion": scale * (1.0 + y),
+                                    "cell": {"row": row, "dial_x": x, "dial_y": y},
+                                }
+                            )
+                        )
+        return load_jsonl(out)
+
+    def test_normalising_makes_rows_comparable(self):
+        r = self._records()
+        fig = plot.surface(r, x="dial_x", y="dial_y", metric="final_dispersion",
+                           thresholds=[1.2], baseline_y=0.0)
+        arrays = _mesh_values(fig, "dial_x")
+        self.assertEqual(len(arrays), 2)
+        # Both panels must now show exactly 1.0 at the baseline and 1.5 at y=0.5.
+        for a in arrays:
+            self.assertEqual(sorted(set(np.round(a, 6))), [1.0, 1.5])
+
+    def test_raw_surface_keeps_the_rows_apart(self):
+        r = self._records()
+        fig = plot.surface(r, x="dial_x", y="dial_y", metric="final_dispersion")
+        arrays = _mesh_values(fig, "dial_x")
+        self.assertEqual(len(arrays), 2)
+        self.assertNotEqual(sorted(set(np.round(arrays[0], 6))),
+                            sorted(set(np.round(arrays[1], 6))))
+
+    def test_unknown_baseline_value_is_an_error(self):
+        r = self._records()
+        with self.assertRaises(ValueError) as ctx:
+            plot.surface(r, x="dial_x", y="dial_y", metric="final_dispersion", baseline_y=0.7)
+        self.assertIn("dial_y", str(ctx.exception))
 
 
 if __name__ == "__main__":

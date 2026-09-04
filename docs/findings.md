@@ -157,3 +157,86 @@ distinction is what the two-dial surface is for, and it is the reason the build
 doc's corrected model needs both mechanisms rather than one.
 
 Figures: `figures/terrain_idea_a_surface.png`, `figures/terrain_idea_a_curve.png`.
+
+---
+
+## 3. Idea A, H1: does a *small* amount of terrain help?
+
+`configs/sweeps/terrain_h1_fine.toml` — n = 20, **200 runs/cell**, a dense
+neighbourhood of zero: α ∈ {0, 0.5, 1, 1.5, 2, 3}°, θ_m ∈ {0, 0.02, 0.05, 0.1},
+`g_eff` = 0.4, λ = R₀.
+
+**Answer: no.** Median final dispersion with 95% bootstrap CIs:
+
+| slope | θ_m = 0 | 0.02 | 0.05 | 0.1 |
+|---|---|---|---|---|
+| 0° | 1.406 [1.389, 1.429] | 1.388 [1.360, 1.406] | 1.385 [1.371, 1.414] | 1.414 [1.399, 1.436] |
+| 0.5° | 1.392 [1.374, 1.414] | 1.387 [1.367, 1.402] | 1.386 [1.366, 1.406] | 1.410 [1.393, 1.436] |
+| 1° | 1.410 [1.388, 1.430] | 1.430 [1.393, 1.456] | 1.411 [1.382, 1.437] | 1.411 [1.389, 1.433] |
+| 1.5° | 1.406 [1.389, 1.425] | 1.397 [1.385, 1.418] | 1.399 [1.384, 1.416] | 1.404 [1.377, 1.428] |
+| 2° | 1.413 [1.389, 1.434] | 1.397 [1.378, 1.422] | 1.404 [1.388, 1.436] | 1.397 [1.377, 1.413] |
+| 3° | 1.405 [1.386, 1.429] | 1.395 [1.376, 1.412] | 1.416 [1.389, 1.434] | 1.395 [1.381, 1.421] |
+
+**Zero of the 23 non-baseline cells** has a confidence interval disjoint from the
+clean baseline's. The entire grid sits between 1.385 and 1.430; every interval
+overlaps every other. This is not a weak effect, it is no effect.
+
+That is now three independent tests of the same prediction — actuation noise, the
+coarse terrain grid, and this — and all three are null. **H1 should be revised in
+the build doc, not quietly dropped.**
+
+The reason is probably that the analogy was over-extended. Daymude et al.'s
+mechanism is specific: noise "perturbs the precise balancing of forces to allow
+robots to push past one another" — it breaks a *contact deadlock* in a discrete
+model. It was never an argument that perturbation aids exploration, and this
+continuous model has no such deadlock for it to break.
+
+## 4. Idea A, H2: does the terrain transition scale with R₀?
+
+`configs/sweeps/terrain_h2_r0_scaling.toml` — λ swept 0.0375–0.60 m against R₀
+varied 7.65–48.45 cm via the state-0 wheel constants, 100 runs/cell. Because
+changing those constants also changes speed and turn rate, every row is scored
+**against its own θ_m = 0 cell**; the numbers below are degradation ratios, where
+1.00 means terrain did nothing.
+
+At θ_m = 0.4:
+
+| row | R₀ | λ = 0.0375 | 0.075 | 0.15 | 0.30 | 0.60 |
+|---|---|---|---|---|---|---|
+| R0-07.7cm | 7.65 cm | 1.049 | 1.047 | 1.021 | 1.005 | 0.990 |
+| R0-14.5cm | 14.45 cm | 1.105 | 1.140 | 1.055 | 0.985 | 0.991 |
+| R0-23.0cm | 22.95 cm | 1.400 | 1.393 | 1.357 | 0.956 | 0.914 |
+| R0-48.5cm | 48.45 cm | 1.050 | 1.274 | 1.294 | 1.065 | 1.067 |
+
+**Partially supported, and the sweep was under-powered to say more.**
+
+What holds: re-indexed by λ/R₀, every cell with λ/R₀ ≳ 1.3 sits at 0.91–1.07 —
+terrain does nothing once its correlation length exceeds the loop it is meant to
+deform. Every elevated cell has λ/R₀ ≲ 1. So R₀ *is* the scale that decides
+whether terrain bites, which is H2's substantive claim, and swarm size plays no
+part in it.
+
+What does not hold: the curves do not collapse onto λ/R₀ alone. Within
+λ/R₀ ≲ 1 the degradation ranges from 1.02 to 1.40, and it is ordered by R₀ —
+the 7.65 cm row is nearly immune while the 22.95 cm row is worst. A second length
+scale is in play, and the obvious candidate is the **axle length** (5.1 cm),
+which is what decides whether the two wheels sample meaningfully different
+traction in the first place. λ/R₀ and λ/ℓ are being varied together here and
+cannot be separated by this design.
+
+The sweep also cannot locate a *transition*, because at θ_m ≤ 0.4 there is not
+one: the largest degradation is 40% in dispersion, and every cell still reaches a
+single cluster. H2 is a statement about where aggregation **fails**, and this grid
+never gets there.
+
+**Next, and this is the concrete design H2 needs:**
+
+1. Push θ_m to 0.6–1.0, where the coarse grid showed aggregation actually
+   breaking, so there is a transition to locate rather than a slope to measure.
+2. Separate λ/R₀ from λ/ℓ by varying the axle length independently of the wheel
+   constants. Both are config fields, so this costs nothing but runs.
+3. Only then fit the transition and test whether it tracks R₀.
+
+Until that is done, H2 should be stated as "the effect vanishes for λ > R₀",
+which is supported, rather than "the transition scales with R₀", which is not yet
+tested.

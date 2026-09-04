@@ -38,6 +38,13 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--row-key", default="row")
     s.add_argument("--thresholds", nargs="*", type=float, default=[0.7, 0.8, 0.9])
     s.add_argument("--title", default=None)
+    s.add_argument(
+        "--baseline-y",
+        type=float,
+        default=None,
+        help="value of --y that is the control condition; each column is divided by it, "
+        "so the surface shows degradation relative to each row's own baseline",
+    )
 
     args = parser.parse_args(argv)
     records = load_jsonl(args.input)
@@ -96,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
             thresholds=args.thresholds,
             out=args.out,
             title=args.title,
+            baseline_y=args.baseline_y,
         )
     if args.out:
         print(f"wrote {args.out}")

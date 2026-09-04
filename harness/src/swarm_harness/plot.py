@@ -125,9 +125,22 @@ def surface(
     title: str | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
+    baseline_y=None,
 ):
     """The section-2.3 figure: one performance surface per capability row, with
-    threshold contours drawn on it."""
+    threshold contours drawn on it.
+
+    ``baseline_y`` names a value of the `y` dial that is the control condition —
+    typically the dial turned off. Each column is then divided by its own value
+    there, so the surface shows *degradation relative to that row's own
+    baseline* rather than raw performance.
+
+    Use it whenever the rows differ on clean ground. Rows that vary the
+    controller's own constants do: in the H2 sweep the largest-R0 row aggregates
+    poorly with no terrain at all, and on a shared raw colour scale it swamps
+    every other panel while saying nothing about terrain. Normalising is not
+    cosmetic there — the comparison is meaningless without it.
+    """
     rows = records.group_by([row_key]) if row_key in records.fields() else {(metric,): records}
     rows = dict(sorted(rows.items(), key=lambda kv: str(kv[0])))
 
@@ -146,6 +159,14 @@ def surface(
                 cell = sub.filter(**{x: xv, y: yv})
                 if len(cell):
                     z[i, j] = float(np.median(np.asarray(cell.column(metric), dtype=float)))
+        if baseline_y is not None:
+            if baseline_y not in ys:
+                raise ValueError(
+                    f"baseline_y={baseline_y!r} is not a value of {y}; have {ys}"
+                )
+            base = z[ys.index(baseline_y), :]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                z = np.where(base == 0, np.nan, z / base)
         grids[name] = (np.asarray(xs, dtype=float), np.asarray(ys, dtype=float), z, sub)
 
     if vmin is None:
@@ -175,13 +196,14 @@ def surface(
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
-    fig.suptitle(title or f"{metric} over ({x}, {y})", fontsize=10, wrap=True)
+    label = metric if baseline_y is None else f"{metric} / value at {y}={baseline_y}"
+    fig.suptitle(title or f"{label} over ({x}, {y})", fontsize=10, wrap=True)
     # Reserve room around the axes before the colorbar is attached: under them
     # so the upper-bound stamp cannot land on the tick labels, and at the right
     # so the colorbar and its label are not clipped.
     fig.subplots_adjust(bottom=0.22, top=0.86, right=0.88)
     if mesh is not None:
-        fig.colorbar(mesh, ax=list(axes), label=metric, fraction=0.03, pad=0.02)
+        fig.colorbar(mesh, ax=list(axes), label=label, fraction=0.03, pad=0.02)
     _stamp(fig, records, y=0.02)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)

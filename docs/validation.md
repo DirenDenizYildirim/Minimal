@@ -113,101 +113,107 @@ Five hypotheses, all wrong. Kept because three of them are useful sensitivity
 results in their own right, and because the sequence is a fair record of how the
 real cause was found — which was not by instrumenting the simulator.
 
+All five were re-run at the corrected inter-wheel distance, and all are reported
+below with the aggregation criterion the gate settled on (`ever_single_cluster`)
+alongside dispersion, since that is what changed the verdict.
+
 ### H-A: angular aliasing of the sensor — **ruled out**
 
-The state-1 constants (1.0, −1.0) spin the body at 2·v_max/ℓ = 4.83 rad/s, which
-at dt = 0.1 s is 27.7° per control step. A body at 0.3 m subtends only 14.2°, so
-a zero-width ray can step straight over its target — and the sparser the swarm
-the worse it gets, which matches the n-dependence exactly.
+The state-1 constants spin the body at ω₁ = 5.02 rad/s, which at dt = 0.1 s is
+28.8° per control step, while a body at 20 cm subtends only 21°. A zero-width ray
+can step over its target — and the sparser the swarm, the worse it gets.
 
-`configs/sweeps/timestep_fov_gate.toml` (30 runs/cell — a diagnostic, not a
-result). Median final dispersion:
+`configs/sweeps/timestep_fov_gate.toml`, median final dispersion:
 
-| n | dt | ray (fov 0) | fov 0.05 | fov 0.10 | fov 0.20 |
+| n | dt | ray | fov 0.05 | fov 0.10 | fov 0.20 |
 |---|---|---|---|---|---|
-| 2 | 0.10 | 14.18 | 13.83 | 14.74 | 16.55 |
-| 2 | 0.01 | **6.50** | 12.14 | 11.87 | 12.64 |
-| 5 | 0.10 | 6.07 | 5.46 | 5.79 | 4.57 |
-| 5 | 0.01 | 5.49 | 6.44 | 5.51 | 6.12 |
-| 20 | 0.10 | 1.40 | 1.39 | 1.39 | 1.31 |
-| 20 | 0.01 | 1.57 | 1.45 | 1.43 | 1.36 |
+| 2 | 0.10 | 5.83 | 7.02 | 5.97 | 6.36 |
+| 2 | 0.01 | 8.02 | 5.28 | 6.05 | 6.46 |
+| 5 | 0.10 | 5.28 | 5.81 | 5.02 | 4.88 |
+| 20 | 0.10 | 1.39 | 1.40 | 1.37 | 1.34 |
+| 20 | 0.01 | 1.42 | 1.40 | 1.41 | 1.33 |
 
-A ten-fold finer timestep moves n = 2 from 14.2 to 6.5 — better, nowhere near
-the ~1 that aggregation means. n = 5 does not move. n = 20 is essentially
-unaffected by either dial, which is the reassuring part: the regime the project
-works in is not sitting on a numerical cliff.
+No trend in either dial. n = 20 is unaffected throughout, which is the
+reassuring part: the regime the project works in is not on a numerical cliff.
 
 ### H-B: it is a time budget — **ruled out**
 
-A robot that sees nothing traces a *closed* circle and never translates; only
-rotating on the spot relocates the centre of its next circle. Displacement
-accumulates one sighting at a time, and with n = 2 sightings are rare. A proof
-is asymptotic; τ = 600 s is not.
-
-`configs/sweeps/small_n_time_gate.toml`, 100 runs/cell. Median final dispersion:
+`configs/sweeps/small_n_time_gate.toml`, 100 runs/cell. Median final dispersion
+/ share ever forming a single cluster:
 
 | n | τ = 600 | τ = 3 000 | τ = 12 000 | τ = 48 000 |
 |---|---|---|---|---|
-| 2 | 12.98 | 6.95 | 19.07 | 6.53 |
-| 3 | 12.13 | 11.29 | 12.55 | 11.48 |
-| 4 | 8.30 | 8.94 | 9.12 | 8.82 |
-| 5 | 5.56 | 5.97 | 6.44 | 6.59 |
-| 10 | 1.81 | 1.87 | 1.93 | 1.87 |
+| 2 | 8.84 / 0.88 | 24.99 / 0.89 | 6.57 / 0.89 | 7.13 / 0.89 |
+| 3 | 10.96 / 0.25 | 14.01 / 0.29 | 9.95 / 0.29 | 10.16 / 0.29 |
+| 4 | 7.89 / 0.53 | 7.90 / 0.56 | 8.42 / 0.56 | 8.14 / 0.56 |
+| 5 | 5.30 / 0.98 | 5.00 / 1.00 | 5.83 / 1.00 | 6.25 / 1.00 |
+| 10 | 1.68 / 1.00 | 1.68 / 1.00 | 1.71 / 1.00 | 1.67 / 1.00 |
 
-Flat in τ across eighty-fold. Small swarms are not slow to aggregate; they do
-not aggregate.
+Flat in τ across eighty-fold: whatever a swarm is going to do, it has done by
+600 s.
+
+**An open observation.** n = 3 and n = 4 reach a single cluster far less often
+than either n = 2 or n = 5, and the dip does not close with time. The tempting
+reading is Daymude et al.'s deadlock, which they prove for n > 3 under uniform
+deterministic motion. But the simpler explanation is combinatorial: "all robots
+in one connected component" is a harder event for three or four robots than for
+two, and easier again once density rises. Distinguishing the two would need the
+deadlock configurations checked directly, and nothing downstream depends on it.
+Recorded, not claimed.
 
 ### H-C: missing baseline actuation noise — **ruled out**
 
-Recorded in full in `docs/decisions/0004-baseline-actuation-noise.md`. Adding
-per-wheel Gaussian noise leaves small n where it was and mildly *hurts* n = 20
-(share of runs ending as a single cluster falls from 0.94 to 0.66 at 5% noise).
-The dial is kept, defaulted to zero, and H1 is now an open question rather than
-an assumption carried over from Daymude et al.
+`configs/sweeps/small_n_noise_probe.toml`. Median final dispersion:
 
-Initial separation was checked at the same time and is also not the cause: at
-n = 2, starting the pair anywhere from 0.05 m (in contact) to 1.2 m (8·R₀) gives
-final dispersion 12.6–16.4 and a single cluster in under 7% of runs. Started
-touching, they separate.
+| `wheel_noise` | n = 2 | n = 5 | n = 20 |
+|---|---|---|---|
+| 0.00 | 6.40 | 5.36 | 1.41 |
+| 0.02 | 11.61 | 5.22 | 1.40 |
+| 0.05 | 12.01 | 4.64 | 1.39 |
+| 0.20 | 10.92 | 5.55 | 1.45 |
+
+No benefit anywhere, and n = 20 reaches a single cluster in every run at every
+noise level. Recorded in full in
+`docs/decisions/0004-baseline-actuation-noise.md`.
+
+Initial separation was checked alongside
+(`configs/sweeps/small_n_start_radius_probe.toml`) and is also not the cause: at
+n = 2 the pair reaches a single cluster in 86–100% of runs at every start radius
+from 0.05 m (in contact) to 1.2 m (8·R₀), while final dispersion stays at 8–12
+throughout. They find each other and then drift apart, wherever they begin.
 
 ### H-D: the sensor cone is too narrow — **refuted by the source**
 
-This one looked strong and was wrong. Recorded because the measurement is real
-and the reasoning is worth not repeating.
+This one looked strong and was wrong twice over.
 
-Sweeping the sensor's half-FOV far wider than the first diagnostic, at 60
-runs/cell (median final dispersion / share ending as a single cluster):
+`configs/sweeps/sensor_fov_gate.toml`, median final dispersion / share ever
+forming a single cluster:
 
 | half-FOV | n = 2 | n = 5 | n = 20 |
 |---|---|---|---|
-| 0.0° (bare ray) | 16.85 / 0.03 | 6.06 / 0.02 | 1.41 / 0.73 |
-| 17.2° | 18.72 / 0.02 | 5.29 / 0.05 | 1.30 / 0.98 |
-| 45.8° | 17.81 / 0.00 | 2.69 / 0.55 | 1.19 / 1.00 |
-| 68.8° | 15.95 / 0.00 | **1.13 / 1.00** | 1.17 / 1.00 |
-| 90.0° | **1.00 / 1.00** | 1.13 / 1.00 | 1.21 / 1.00 |
+| 0.0° (bare ray) | 8.28 / 0.90 | 5.41 / 0.97 | 1.41 / 1.00 |
+| 17.2° | 8.36 / 0.72 | 4.57 / 1.00 | 1.31 / 1.00 |
+| 28.6° | 11.06 / 0.45 | 4.10 / 1.00 | 1.25 / 1.00 |
+| 45.8° | 15.64 / 0.17 | 2.89 / 1.00 | 1.19 / 1.00 |
+| 68.8° | 14.19 / 0.18 | 1.14 / 1.00 | 1.16 / 1.00 |
+| 90.0° | 1.00 / 1.00 | 1.13 / 1.00 | 1.21 / 1.00 |
 
-Monotone, and it closes the gap completely. The mechanism was plausible too:
-state-0 wheel speeds are both negative, so a blind robot drives *backwards* while
-its sensor faces forwards, and a wide cone makes "I see nothing" a reliable
-statement that the other robot is behind me.
+Wrong for the first reason: **it is not what Gauci did.** The paper casts a ray
+from the e-puck's front and takes the first body it intersects — a zero-width
+ray, exactly what was already implemented. This table measures a *deviation from*
+the published model, not a correction toward it.
 
-**It is not what Gauci did.** The paper casts a ray from the e-puck's front and
-takes the first body it intersects — a zero-width ray, which is exactly what was
-already implemented. So this table measures a *deviation from the published
-model*, not a correction toward it, and adopting it would have been fitting the
-model to the answer while believing the opposite.
+Wrong for the second reason: under the aggregation criterion the gate eventually
+settled on, widening the cone makes n = 2 **worse**, not better — the share of
+pairs that ever reach a single cluster falls from 0.90 to 0.17 before the
+degenerate 90° case, where both robots simply freeze on sight and never move.
+The apparent "recovery" was an artefact of scoring dispersion at τ.
 
-It is kept as a committed sweep (`configs/sweeps/sensor_fov_gate.toml`) because
-it is a genuine sensitivity result: at n ≥ 10 the field of view barely matters
-(1.41 → 1.17 across the whole range), which is worth knowing for the hardware
-track, where a real camera is not a ray.
+Kept as a committed sweep because it is a genuine sensitivity result: at n ≥ 10
+the field of view barely matters, which is worth knowing for the hardware track,
+where a real camera is not a ray.
 
 ### H-E: discretisation of the sensor reading — **ruled out**
-
-With the sensor model confirmed, the timestep came back into the frame. In state
-1 the robot rotates at ω₁ = 5.02 rad/s, so at dt = 0.1 s it turns **28.8° per
-control step** while a body at 20 cm subtends only 21°; the ray can sweep past
-its target between two samples.
 
 `configs/sweeps/timestep_convergence.toml`, 100 runs/cell, median final
 dispersion at n = 2:
@@ -220,17 +226,14 @@ dispersion at n = 2:
 | 0.100 | 28.8 | 8.84 | 6.16 |
 
 Fifty-fold refinement changes nothing, and if anything the coarse step does
-better. Independently, the paper states its control cycle **was** 0.1 s, with
+better. Independently, the paper states its control cycle **was** 0.1 s with
 physics updated ten times per cycle — and since integration here is exact-arc,
-substepping a constant-wheel-speed arc is a no-op. So the timestep is neither
-wrong nor load-bearing.
+substepping a constant-wheel-speed arc is a no-op. The timestep is neither wrong
+nor load-bearing.
 
 ### H-F: the criterion was wrong — **this was it**
 
 See the gate status above and `docs/decisions/0005-aggregation-criterion.md`.
-The pair reaches contact in 93% of runs and does not stay; the literature scores
-reaching, not staying, and the theorem being reproduced had itself been
-disproven.
 
 ### What the five wrong hypotheses were worth
 

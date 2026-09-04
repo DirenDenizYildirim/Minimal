@@ -8,20 +8,23 @@ submitted.
 |---|---|---|
 | 1–3 | Tier-1 sim; reproduce Gauci constants and scaling. **Gate.** | Done. **Gate passed**, with the small-n criterion corrected — see `docs/validation.md` and ADR 0005. |
 | 3 | Occlusion shakedown | `configs/sweeps/occlusion_shakedown.toml`, M0 vs M1-hysteresis. Runs; re-run once the gate passes. |
-| 4–7 | Terrain generator; Idea A sweep; H2 against `R0`; anisotropy lemma | Terrain model and dials done and tested. `configs/sweeps/terrain_idea_a.toml`. H2's `R0` sweep and the H3 slope-sensor row are not written yet. |
+| 4–7 | Terrain generator; Idea A sweep; H2 against `R0`; anisotropy lemma | Terrain model, dials and the two-dial surface done. **H1 tested three ways and null** — needs revising in the build doc. **H2 partially supported**: the effect vanishes for λ > R₀, but the sweep was under-powered to locate a transition. H3 (slope-sensor row) and the anisotropy lemma not started. |
 | 7–11 | Pursuer family; Idea B rows; capture-rate surfaces | `pursuer.rs` holds parameters only. Sensor already returns `AgentKind::Pursuer` and the S = 3 / S = 5 encodings for rows B1–B4 are implemented and tested. |
 | 11–15 | ARGoS cells; hardware | Not started. |
 | 15+ | Write Paper 1 | — |
 
 ## Next actions, in order
 
-1. **Idea A, H2.** Add the companion sweep that varies the four wheel constants —
-   and hence `R0` — at fixed correlation length `λ`, and check that the terrain
-   transition tracks `R0` rather than swarm size. This is the hypothesis with a
-   theorem attached, so it is the one worth doing next.
-2. **Idea A, H1, properly.** The coarse grid does not support it and neither did
-   the actuation-noise probe. Run a fine sweep at small α (0–3°) and small θ_m
-   (0–0.1), ≥ 100 runs/cell, and either support it or revise it in the build doc.
+1. **Idea A, H2, properly powered.** The first sweep showed terrain does nothing
+   once λ > R₀ — H2's substantive claim — but could not locate a *transition*,
+   because at θ_m ≤ 0.4 aggregation never actually fails. Re-run with θ_m pushed
+   to 0.6–1.0, and separate λ/R₀ from λ/ℓ by varying the axle length
+   independently of the wheel constants (both are config fields, so this costs
+   only runs). Only then fit the transition. Details in `docs/findings.md` §4.
+2. **Revise H1 in the build doc.** Three independent null results
+   (`docs/findings.md` §3). The Daymude analogy was over-extended: their noise
+   breaks a *contact deadlock* in a discrete model, and this continuous model has
+   no such deadlock. This is a doc change, not more runs.
 3. **Idea A, H3.** Needs a slope-detecting sensor state (S = 4: binary LOS × a
    tilt bit), plus the eight-constant row that goes with it.
 4. **Idea B.** Implement the pursuer step — search phase under finite `r_p`,
