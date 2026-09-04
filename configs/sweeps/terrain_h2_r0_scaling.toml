@@ -1,0 +1,58 @@
+# IDEA A, H2 — does the terrain transition scale with R0?
+#
+# H2 (build doc): "aggregation fails when the trajectory deformation over one
+# state-0 circle exceeds a fraction of the circle radius R0 — i.e. the transition
+# should scale with R0, not with swarm scale. Test by sweeping the four constants
+# (which change R0) and checking the transition tracks R0."
+#
+# The traction field deforms the state-0 loop only when the two wheels sample
+# meaningfully different values, so the deformation depends on the correlation
+# length LAMBDA relative to the loop it is deforming. If H2 holds, performance
+# should collapse onto lambda/R0 rather than depending on lambda and R0
+# separately. That is a prediction that can fail, which is the point.
+#
+# Two things are varied against each other:
+#   * lambda directly, 0.0375 m to 0.60 m;
+#   * R0, via the state-0 wheel constants (vr0 fixed at -1.0, vl0 varied), giving
+#     R0 = 7.65, 14.45, 22.95 and 48.45 cm.
+#
+# CONFOUND, and how it is handled: changing vl0 also changes forward speed and
+# turn rate, so the rows differ on flat ground too. Every row therefore includes
+# its own theta_m = 0 cell, and the analysis must report degradation RELATIVE TO
+# EACH ROW'S OWN clean baseline, never raw dispersion across rows.
+#
+# These rows are hand-picked points, not a grid search, so they are labelled
+# hand_designed and the harness will stamp them as upper bounds. That stamp is
+# about minima; here the rows are not minimality claims at all.
+
+name = "terrain-h2-r0-scaling"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.0375, 0.075, 0.15, 0.30, 0.60]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.2, 0.4]
+
+[[rows]]
+label = "R0-07.7cm"
+[rows.overrides]
+controller = { kind = "gauci", constants = [-0.5, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "R0-14.5cm"
+[rows.overrides]
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "R0-23.0cm"
+[rows.overrides]
+controller = { kind = "gauci", constants = [-0.8, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "R0-48.5cm"
+[rows.overrides]
+controller = { kind = "gauci", constants = [-0.9, -1.0, 1.0, -1.0], provenance = "hand_designed" }

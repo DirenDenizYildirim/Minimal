@@ -79,25 +79,33 @@ as provisional. Comparisons *between* cells — which is what the whole project 
 
 ## 1. Aggregation in a clean arena
 
-`configs/sweeps/gauci_scaling.toml` — 100 runs/cell, n = 20 default arena,
-τ = 600 s, dt = 0.1 s.
+`configs/sweeps/gauci_scaling.toml` — 100 runs/cell, τ = 600 s, dt = 0.1 s, at
+the corrected inter-wheel distance. The simulator reports R₀ = **14.45 cm**,
+matching the published figure exactly.
 
-| n | dispersion at t = 0 | dispersion at τ | ratio | share of time single cluster |
-|---|---|---|---|---|
-| 2 | 8.09 | **12.98** | **1.60** | 0.08 |
-| 5 | 16.93 | **5.56** | 0.33 | 0.03 |
-| 10 | 18.57 | 1.81 | 0.098 | 0.57 |
-| 20 | 19.22 | 1.40 | 0.073 | 0.77 |
-| 50 | 19.20 | 1.20 | 0.063 | 0.89 |
-| 100 | 19.84 | 1.15 | 0.058 | 0.90 |
+| n | dispersion at t = 0 | dispersion at τ | ratio | **ever one cluster** | one cluster at τ | share of time |
+|---|---|---|---|---|---|---|
+| 2 | 8.09 | 8.84 | 1.09 | **0.88** | 0.15 | 0.10 |
+| 5 | 16.93 | 5.30 | 0.31 | **0.98** | 0.09 | 0.05 |
+| 10 | 18.57 | 1.68 | 0.090 | **1.00** | 0.72 | 0.67 |
+| 20 | 19.22 | 1.43 | 0.074 | **1.00** | 0.78 | 0.80 |
+| 50 | 19.20 | 1.20 | 0.063 | **1.00** | 0.93 | 0.87 |
+| 100 | 19.84 | 1.15 | 0.058 | **1.00** | 0.97 | 0.90 |
 
-For n ≥ 10 this is what aggregation looks like: the swarm contracts by more than
-an order of magnitude and lands close to the packed-cluster value of ~1, getting
-closer as n grows (a larger cluster is better approximated by the uniform disk
-the normaliser assumes).
+Read the **ever** column: that is the criterion the literature uses (ADR 0005).
+Every swarm of ten or more aggregates in every run, and small swarms aggregate in
+88–98% of runs, against the ~95.8% reported for this controller at n = 2.
 
-For n = 2 and n = 5 it does not aggregate. n = 2 ends *further apart* than it
-started (0.21 m → 0.27 m centre to centre).
+Read the dispersion column for how *tightly*: an order of magnitude of
+contraction at n ≥ 10, approaching the packed-cluster value of ~1 as n grows,
+which is expected — a larger cluster is better approximated by the uniform disk
+the normaliser assumes.
+
+The two small-n columns diverge because nothing in the controller holds a pair
+together once it arrives. At contact the other robot subtends about 60°, so a
+robot is frozen for a sixth of each rotation and backing away for the rest; a
+dense cluster subtends far more, robots are frozen most of the time, and they
+accumulate. Same controller, opposite outcome, and the reason is angular size.
 
 ## 2. Diagnosing the small-n failure
 

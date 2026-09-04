@@ -1,0 +1,37 @@
+# IDEA A, H1 — does a *small* amount of terrain help?
+#
+# H1 (build doc): "small alpha and theta_m help, as motion noise did in Daymude
+# et al." The coarse Idea A grid does not support it: both dials degrade
+# monotonically. Neither did the actuation-noise probe
+# (docs/decisions/0004-baseline-actuation-noise.md).
+#
+# Both of those read H1 off the corner of a grid built for something else. This
+# sweep tests it on its own terms, at the small values H1 is actually about, with
+# a dense zero-neighbourhood and 200 runs/cell — the effect, if it exists, is
+# small enough that 100 runs left it inside the spread.
+#
+# Note that Daymude et al.'s mechanism is specific: noise "perturbs the precise
+# balancing of forces to allow robots to push past one another", i.e. it breaks a
+# contact deadlock. It is not an exploration argument. If H1 fails here, the
+# honest conclusion is that the analogy does not carry from their discrete model
+# to this continuous one, and the build doc should say so.
+
+name = "terrain-h1-fine"
+base = "../gauci_baseline.toml"
+runs_per_cell = 200
+
+[[axis]]
+path = "terrain.slope_angle"
+# radians: 0, 0.5, 1, 1.5, 2, 3 degrees
+values = [0.0, 0.008727, 0.017453, 0.026180, 0.034907, 0.052360]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.02, 0.05, 0.1]
+
+[[rows]]
+label = "M0-gauci"
+[rows.overrides]
+"terrain.slope_gain" = 0.4
+"terrain.correlation_length" = 0.1445
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
