@@ -9,16 +9,26 @@ use crate::sensor::SensorConfig;
 use crate::terrain::TerrainConfig;
 use serde::{Deserialize, Serialize};
 
-/// e-puck body and drivetrain constants.
+/// e-puck body and drivetrain constants, as modelled in Enki by Gauci et al.
+/// (2014): "the body of an e-puck is modeled as a disk of diameter 7.4 cm and
+/// mass 152 g, with an inter-wheel distance of 5.1 cm, and the velocities of the
+/// left and right wheels can be set independently in [-12.8, 12.8] cm/s".
 ///
-/// **These are the numbers the week-1 gate must confirm against Gauci et al.
-/// (2014) IJRR before any absolute figure is quoted.** See `docs/validation.md`.
+/// These three numbers are not free parameters. Together with the published
+/// wheel constants they reproduce all three of the paper's derived quantities
+/// exactly -- turn radius 14.45 cm, omega_0 = 0.75 rad/s, omega_1 = 5.02 rad/s
+/// -- which `controller::tests::published_derived_quantities_reproduce` checks.
+/// Changing any of them breaks that check, which is the point.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct RobotConfig {
     /// Body radius in metres.
     pub radius: f64,
     /// Wheel separation in metres.
+    ///
+    /// 0.051, not 0.053. The wrong value shifts `R0` -- the controller's only
+    /// intrinsic length scale, and the quantity H2 says the terrain transition
+    /// scales with -- by 4%.
     pub axle_length: f64,
     /// Maximum wheel speed in m/s; table constants are normalised to this.
     pub max_wheel_speed: f64,
@@ -28,7 +38,7 @@ impl Default for RobotConfig {
     fn default() -> Self {
         Self {
             radius: 0.037,
-            axle_length: 0.053,
+            axle_length: 0.051,
             max_wheel_speed: 0.128,
         }
     }

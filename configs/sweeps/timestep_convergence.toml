@@ -1,0 +1,33 @@
+# WEEK-1 GATE, decisive test — does n = 2 aggregate as dt -> 0?
+#
+# The sensor model is now confirmed, not guessed: Gauci et al. cast a ray from
+# the e-puck's front and take the first body it intersects. So the zero-width
+# ray is right, and the earlier wide-cone lead was wrong.
+#
+# That puts the timestep back in the frame, and the first diagnostic did not
+# push it far enough. In state 1 the robot rotates at omega_1 = 5.02 rad/s. At
+# dt = 0.1 s that is 28.8 degrees per control step, while a body at 20 cm
+# subtends only 21 degrees: the ray can sweep straight past its target between
+# two samples. The paper's n = 2 proof is a continuous-time argument, where the
+# sensor is read continuously and no crossing is ever missed.
+#
+# If aggregation appears as dt falls, the discrepancy is discretisation of the
+# sensor, and the control period is a modelling parameter to pin down rather
+# than a bug. Two trial lengths, because "finite time" in the proof might be
+# long.
+
+name = "timestep-convergence"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "swarm.n"
+values = [2, 5]
+
+[[axis]]
+path = "sim.dt"
+values = [0.1, 0.05, 0.02, 0.01, 0.005, 0.002]
+
+[[axis]]
+path = "sim.duration"
+values = [600.0, 6000.0]

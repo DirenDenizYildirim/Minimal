@@ -10,9 +10,12 @@
 # docs/validation.md.
 
 [robot]
-# e-puck. VERIFY against Gauci et al. Table 1 before quoting absolute numbers.
+# e-puck as modelled in Enki by Gauci et al. (2014): disk of diameter 7.4 cm,
+# inter-wheel distance 5.1 cm, wheel velocities in [-12.8, 12.8] cm/s. Verified
+# against the paper; these reproduce its published R0 = 14.45 cm, omega_0 = 0.75
+# and omega_1 = 5.02 rad/s exactly. Not free parameters.
 radius = 0.037
-axle_length = 0.053
+axle_length = 0.051
 max_wheel_speed = 0.128
 
 [swarm]

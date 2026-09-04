@@ -155,7 +155,7 @@ mod tests {
         let mut rng = rng_from(0);
         let cmd = [0.1, -0.05];
         assert_eq!(
-            t.apply(&Pose::new(3.0, -2.0, 0.9), 0.053, cmd, &mut rng),
+            t.apply(&Pose::new(3.0, -2.0, 0.9), 0.051, cmd, &mut rng),
             cmd
         );
     }
@@ -173,7 +173,7 @@ mod tests {
         let mut differed = 0;
         for i in 0..200 {
             let pose = Pose::new(i as f64 * 0.031, i as f64 * -0.017, i as f64 * 0.1);
-            let (l, r) = pose.wheel_contacts(0.053);
+            let (l, r) = pose.wheel_contacts(0.051);
             if (t.traction(l) - t.traction(r)).abs() > 1e-3 {
                 differed += 1;
             }
@@ -188,7 +188,7 @@ mod tests {
     fn equal_wheel_scaling_would_not_change_curvature() {
         // Documents *why* the v1 model failed: scaling both wheels by the same
         // factor leaves the turn radius invariant, so the circle is unchanged.
-        let (vl, vr, axle) = (-0.7 * 0.128, -0.128, 0.053);
+        let (vl, vr, axle) = (-0.7 * 0.128, -0.128, 0.051);
         let r_nominal = crate::robot::turn_radius(vl, vr, axle).unwrap();
         let r_scaled = crate::robot::turn_radius(0.4 * vl, 0.4 * vr, axle).unwrap();
         assert!((r_nominal - r_scaled).abs() < 1e-12);
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn per_wheel_traction_does_change_curvature() {
-        let (vl, vr, axle) = (-0.7 * 0.128, -0.128, 0.053);
+        let (vl, vr, axle) = (-0.7 * 0.128, -0.128, 0.051);
         let r_nominal = crate::robot::turn_radius(vl, vr, axle).unwrap();
         let r_skewed = crate::robot::turn_radius(0.8 * vl, 1.1 * vr, axle).unwrap();
         assert!(
@@ -234,7 +234,7 @@ mod tests {
     /// wrong thing. What has to change for terrain to break symmetry is the
     /// shape that remains once the drift is taken out.
     fn drift_removed_extent(t: &Terrain) -> (f64, f64) {
-        let (axle, vmax): (f64, f64) = (0.053, 0.128);
+        let (axle, vmax): (f64, f64) = (0.051, 0.128);
         let cmd: [f64; 2] = [-0.7 * vmax, -vmax];
         let omega: f64 = (cmd[1] - cmd[0]) / axle;
         let steps = 4000usize;

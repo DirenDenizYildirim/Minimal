@@ -62,8 +62,16 @@ pub struct RunRecord {
     /// are the stable readouts.
     pub single_cluster: bool,
     /// First sample time at which the swarm was a single cluster, if ever.
-    /// Also noisy — it fires on the first transient chain.
     pub time_to_first_single_cluster: Option<f64>,
+    /// Whether the swarm was *ever* a single cluster during the trial.
+    ///
+    /// This — not `single_cluster` at tau — is the criterion the aggregation
+    /// literature actually uses. Steinberg and Solovey (2024) define aggregation
+    /// as the union of discs around the robots becoming **connected**; the
+    /// definition does not require them to stay connected. For a small swarm the
+    /// two differ enormously: a pair reaches contact in ~90% of runs and is
+    /// touching at tau in ~10%. See `docs/decisions/0005-aggregation-criterion.md`.
+    pub ever_single_cluster: bool,
     /// Share of samples at which the swarm was a single cluster. Robust to the
     /// flicker above, and the metric to use for time-resolved comparisons.
     pub fraction_time_single_cluster: f64,
@@ -321,6 +329,7 @@ impl World {
             final_largest_cluster_fraction: final_sample.largest_cluster_fraction,
             single_cluster: final_sample.clusters == 1,
             time_to_first_single_cluster: time_to_single,
+            ever_single_cluster: time_to_single.is_some(),
             fraction_time_single_cluster: samples_single as f64 / samples_taken as f64,
             realised_fn_rate: self.tally.realised_fn_rate(),
             realised_fp_rate: self.tally.realised_fp_rate(),
@@ -459,11 +468,25 @@ mod tests {
         let rec = World::new(cfg.clone(), 0).unwrap().run();
         let r0 = rec.state0_turn_radius.unwrap();
 
-        let mut w = World::new(cfg, 0).unwrap();
+        let mut w = World::new(cfg.clone(), 0).unwrap();
         let start = w.poses()[0];
-        let centre = start.p
-            + start.heading().perp()
-                * (0.5 * (-0.7 + -1.0) * 0.128 * 0.053 / ((-1.0 + 0.7) * 0.128));
+        // The instantaneous centre of rotation sits at R0, ninety degrees
+        // counter-clockwise of the heading -- which is how the paper describes
+        // it. Derived from the config, not hardcoded, so a parameter change
+        // cannot silently make this test vacuous.
+        let (vl, vr) = {
+            let c = crate::GAUCI_CONSTANTS;
+            (
+                c[0] * cfg.robot.max_wheel_speed,
+                c[1] * cfg.robot.max_wheel_speed,
+            )
+        };
+        let signed_r = 0.5 * (vl + vr) * cfg.robot.axle_length / (vr - vl);
+        assert!(
+            signed_r > 0.0,
+            "ICR must be counter-clockwise of the heading"
+        );
+        let centre = start.p + start.heading().perp() * signed_r;
         for _ in 0..12_000 {
             w.step();
             let d = (w.positions()[0] - centre).norm();
@@ -516,6 +539,32 @@ mod tests {
             .sum::<f64>()
             / 5.0;
         assert!(blinded > clean, "clean {clean} vs 90% dropout {blinded}");
+    }
+
+    #[test]
+    fn reaching_a_cluster_and_being_one_at_tau_are_different_measurements() {
+        // The distinction the small-n gate turned on. A pair reaches contact in
+        // most runs and is almost never still touching at tau, because nothing
+        // in the controller holds two robots together once they arrive.
+        let mut cfg = short(2, 600.0);
+        cfg.metrics.sample_interval = 1.0;
+        cfg.sim.seed = 20260904;
+        let recs: Vec<_> = (0..40)
+            .map(|i| World::new(cfg.clone(), i).unwrap().run())
+            .collect();
+        let ever = recs.iter().filter(|r| r.ever_single_cluster).count();
+        let at_tau = recs.iter().filter(|r| r.single_cluster).count();
+        assert!(ever > 3 * at_tau, "ever {ever} vs at tau {at_tau}");
+        assert!(
+            ever * 4 > recs.len() * 3,
+            "pairs should reach contact in most runs: {ever}/40"
+        );
+        for r in &recs {
+            assert_eq!(
+                r.ever_single_cluster,
+                r.time_to_first_single_cluster.is_some()
+            );
+        }
     }
 
     #[test]

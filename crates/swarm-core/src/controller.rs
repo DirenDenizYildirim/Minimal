@@ -375,6 +375,52 @@ mod tests {
         assert!(TableController::new(cap0, entries).is_err());
     }
 
+    /// The published behaviour of the Gauci controller, stated as three derived
+    /// quantities rather than as the four constants: "when no robot is seen, a
+    /// robot will rotate around a point 90 degrees counter-clockwise from its
+    /// line-of-sight sensor and 14.45 cm away at a speed of omega_0 = -0.75
+    /// rad/s; when a robot is seen, it will rotate clockwise in place at a speed
+    /// of omega_1 = -5.02 rad/s."
+    ///
+    /// This is the strongest single check in the week-1 gate: it ties the wheel
+    /// constants, the body geometry and the kinematics together against numbers
+    /// nobody here chose. It is what caught the inter-wheel distance being 5.3 cm
+    /// instead of 5.1.
+    #[test]
+    fn published_derived_quantities_reproduce() {
+        let robot = crate::config::RobotConfig::default();
+        let c = TableController::gauci(crate::GAUCI_CONSTANTS).unwrap();
+        let (vmax, axle) = (robot.max_wheel_speed, robot.axle_length);
+
+        let omega = |e: Entry| (e.wheels[1] - e.wheels[0]) * vmax / axle;
+        let state0 = c.act(0, 0, 0);
+        let state1 = c.act(1, 0, 0);
+
+        let r0 = crate::robot::turn_radius(state0.wheels[0] * vmax, state0.wheels[1] * vmax, axle)
+            .expect("state 0 is a circle, not a straight line");
+        assert!(
+            (r0 - 0.1445).abs() < 5e-5,
+            "turn radius {r0} m, published 0.1445 m"
+        );
+        assert!(
+            (omega(state0) + 0.75).abs() < 5e-3,
+            "omega_0 = {}",
+            omega(state0)
+        );
+        assert!(
+            (omega(state1) + 5.02).abs() < 5e-3,
+            "omega_1 = {}",
+            omega(state1)
+        );
+
+        // Both are clockwise, and state 1 is a rotation on the spot: no translation.
+        assert!(omega(state0) < 0.0 && omega(state1) < 0.0);
+        assert!((state1.wheels[0] + state1.wheels[1]).abs() < 1e-12);
+        // State 0 translates backwards along the heading, which is what makes
+        // "I see nothing" informative about where the other robot is not.
+        assert!(state0.wheels[0] + state0.wheels[1] < 0.0);
+    }
+
     #[test]
     fn only_enumerated_rows_are_tight() {
         assert!(Provenance::Enumerated.is_tight());

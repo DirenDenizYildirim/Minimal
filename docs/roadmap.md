@@ -6,7 +6,7 @@ submitted.
 
 | Weeks | Build doc | Repository state |
 |---|---|---|
-| 1–3 | Tier-1 sim; reproduce Gauci constants and scaling. **Gate.** | Simulator, CLI, sweep harness and metrics done. `configs/sweeps/gauci_scaling.toml`. **Gate not yet passed** — see `docs/validation.md`. |
+| 1–3 | Tier-1 sim; reproduce Gauci constants and scaling. **Gate.** | Done. **Gate passed**, with the small-n criterion corrected — see `docs/validation.md` and ADR 0005. |
 | 3 | Occlusion shakedown | `configs/sweeps/occlusion_shakedown.toml`, M0 vs M1-hysteresis. Runs; re-run once the gate passes. |
 | 4–7 | Terrain generator; Idea A sweep; H2 against `R0`; anisotropy lemma | Terrain model and dials done and tested. `configs/sweeps/terrain_idea_a.toml`. H2's `R0` sweep and the H3 slope-sensor row are not written yet. |
 | 7–11 | Pursuer family; Idea B rows; capture-rate surfaces | `pursuer.rs` holds parameters only. Sensor already returns `AgentKind::Pursuer` and the S = 3 / S = 5 encodings for rows B1–B4 are implemented and tested. |
@@ -15,17 +15,22 @@ submitted.
 
 ## Next actions, in order
 
-1. **Close the week-1 gate.** n = 2 does not aggregate; the diagnosis and the
-   candidate fix are in `docs/validation.md`. Nothing downstream is trustworthy
-   until this is closed, because every hostility result is a comparison against
-   the clean-arena baseline.
-2. Re-run the occlusion shakedown at the settled timestep and sensor model.
-3. Idea A: add the H2 companion sweep (vary the four wheel constants, and hence
-   `R0`, at fixed correlation length `λ`; check the transition tracks `R0` rather
-   than swarm size). Add the H3 row, which needs a slope-detecting sensor state.
-4. Idea B: implement the pursuer step — search phase under finite `r_p`,
+1. **Idea A, H2.** Add the companion sweep that varies the four wheel constants —
+   and hence `R0` — at fixed correlation length `λ`, and check that the terrain
+   transition tracks `R0` rather than swarm size. This is the hypothesis with a
+   theorem attached, so it is the one worth doing next.
+2. **Idea A, H1, properly.** The coarse grid does not support it and neither did
+   the actuation-noise probe. Run a fine sweep at small α (0–3°) and small θ_m
+   (0–0.1), ≥ 100 runs/cell, and either support it or revise it in the build doc.
+3. **Idea A, H3.** Needs a slope-detecting sensor state (S = 4: binary LOS × a
+   tilt bit), plus the eight-constant row that goes with it.
+4. **Idea B.** Implement the pursuer step — search phase under finite `r_p`,
    `p_lock = 1/(1 + κ·n_local)`, the three targeting rules — and switch the
    primary metric to capture rate per unit time, normalised by swarm size.
+5. **Week-3 shakedown, finish the job.** The hand-written hysteresis row showed a
+   consistent gain, so run the eight-constant search it was meant to justify.
+6. Fold the impossibility result into the framing (`docs/literature-corrections.md`),
+   since `c*(θ)` now has to be a function of swarm size as well as environment.
 
 ## Deliberately deferred
 

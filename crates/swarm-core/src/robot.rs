@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn straight_motion_is_straight() {
-        let p = integrate(Pose::new(0.0, 0.0, 0.0), 0.1, 0.1, 0.053, 1.0);
+        let p = integrate(Pose::new(0.0, 0.0, 0.0), 0.1, 0.1, 0.051, 1.0);
         assert!((p.p.x - 0.1).abs() < 1e-12);
         assert!(p.p.y.abs() < 1e-12);
         assert!(p.theta.abs() < 1e-12);
@@ -89,14 +89,14 @@ mod tests {
 
     #[test]
     fn spin_in_place_does_not_translate() {
-        let p = integrate(Pose::new(1.0, 2.0, 0.4), -0.1, 0.1, 0.053, 0.7);
+        let p = integrate(Pose::new(1.0, 2.0, 0.4), -0.1, 0.1, 0.051, 0.7);
         assert!((p.p - Vec2::new(1.0, 2.0)).norm() < 1e-12);
     }
 
     #[test]
     fn circle_closes_and_radius_matches_analytic_r0() {
         // Gauci's published state-0 constants, scaled by e-puck max wheel speed.
-        let (axle, vmax) = (0.053, 0.128);
+        let (axle, vmax) = (0.051, 0.128);
         let (vl, vr) = (-0.7 * vmax, -vmax);
         let r0 = turn_radius(vl, vr, axle).unwrap();
 
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn integration_is_timestep_independent() {
-        let (axle, vl, vr) = (0.053, -0.09, -0.128);
+        let (axle, vl, vr) = (0.051, -0.09, -0.128);
         let coarse = integrate(Pose::default(), vl, vr, axle, 0.1);
         let mut fine = Pose::default();
         for _ in 0..100 {

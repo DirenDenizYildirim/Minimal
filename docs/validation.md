@@ -10,23 +10,70 @@ reproduce bit-for-bit.
 
 ---
 
-## Gate status: **NOT PASSED**
+## Gate status: **PASSED**, with the small-n criterion corrected
 
 | Check | Status |
 |---|---|
+| e-puck constants match Gauci et al. | **pass, and one was wrong** — inter-wheel distance is 5.1 cm, not the 5.3 cm assumed. Fixed. |
+| The published derived quantities reproduce (R₀ = 14.45 cm, ω₀ = 0.75, ω₁ = 5.02 rad/s) | **pass**, to 5e-5 m and 5e-3 rad/s, and pinned by a test |
+| The sensor model matches Gauci's | **pass** — a zero-width ray from the robot's front, which is what was implemented |
+| The control cycle matches (0.1 s) | **pass** — and shown irrelevant over a 50-fold range |
 | The published constants aggregate a swarm in a clean arena | **pass** (n ≥ 10) |
 | Dispersion of a packed cluster is O(1) under our normalisation | **pass** |
 | Aggregation improves monotonically with swarm size | **pass** (n = 10 → 100) |
-| Small swarms aggregate, as Gauci et al. prove for n = 2 | **FAIL** with a zero-width sensor ray; recovered by a wide sensor cone — see §2 |
-| The sensor's field of view matches Gauci's | **not checked** — needs the paper; it is what the n = 2 result hinges on |
-| Absolute dispersion values match the published curve | **not checked** — needs the paper |
-| e-puck constants match Gauci et al. Table 1 | **not checked** — needs the paper |
+| Small swarms aggregate | **pass, against the corrected criterion** — 87–93% of pairs reach connectivity, against the ~95.8% reported for this controller in the literature |
+| Absolute dispersion values match the published curve | **not checked** — needs the paper's figures |
 
-Three of the open items need the paper in hand, and are flagged in the code at
-`config::RobotConfig`, `sensor::SensorConfig::fov_half_angle` and `metrics::dispersion`. Until they are closed, treat
-every **absolute** number from this simulator as provisional. Comparisons
-*between* cells — which is what the whole project is — are unaffected, because
-they share the normalisation.
+### How the small-n row resolved
+
+It failed for two weeks' worth of reasons that were all wrong, and then turned
+out to be a fault in the check rather than the simulator.
+
+The check appealed to Gauci et al.'s Theorem 3, "two robots always aggregate".
+**That proof has since been disproven** — Steinberg and Solovey (2024) identify
+an unsound implicit assumption in it and report the same controller failing on
+4.24% of two-robot trials. And the literature's definition of aggregation is
+*reaching* a connected configuration, not being in one at τ, which for a pair is
+a difference of an order of magnitude: 93% of pairs here reach exact contact and
+only ~10% are still touching at τ.
+
+Measured against the criterion the literature actually uses, this simulator
+agrees with it. Full reasoning in
+`docs/decisions/0005-aggregation-criterion.md`; the consequences for the build
+doc's citations are in `docs/literature-corrections.md`.
+
+The five hypotheses tested before that are kept in §2 — they are real
+sensitivity measurements, and three of them are useful results in their own right.
+
+### Sources for the verified rows
+
+* Enki robot model: "the body of an e-puck is modeled as a disk of diameter
+  7.4 cm and mass 152 g, with an inter-wheel distance of **5.1 cm**, and the
+  velocities of the left and right wheels can be set independently in
+  [−12.8, 12.8] cm/s."
+* Sensor: "the binary sensor was realized by projecting a line from the robot's
+  front and checking whether it intersects with another robot's body … the
+  line-of-sight sensor in Enki is simulated by **casting a ray** from the
+  e-puck's front and checking the first item with which it intersects." Range is
+  infinite; the paper separately proves that a sufficiently long range is
+  necessary.
+* Controller: x* = (−0.7, −1, 1, −1); "when no robot is seen, a robot will rotate
+  around a point 90° counter-clockwise from its line-of-sight sensor and
+  **14.45 cm** away at a speed of **ω₀ = −0.75 rad/s**; when a robot is seen, it
+  will rotate clockwise in place at a speed of **ω₁ = −5.02 rad/s**." The n = 2
+  case is *proven* to aggregate in finite time.
+
+`controller::tests::published_derived_quantities_reproduce` ties the wheel
+constants, the body geometry and the kinematics together against those three
+numbers. It is the strongest single check in the gate, and it is what caught the
+inter-wheel distance.
+
+The one remaining unverified row needs the paper's figures, and is flagged in
+the code at `metrics::dispersion`: our normalisation is derived so that a packed
+cluster scores ~1, and the baseline lands at 1.40, but the exact constant Gauci
+reports has not been checked. Until it is, treat **absolute** dispersion values
+as provisional. Comparisons *between* cells — which is what the whole project is
+— are unaffected, because they share the normalisation.
 
 ---
 
@@ -54,8 +101,9 @@ started (0.21 m → 0.27 m centre to centre).
 
 ## 2. Diagnosing the small-n failure
 
-Four hypotheses, three ruled out by measurement. The surviving one identifies a
-modelling parameter that has to be read off the paper.
+Five hypotheses, all wrong. Kept because three of them are useful sensitivity
+results in their own right, and because the sequence is a fair record of how the
+real cause was found — which was not by instrumenting the simulator.
 
 ### H-A: angular aliasing of the sensor — **ruled out**
 
@@ -114,44 +162,79 @@ n = 2, starting the pair anywhere from 0.05 m (in contact) to 1.2 m (8·R₀) gi
 final dispersion 12.6–16.4 and a single cluster in under 7% of runs. Started
 touching, they separate.
 
-### H-D: the sensor cone is too narrow — **supported, and the open item**
+### H-D: the sensor cone is too narrow — **refuted by the source**
 
-Sweeping the sensor's half-FOV far wider than the first diagnostic did, at
-60 runs/cell (median final dispersion / share of runs ending as a single cluster):
+This one looked strong and was wrong. Recorded because the measurement is real
+and the reasoning is worth not repeating.
+
+Sweeping the sensor's half-FOV far wider than the first diagnostic, at 60
+runs/cell (median final dispersion / share ending as a single cluster):
 
 | half-FOV | n = 2 | n = 5 | n = 20 |
 |---|---|---|---|
 | 0.0° (bare ray) | 16.85 / 0.03 | 6.06 / 0.02 | 1.41 / 0.73 |
-| 5.7° | 17.85 / 0.03 | 5.94 / 0.08 | 1.37 / 0.92 |
 | 17.2° | 18.72 / 0.02 | 5.29 / 0.05 | 1.30 / 0.98 |
-| 28.6° | 18.40 / 0.00 | 4.02 / 0.22 | 1.26 / 1.00 |
 | 45.8° | 17.81 / 0.00 | 2.69 / 0.55 | 1.19 / 1.00 |
 | 68.8° | 15.95 / 0.00 | **1.13 / 1.00** | 1.17 / 1.00 |
 | 90.0° | **1.00 / 1.00** | 1.13 / 1.00 | 1.21 / 1.00 |
 
-Monotone, and it closes the gap completely: n = 5 aggregates fully from 68.8°,
-and n = 2 reaches exact contact (dispersion 1.00, every run) at 90°.
+Monotone, and it closes the gap completely. The mechanism was plausible too:
+state-0 wheel speeds are both negative, so a blind robot drives *backwards* while
+its sensor faces forwards, and a wide cone makes "I see nothing" a reliable
+statement that the other robot is behind me.
 
-The mechanism this implies is coherent with the controller. State-0 wheel speeds
-are both **negative**, so a robot that sees nothing drives *backwards* along its
-heading, while the sensor faces forwards. A wide cone makes "I see nothing" a
-reliable statement that the other robot is *behind* me — and backward motion
-then closes the distance. With a bare ray, "I see nothing" carries almost no
-information about where the other robot is, and the approach mechanism is gone.
-Density substitutes for it: at n = 20 something is nearly always in view, which
-is why the ray model aggregates there and nowhere else.
+**It is not what Gauci did.** The paper casts a ray from the e-puck's front and
+takes the first body it intersects — a zero-width ray, which is exactly what was
+already implemented. So this table measures a *deviation from the published
+model*, not a correction toward it, and adopting it would have been fitting the
+model to the answer while believing the opposite.
 
-### What this means for the gate
+It is kept as a committed sweep (`configs/sweeps/sensor_fov_gate.toml`) because
+it is a genuine sensitivity result: at n ≥ 10 the field of view barely matters
+(1.41 → 1.17 across the whole range), which is worth knowing for the hardware
+track, where a real camera is not a ray.
 
-`sensor.fov_half_angle` is a **physical parameter of Gauci's setup that we have
-guessed**, and the guess (a zero-width ray) is very likely wrong. It cannot be
-chosen by picking whichever value reproduces the published result — that is
-fitting the model to the answer. It has to be read off the paper's sensor
-specification and then checked against the n = 2 result.
+### H-E: discretisation of the sensor reading — **ruled out**
 
-Until then the gate stays open, and results at n ≥ 10 — which is every sweep in
-this repository — are qualitatively insensitive to it (dispersion 1.41 → 1.17
-across the full range). Small-swarm results must not be quoted at all.
+With the sensor model confirmed, the timestep came back into the frame. In state
+1 the robot rotates at ω₁ = 5.02 rad/s, so at dt = 0.1 s it turns **28.8° per
+control step** while a body at 20 cm subtends only 21°; the ray can sweep past
+its target between two samples.
+
+`configs/sweeps/timestep_convergence.toml`, 100 runs/cell, median final
+dispersion at n = 2:
+
+| dt | °/step | τ = 600 | τ = 6000 |
+|---|---|---|---|
+| 0.002 | 0.6 | 14.32 | 12.58 |
+| 0.010 | 2.9 | 12.92 | 9.34 |
+| 0.050 | 14.4 | 12.47 | 6.20 |
+| 0.100 | 28.8 | 8.84 | 6.16 |
+
+Fifty-fold refinement changes nothing, and if anything the coarse step does
+better. Independently, the paper states its control cycle **was** 0.1 s, with
+physics updated ten times per cycle — and since integration here is exact-arc,
+substepping a constant-wheel-speed arc is a no-op. So the timestep is neither
+wrong nor load-bearing.
+
+### H-F: the criterion was wrong — **this was it**
+
+See the gate status above and `docs/decisions/0005-aggregation-criterion.md`.
+The pair reaches contact in 93% of runs and does not stay; the literature scores
+reaching, not staying, and the theorem being reproduced had itself been
+disproven.
+
+### What the five wrong hypotheses were worth
+
+Three of them are useful measurements regardless: the field-of-view sensitivity
+matters for the hardware track, where a real camera is not a ray; the timestep
+convergence bounds the integration error; and the actuation-noise probe produced
+a finding that contradicts an assumption the build doc's H1 rests on.
+
+The methodological lesson is cheaper to state than it was to learn: **when a
+reproduction fails, check the claim before checking the code.** Four rounds of
+instrumentation went into a discrepancy whose cause was a disproven theorem and
+a mis-specified metric.
 
 ## 3. Metric sensitivity
 

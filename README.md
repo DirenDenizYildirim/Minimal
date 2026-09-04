@@ -91,26 +91,41 @@ PYTHONPATH=harness/src .venv/bin/python -m swarm_harness.cli surface \
 | Transient sensor + latch (Idea D) | not started |
 | Tier 2 (ARGoS), hardware track | not started |
 
-## Status: the week-1 gate has not passed
+## Status: the week-1 gate has passed
 
 The build doc puts a gate before any hostility dial is added — reproduce Gauci's
-aggregation and its scaling in swarm size. Aggregation reproduces cleanly for
-n ≥ 10 (dispersion falls from ~19 to 1.15 at n = 100, against ~1 for a perfectly
-packed cluster). **It does not for n ≤ 5, where Gauci et al. prove it should.**
+aggregation and its scaling in swarm size.
 
-Four hypotheses were tested; three are ruled out by measurement (angular
-aliasing, time budget, missing actuation noise — and initial separation
-alongside). The surviving one is the sensor's field of view: with the zero-width
-ray this simulator assumed, "I see nothing" carries almost no information about
-where another robot is, and the approach mechanism — state-0 wheel speeds are
-both negative, so a blind robot drives *backwards* while its sensor faces
-forwards — never engages. Widening the cone recovers the published behaviour
-completely, and monotonically.
+**Verified against the sources.** The e-puck model (disk of diameter 7.4 cm,
+inter-wheel distance 5.1 cm, wheel speeds in ±12.8 cm/s), the sensor (a
+zero-width ray cast from the robot's front, taking the first body it intersects,
+infinite range), the control cycle (0.1 s), and the controller
+x* = (−0.7, −1, 1, −1). Together these reproduce all three of the paper's derived
+quantities — turn radius 14.45 cm, ω₀ = 0.75 rad/s, ω₁ = 5.02 rad/s — and a test
+pins them. That check is what caught the inter-wheel distance being 5.3 cm
+instead of 5.1.
 
-That value must be read off Gauci et al.'s sensor specification, not chosen to
-reproduce the answer, so the gate stays open. Results at n ≥ 10 — every sweep
-here — move only from 1.41 to 1.17 across the whole plausible range of that
-parameter, so directions are robust and absolute numbers are provisional.
+Aggregation reproduces for n ≥ 10: dispersion falls from ~19 to 1.15 at n = 100,
+against ~1 for a perfectly packed cluster.
+
+**The small-n row took five wrong hypotheses to close**, and the answer was that
+the check was wrong, not the simulator. It appealed to Gauci's two-robot
+theorem — which [Steinberg & Solovey (2024)](https://arxiv.org/abs/2501.00390)
+have since **disproven**, reporting the same controller failing on 4.24% of
+two-robot trials. And the literature scores aggregation as *reaching* a connected
+configuration, not being in one at τ. For a pair that is an order of magnitude:
+93% of pairs here reach exact contact, ~10% are still touching at τ. Measured the
+way the literature measures it, this simulator agrees with it.
+
+Ruled out along the way, each with a committed sweep: angular aliasing, the time
+budget (flat to τ = 48 000 s), missing actuation noise, initial separation, and
+timestep discretisation (flat over a 50-fold range). Three are useful
+sensitivity results in their own right.
+
+The same paper proves something the build doc does not yet cite: **no bimodal
+controller in this class aggregates for every swarm size.** That sharpens the
+project's framing rather than undermining it — see
+[`docs/literature-corrections.md`](docs/literature-corrections.md).
 
 Full record: [`docs/validation.md`](docs/validation.md). Experimental results so
 far: [`docs/findings.md`](docs/findings.md). Schedule:
