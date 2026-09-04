@@ -1,0 +1,27 @@
+# WEEK-1 GATE DIAGNOSTIC 5 — how wide does the sensor cone have to be?
+#
+# This is the one that explains the small-n failure. State-0 wheel speeds are
+# both negative, so a robot that sees nothing drives BACKWARDS along its heading
+# while the sensor faces forwards. A wide cone makes "I see nothing" a reliable
+# statement that the other robot is behind me, and backward motion then closes
+# the distance. A bare ray carries almost no such information.
+#
+# Result: monotone. n = 5 aggregates fully from a half-FOV of 68.8 degrees, and
+# n = 2 reaches exact contact at 90. n = 20 barely moves (1.41 -> 1.17).
+#
+# DO NOT pick the value that reproduces the published result. sensor.fov_half_angle
+# is a physical property of Gauci's setup and must be read off the paper.
+# 60 runs/cell.
+
+name = "sensor-fov-gate"
+base = "../gauci_baseline.toml"
+runs_per_cell = 60
+
+[[axis]]
+path = "swarm.n"
+values = [2, 5, 20]
+
+[[axis]]
+path = "sensor.fov_half_angle"
+# radians: 0, 5.7, 17.2, 28.6, 45.8, 68.8, 90 degrees
+values = [0.0, 0.1, 0.3, 0.5, 0.8, 1.2, 1.5708]

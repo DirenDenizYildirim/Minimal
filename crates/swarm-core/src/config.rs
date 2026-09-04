@@ -133,6 +133,37 @@ impl Default for SimParams {
     }
 }
 
+/// Actuation noise present on a flat, clean board.
+///
+/// Not a hostility dial — a property of the robot. Without it the state-0 wheel
+/// constants trace an *exactly closed* circle: the robot returns to where it
+/// started and never explores, so a sparse swarm can never find itself. Real
+/// e-pucks slip, and Daymude et al. (2021) report that collisions and slipping
+/// are what break deterministic deadlock in practice; the build doc's H1 leans
+/// on the same observation ("small alpha and theta_m help, as motion noise did
+/// in Daymude et al."). A noise-free simulator is the anomaly, not the baseline.
+///
+/// See `docs/decisions/0004-baseline-actuation-noise.md`.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct NoiseConfig {
+    /// Per-wheel Gaussian noise added to the realised wheel speed each control
+    /// step, as a fraction of `max_wheel_speed`. 0 reproduces the noise-free
+    /// idealisation, which is useful as a control and useless as a baseline.
+    pub wheel_noise: f64,
+}
+
+impl Default for NoiseConfig {
+    fn default() -> Self {
+        // Off by default: the reference baseline is the noise-free idealisation
+        // Gauci's simulation uses, and adding noise silently would change every
+        // number measured against it. Measured effect at n = 20 is mildly
+        // negative (see docs/decisions/0004-baseline-actuation-noise.md), so
+        // this is a dial to sweep, not a correction to apply.
+        Self { wheel_noise: 0.0 }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct MetricsConfig {
@@ -170,6 +201,7 @@ pub struct SimConfig {
     pub sim: SimParams,
     pub sensor: SensorConfig,
     pub controller: ControllerConfig,
+    pub noise: NoiseConfig,
     pub occlusion: OcclusionConfig,
     pub terrain: TerrainConfig,
     /// Idea B. Not implemented yet; rejected by `validate` so a config cannot
@@ -212,6 +244,12 @@ impl SimConfig {
         }
         if self.robot.max_wheel_speed <= 0.0 {
             return err("robot.max_wheel_speed must be positive".into());
+        }
+        if self.noise.wheel_noise < 0.0 || !self.noise.wheel_noise.is_finite() {
+            return err(format!(
+                "noise.wheel_noise must be non-negative and finite, got {}",
+                self.noise.wheel_noise
+            ));
         }
         if !(0.0..=1.0).contains(&self.occlusion.fn_rate)
             || !(0.0..=1.0).contains(&self.occlusion.fp_rate)

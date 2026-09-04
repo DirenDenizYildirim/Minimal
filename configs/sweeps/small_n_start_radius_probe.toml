@@ -1,0 +1,20 @@
+# WEEK-1 GATE DIAGNOSTIC 4 — is small-n failure about the initial separation?
+#
+# R0 = 0.150 m for the baseline constants, so this brackets the start radius from
+# a third of R0 (bodies in contact) to eight times it.
+#
+# Result: no. Final dispersion is 12.6-16.4 at every start radius, and fewer than
+# 7% of runs end as a single cluster. Started touching, the pair separates.
+# 100 runs/cell.
+
+name = "small-n-start-radius"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "swarm.n"
+values = [2, 5]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [0.05, 0.1, 0.15, 0.3, 0.6, 1.2]

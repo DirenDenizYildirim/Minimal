@@ -132,7 +132,9 @@ def surface(
     rows = dict(sorted(rows.items(), key=lambda kv: str(kv[0])))
 
     n = len(rows)
-    fig, axes = plt.subplots(1, n, figsize=(5.0 * n, 4.4), squeeze=False)
+    # A single panel still needs room for a title and the colorbar, so the width
+    # has a floor rather than scaling straight from the panel count.
+    fig, axes = plt.subplots(1, n, figsize=(max(7.5, 5.0 * n), 4.6), squeeze=False)
     axes = axes[0]
 
     grids = {}
@@ -173,11 +175,11 @@ def surface(
         ax.set_xlabel(x)
         ax.set_ylabel(y)
 
-    fig.suptitle(title or f"{metric} over ({x}, {y})", fontsize=11)
-    # Reserve room under the axes before the colorbar is attached, so the
-    # upper-bound stamp cannot land on the tick labels and the bar matches the
-    # panel height.
-    fig.subplots_adjust(bottom=0.22, top=0.86)
+    fig.suptitle(title or f"{metric} over ({x}, {y})", fontsize=10, wrap=True)
+    # Reserve room around the axes before the colorbar is attached: under them
+    # so the upper-bound stamp cannot land on the tick labels, and at the right
+    # so the colorbar and its label are not clipped.
+    fig.subplots_adjust(bottom=0.22, top=0.86, right=0.88)
     if mesh is not None:
         fig.colorbar(mesh, ax=list(axes), label=metric, fraction=0.03, pad=0.02)
     _stamp(fig, records, y=0.02)

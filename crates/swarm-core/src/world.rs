@@ -22,6 +22,7 @@ use crate::robot::{integrate, turn_radius, Pose};
 use crate::sensor::{cast, AgentKind, Target};
 use crate::terrain::Terrain;
 use rand::Rng as _;
+use rand_distr::{Distribution, Normal};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -181,10 +182,17 @@ impl World {
             self.tx[i] = entry.tx;
         }
 
-        // 4-5: terrain, then motion.
+        // 4-5: terrain, actuation noise, then motion.
+        let wheel_noise = self.cfg.noise.wheel_noise * vmax;
+        let slip = (wheel_noise > 0.0)
+            .then(|| Normal::new(0.0, wheel_noise).expect("sigma is finite and positive"));
         for i in 0..n {
             let pose = self.targets[i].pose;
-            let realised = self.terrain.apply(&pose, axle, commands[i], &mut self.rng);
+            let mut realised = self.terrain.apply(&pose, axle, commands[i], &mut self.rng);
+            if let Some(slip) = slip {
+                realised[0] += slip.sample(&mut self.rng);
+                realised[1] += slip.sample(&mut self.rng);
+            }
             self.targets[i].pose = integrate(pose, realised[0], realised[1], axle, dt);
             self.memory[i] = next_memory[i];
         }
@@ -243,7 +251,11 @@ impl World {
         let interval = self.cfg.metrics.sample_interval;
         let store = self.cfg.metrics.store_series && interval > 0.0;
         let mut series = if store { Some(vec![initial]) } else { None };
-        let mut time_to_single = if initial.clusters == 1 { Some(0.0) } else { None };
+        let mut time_to_single = if initial.clusters == 1 {
+            Some(0.0)
+        } else {
+            None
+        };
         let mut samples_taken = 1u64;
         let mut samples_single = u64::from(initial.clusters == 1);
 
@@ -518,8 +530,14 @@ mod tests {
         let without = World::new(cfg, 0).unwrap().run();
         assert!(with.series.is_some());
         assert!(without.series.is_none());
-        assert_eq!(with.fraction_time_single_cluster, without.fraction_time_single_cluster);
-        assert_eq!(with.time_to_first_single_cluster, without.time_to_first_single_cluster);
+        assert_eq!(
+            with.fraction_time_single_cluster,
+            without.fraction_time_single_cluster
+        );
+        assert_eq!(
+            with.time_to_first_single_cluster,
+            without.time_to_first_single_cluster
+        );
     }
 
     #[test]
@@ -537,10 +555,15 @@ mod tests {
         let at = |radii: f64, cfg: &SimConfig| {
             let mut c = cfg.clone();
             c.metrics.cluster_link_radii = radii;
-            let recs: Vec<_> = (0..4).map(|i| World::new(c.clone(), i).unwrap().run()).collect();
+            let recs: Vec<_> = (0..4)
+                .map(|i| World::new(c.clone(), i).unwrap().run())
+                .collect();
             let disp = recs.iter().map(|r| r.final_dispersion).sum::<f64>() / 4.0;
-            let frac =
-                recs.iter().map(|r| r.fraction_time_single_cluster).sum::<f64>() / 4.0;
+            let frac = recs
+                .iter()
+                .map(|r| r.fraction_time_single_cluster)
+                .sum::<f64>()
+                / 4.0;
             (disp, frac)
         };
         let (tight_disp, tight_frac) = at(2.2, &cfg);

@@ -1,0 +1,21 @@
+# WEEK-1 GATE DIAGNOSTIC 3 — does baseline actuation noise rescue small n?
+#
+# Hypothesis: with constant wheel speeds the state-0 trajectory is an exactly
+# closed circle, so a robot that sees nothing never explores. Real e-pucks slip,
+# and Daymude et al. (2021) report that collisions and slipping break
+# deterministic deadlock.
+#
+# Result: no. Small n is unaffected and n = 20 is mildly harmed. Recorded in
+# docs/decisions/0004-baseline-actuation-noise.md. 50 runs/cell — a diagnostic.
+
+name = "small-n-noise-probe"
+base = "../gauci_baseline.toml"
+runs_per_cell = 50
+
+[[axis]]
+path = "swarm.n"
+values = [2, 5, 20]
+
+[[axis]]
+path = "noise.wheel_noise"
+values = [0.0, 0.01, 0.02, 0.05, 0.1, 0.2]

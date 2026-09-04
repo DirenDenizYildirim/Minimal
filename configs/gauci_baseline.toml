@@ -56,3 +56,9 @@ friction_amplitude = 0.0
 [metrics]
 cluster_link_radii = 3.0
 sample_interval = 10.0
+
+[noise]
+# Per-wheel actuation noise, as a fraction of max wheel speed. Zero here: the
+# reference baseline is the noise-free idealisation. It is a dial to sweep, not
+# a correction to apply — see docs/decisions/0004-baseline-actuation-noise.md.
+wheel_noise = 0.0

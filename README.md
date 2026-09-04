@@ -59,6 +59,21 @@ PYTHONPATH=harness/src .venv/bin/python -m swarm_harness.cli \
 `swarm sweep --dry-run` validates every cell and reports the workload without
 simulating anything.
 
+### Regenerating a figure
+
+Results and figures are not committed — they are reproducible from the configs,
+and every run is seeded from `(sim.seed, run_index)`:
+
+```bash
+./target/release/swarm sweep --config configs/sweeps/terrain_idea_a.toml \
+  --out results/terrain_idea_a.jsonl
+PYTHONPATH=harness/src .venv/bin/python -m swarm_harness.cli surface \
+  results/terrain_idea_a.jsonl \
+  --x terrain.slope_angle --y terrain.friction_amplitude \
+  --metric fraction_time_single_cluster --thresholds 0.5 0.6 0.7 \
+  --out figures/terrain_idea_a_surface.png
+```
+
 ## What is implemented
 
 | Piece | Status |
@@ -67,6 +82,7 @@ simulating anything.
 | Line-of-sight sensor: binary / ternary / ternary-with-side (S = 2, 3, 5) | done |
 | Lookup-table controllers over `(S, M, A, K)`, with provenance | done |
 | Occlusion dial `θ_occ` — correlated false negatives and positives | done |
+| Actuation-noise dial (a robot property, not a hostility dial; off by default) | done |
 | Terrain dial `θ_terr` — per-wheel traction field, heading-dependent gravity | done |
 | Dispersion and cluster metrics, in the centroid frame | done |
 | Sweep harness, JSONL output, surfaces with threshold contours | done |
@@ -75,9 +91,30 @@ simulating anything.
 | Transient sensor + latch (Idea D) | not started |
 | Tier 2 (ARGoS), hardware track | not started |
 
-See [`docs/roadmap.md`](docs/roadmap.md) for the schedule this maps onto and
-[`docs/validation.md`](docs/validation.md) for what has been verified — including
-a gate that has **not** yet passed.
+## Status: the week-1 gate has not passed
+
+The build doc puts a gate before any hostility dial is added — reproduce Gauci's
+aggregation and its scaling in swarm size. Aggregation reproduces cleanly for
+n ≥ 10 (dispersion falls from ~19 to 1.15 at n = 100, against ~1 for a perfectly
+packed cluster). **It does not for n ≤ 5, where Gauci et al. prove it should.**
+
+Four hypotheses were tested; three are ruled out by measurement (angular
+aliasing, time budget, missing actuation noise — and initial separation
+alongside). The surviving one is the sensor's field of view: with the zero-width
+ray this simulator assumed, "I see nothing" carries almost no information about
+where another robot is, and the approach mechanism — state-0 wheel speeds are
+both negative, so a blind robot drives *backwards* while its sensor faces
+forwards — never engages. Widening the cone recovers the published behaviour
+completely, and monotonically.
+
+That value must be read off Gauci et al.'s sensor specification, not chosen to
+reproduce the answer, so the gate stays open. Results at n ≥ 10 — every sweep
+here — move only from 1.41 to 1.17 across the whole plausible range of that
+parameter, so directions are robust and absolute numbers are provisional.
+
+Full record: [`docs/validation.md`](docs/validation.md). Experimental results so
+far: [`docs/findings.md`](docs/findings.md). Schedule:
+[`docs/roadmap.md`](docs/roadmap.md).
 
 ## Two rules this repository enforces in code
 

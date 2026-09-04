@@ -40,6 +40,12 @@ pub struct SensorConfig {
     /// Maximum detection range in metres. `None` = unlimited, as in Gauci's sim.
     pub range: Option<f64>,
     /// Half-angle of the sensor cone in radians. 0 = a single ray.
+    ///
+    /// **VERIFY against Gauci et al. before quoting any small-swarm result.**
+    /// This is a physical parameter of their setup that we have guessed, and the
+    /// guess decides whether n = 2 aggregates at all: with a bare ray it does
+    /// not, and it recovers completely by a half-FOV of 90 degrees. Results at
+    /// n >= 10 are qualitatively insensitive to it. See `docs/validation.md` §2.
     pub fov_half_angle: f64,
     /// How raw hits map onto discrete sensor states.
     pub encoding: SensorEncoding,
@@ -66,7 +72,15 @@ pub enum SensorEncoding {
     Binary,
     /// Gauci et al. (2014) AAMAS: nothing / robot / other. S = 3.
     Ternary,
-    /// Ternary plus which half of the cone the non-robot is in. S = 5.
+    /// Ternary plus which side of the sensor axis the body sits on: nothing,
+    /// robot-left, robot-right, pursuer-left, pursuer-right. S = 5.
+    ///
+    /// This is row B2 ("ternary + pursuer left/right half"). Resolving the side
+    /// for both kinds is what makes it five states rather than four, and it is
+    /// the reading consistent with the S column of the build doc's table. Side
+    /// is meaningful even for a zero-width ray: the bearing to a visible body's
+    /// centre is bounded by its angular half-width, not zero, so it still says
+    /// which way to turn to face it.
     TernaryWithSide,
 }
 
@@ -87,20 +101,15 @@ impl SensorEncoding {
                 AgentKind::Robot => 1,
                 AgentKind::Pursuer => 2,
             },
-            (SensorEncoding::TernaryWithSide, Some(h)) => match h.kind {
-                AgentKind::Robot => 1,
-                // 2/3 = pursuer to the left / right; 4 is reserved for a
-                // dead-ahead reading so the state count matches the B2 row.
-                AgentKind::Pursuer => {
-                    if h.bearing > 1e-9 {
-                        2
-                    } else if h.bearing < -1e-9 {
-                        3
-                    } else {
-                        4
-                    }
+            (SensorEncoding::TernaryWithSide, Some(h)) => {
+                // A bearing of exactly zero is measure-zero; break the tie
+                // deterministically towards "left" so the mapping is total.
+                let right = usize::from(h.bearing < 0.0);
+                match h.kind {
+                    AgentKind::Robot => 1 + right,
+                    AgentKind::Pursuer => 3 + right,
                 }
-            },
+            }
         }
     }
 }
@@ -253,20 +262,36 @@ mod tests {
         assert_eq!(SensorEncoding::Ternary.states(), 3);
         assert_eq!(SensorEncoding::TernaryWithSide.states(), 5);
 
-        let pursuer_left = Some(Hit {
-            kind: AgentKind::Pursuer,
-            distance: 1.0,
-            bearing: 0.2,
-        });
+        let hit = |kind, bearing| {
+            Some(Hit {
+                kind,
+                distance: 1.0,
+                bearing,
+            })
+        };
+        let pursuer_left = hit(AgentKind::Pursuer, 0.2);
+        let pursuer_right = hit(AgentKind::Pursuer, -0.2);
+        let robot_left = hit(AgentKind::Robot, 0.2);
+        let robot_right = hit(AgentKind::Robot, -0.2);
+
+        // A coarser encoding must not be able to tell finer cases apart.
         assert_eq!(SensorEncoding::Binary.encode(pursuer_left), 1);
+        assert_eq!(SensorEncoding::Binary.encode(robot_right), 1);
         assert_eq!(SensorEncoding::Ternary.encode(pursuer_left), 2);
-        assert_eq!(SensorEncoding::TernaryWithSide.encode(pursuer_left), 2);
-        let pursuer_right = Some(Hit {
-            kind: AgentKind::Pursuer,
-            distance: 1.0,
-            bearing: -0.2,
-        });
-        assert_eq!(SensorEncoding::TernaryWithSide.encode(pursuer_right), 3);
+        assert_eq!(SensorEncoding::Ternary.encode(pursuer_right), 2);
+        assert_eq!(SensorEncoding::Ternary.encode(robot_left), 1);
+
+        // S = 5: nothing, robot L/R, pursuer L/R -- every state reachable and
+        // distinct, which is what makes the row worth five states.
+        let five: Vec<usize> = [None, robot_left, robot_right, pursuer_left, pursuer_right]
+            .into_iter()
+            .map(|h| SensorEncoding::TernaryWithSide.encode(h))
+            .collect();
+        assert_eq!(five, vec![0, 1, 2, 3, 4]);
+        assert!(five
+            .iter()
+            .all(|&i| i < SensorEncoding::TernaryWithSide.states()));
+
         assert_eq!(SensorEncoding::Ternary.encode(None), 0);
     }
 }
