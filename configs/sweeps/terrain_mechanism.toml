@@ -1,0 +1,50 @@
+# IDEA A — MECHANISM TEST. Is the terrain effect trajectory deformation, or just
+# relative speed heterogeneity between robots?
+#
+# The build doc rejected v1's scalar speed field because scaling both wheels
+# equally leaves the instantaneous centre of rotation fixed: dp/dtheta = v/omega
+# is independent of the multiplier, so the robot traces the *same circle* at a
+# position-dependent rate. No trajectory is deformed relative to any other, and
+# the corrected per-wheel model was introduced to fix that.
+#
+# But "cannot deform a trajectory" is not the same as "cannot break aggregation".
+# A scalar field still makes robots in different places move at different rates,
+# and that alone changes who meets whom. This sweep runs the two side by side on
+# the identical grid and identical seeds.
+#
+# DECISION RULE, fixed before running: if the scalar-centre row reproduces the
+# per-wheel row's peak location (lambda/R0) and peak magnitude within CI, then the
+# mechanism is relative speed heterogeneity, not curvature, and the
+# curvature-noise explanation in findings.md is retired. If it does not
+# reproduce, report what differs and stop.
+#
+# theta_m is cut at 0.9. The field reaches |f| = 1, so at theta_m = 1 the
+# traction multiplier can reach zero and a wheel stalls — a pivot, not terrain.
+# See TerrainConfig::traction_floor. The 1.0 and 1.5 columns of the earlier H2
+# grid are excluded for that reason; every other value is unchanged from it.
+#
+# Slope is off: this is about the traction field alone.
+
+name = "terrain-mechanism"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.0125, 0.025, 0.05, 0.1, 0.2, 0.4]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.4, 0.7, 0.9]
+
+[[rows]]
+label = "per-wheel"
+[rows.overrides]
+"terrain.traction_mode" = "per_wheel"
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "scalar-centre"
+[rows.overrides]
+"terrain.traction_mode" = "scalar_centre"
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }

@@ -337,3 +337,83 @@ already saved by its perception limits.
    question becomes answerable.
 
 Figure: `figures/pursuer_idea_b_surface.png`.
+
+---
+
+## 6. Idea A mechanism test: is it deformation, or just speed heterogeneity?
+
+`configs/sweeps/terrain_mechanism.toml` — n = 20, τ = 600 s, 100 runs/cell,
+**paired seeds**: both rows use the same swarm placements and the same traction
+field, and differ only in how the field is sampled.
+
+* **per-wheel** — each wheel samples at its own contact point. The corrected
+  model, which changes curvature.
+* **scalar-centre** — both wheels take one multiplier sampled at the robot's
+  centre. This is v1's scalar speed field. It cannot change the turn radius:
+  scaling both wheels by `m` gives `v' = mv` and `ω' = mω`, so `dp/dθ = v/ω` is
+  independent of `m` and the robot traces the *same circle* at a
+  position-dependent rate. (Pinned by
+  `terrain::tests::a_scalar_centre_field_cannot_change_the_turn_radius`.)
+
+The question the test settles: a scalar field still makes robots in different
+places move at different rates, and that alone changes who meets whom. Is *that*
+the mechanism, with curvature incidental?
+
+**Decision rule, fixed before running:** if the scalar row reproduces the
+per-wheel row's peak location and magnitude within CI, the mechanism is relative
+speed heterogeneity and the curvature explanation is retired.
+
+### It does not reproduce. The scalar field does nothing.
+
+Degradation relative to each row's own θ_m = 0 cell, median [95% bootstrap CI]:
+
+| λ | λ/R₀ | per-wheel, θ_m = 0.7 | scalar-centre, θ_m = 0.7 | per-wheel, θ_m = 0.9 | scalar-centre, θ_m = 0.9 |
+|---|---|---|---|---|---|
+| 0.0125 | 0.09 | 1.10 [1.06, 1.14] | 0.97 [0.96, 0.99] | 1.19 [1.11, 1.31] | 0.99 [0.97, 1.01] |
+| 0.025 | 0.17 | 1.28 [1.19, 1.35] | 0.99 [0.98, 1.01] | 1.44 [1.39, 1.62] | 1.00 [0.99, 1.02] |
+| 0.05 | 0.35 | 1.56 [1.44, 1.71] | 1.00 [0.98, 1.01] | 2.08 [1.84, 2.47] | 1.01 [0.99, 1.03] |
+| **0.10** | **0.69** | **1.58 [1.48, 1.72]** | 0.96 [0.94, 0.98] | **2.21 [1.90, 2.41]** | 0.98 [0.96, 1.01] |
+| 0.20 | 1.38 | 1.13 [1.09, 1.23] | 0.97 [0.94, 0.99] | 1.47 [1.32, 1.65] | 0.98 [0.97, 1.00] |
+| 0.40 | 2.77 | 1.02 [1.00, 1.06] | 0.96 [0.94, 0.98] | 1.11 [1.06, 1.18] | 0.96 [0.94, 0.97]
+
+Pooled over every θ_m > 0 cell (n = 1800 runs each):
+
+* per-wheel **1.175 [1.154, 1.190]**
+* scalar-centre **0.980 [0.976, 0.986]**
+
+Neither the peak location nor the magnitude reproduces. The per-wheel row has a
+peak at λ/R₀ = 0.69 rising to 2.21×; the scalar row has **no peak at all** — it
+is flat within [0.96, 1.01] across the entire grid, and its CI excludes the
+per-wheel value at every λ ≤ 0.2 for every θ_m ≥ 0.4.
+
+**Per the decision rule, the curvature explanation stands and is not retired.**
+Relative speed heterogeneity between robots is not sufficient to degrade
+aggregation here; the per-wheel term is doing the work. This is a direct
+vindication of the build doc's correction: v1's model would have measured
+nothing, and the paper can now say so with a paired control rather than an
+argument.
+
+### One thing that differs, reported without explanation
+
+The scalar row sits *slightly below* 1.0 — pooled 0.980 [0.976, 0.986], a CI
+that excludes 1.0. A pure scalar speed field appears to aggregate marginally
+*better* than flat ground, by about 2%.
+
+The decision rule says report and stop, so that is all this says. It is not in
+the direction H1 predicted (H1 is about small perturbations helping, and this is
+across the whole θ_m range including the largest), and 2% is at the edge of what
+this design resolves. Added to the "next" list rather than chased.
+
+Figure: `figures/terrain_mechanism.png`.
+
+### θ_m ceiling
+
+The field reaches |f| = 1, so at θ_m = 1 the traction multiplier `1 + θ_m·f` can
+reach zero and a wheel stalls outright — the robot pivots, which is a different
+dynamical regime, not terrain deformation. All terrain sweeps from here are cut
+at **θ_m = 0.9**, below the `1/max|f| = 1.0` where that becomes possible. A floor
+of `m ≥ 0.05` is implemented as a safety net and is verified never to bind inside
+the swept range (`terrain::tests::the_traction_floor_does_not_bind_in_the_swept_range`).
+
+The θ_m = 1.25–1.5 band visible in the earlier H2 figure was stall, not terrain,
+and has been removed from the swept range rather than explained away.

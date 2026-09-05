@@ -28,8 +28,8 @@ from .load import Records  # noqa: E402
 from .stats import median_ci  # noqa: E402
 
 UPPER_BOUND_NOTE = (
-    "Rows marked † are not exhaustively searched: their minima are UPPER BOUNDS "
-    "(not found ≠ not possible)."
+    "† searched, not exhaustive — an upper bound.    "
+    "‡ hand-designed, not searched — no evidence about the capability itself."
 )
 
 
@@ -48,12 +48,39 @@ def _stamp(fig, records: Records, y: float = 0.005) -> None:
         )
 
 
-def _row_is_bounded(sub: Records) -> bool:
-    return sub.any_upper_bound()
-
-
 def _label(name: str, sub: Records) -> str:
-    return f"{name} †" if _row_is_bounded(sub) else str(name)
+    """Row label with its provenance marker. See `Records.mark`."""
+    return f"{name}{sub.mark()}"
+
+
+def annotate_params(fig, records: Records, fields: Sequence[str] = ()) -> None:
+    """Print the run parameters a reader needs to interpret the figure.
+
+    A pursuit result is meaningless without the speed ratio, the handling time,
+    the swarm size, the trial length and the arena the swarm started in — those
+    set what "survival" even means. Anything constant across the records is
+    printed; anything that varies is a swept axis and is on the plot already.
+    """
+    parts = []
+    for f in fields:
+        values = {r.get(f) for r in records if f in r}
+        if len(values) == 1:
+            v = values.pop()
+            if v is not None:
+                parts.append(f"{_PARAM_LABELS.get(f, f)} = {v:g}" if isinstance(v, (int, float))
+                             else f"{_PARAM_LABELS.get(f, f)} = {v}")
+    if parts:
+        fig.text(0.5, 0.955, "   ".join(parts), ha="center", va="top",
+                 fontsize=8, color="0.3")
+
+
+_PARAM_LABELS = {
+    "pursuer_speed_ratio": "ρ",
+    "pursuer_handling_time": "h",
+    "n": "n",
+    "duration": "τ",
+    "start_radius": "start radius",
+}
 
 
 def curve(

@@ -92,6 +92,25 @@ class Records:
         }
         return sorted(labels)
 
+    def provenance(self) -> str | None:
+        """The single provenance in these records, or None if they disagree."""
+        seen = {r.get("provenance") for r in self.rows}
+        return seen.pop() if len(seen) == 1 else None
+
+    def mark(self) -> str:
+        """Figure marker for how this row's controller was obtained.
+
+        A searched row and a hand-written one are both upper bounds, but they
+        are not the same claim: a search that failed to find something is weak
+        evidence that nothing is there, while a hand-written guess is no
+        evidence at all. Conflating them is how "more sensing hurts" gets
+        written down.
+
+        ``†`` searched but not exhaustive; ``‡`` hand-designed; nothing for an
+        enumerated row, whose minimum is tight.
+        """
+        return {"optimiser_found": " †", "hand_designed": " ‡"}.get(self.provenance() or "", "")
+
 
 def load_jsonl(path: str | Path | Iterable[str]) -> Records:
     """Load run records from a JSONL file, or from any iterable of JSON lines."""

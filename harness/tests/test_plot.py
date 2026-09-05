@@ -23,7 +23,9 @@ def _mesh_values(fig, xlabel):
 from swarm_harness import plot
 
 
-def cells(rows, xs, ys, tight=True):
+def cells(rows, xs, ys, tight=True, provenance=None):
+    if provenance is None:
+        provenance = "enumerated" if tight else "optimiser_found"
     out = []
     for row in rows:
         for x in xs:
@@ -33,6 +35,7 @@ def cells(rows, xs, ys, tight=True):
                         json.dumps(
                             {
                                 "minimum_is_tight": tight,
+                                "provenance": provenance,
                                 "final_largest_cluster_fraction": max(0.0, 1.0 - x - 0.1 * y),
                                 "cell": {"row": row, "occlusion.fn_rate": x, "swarm.n": y},
                             }
@@ -52,12 +55,52 @@ class TestPlot(unittest.TestCase):
         self.assertTrue(any("M0" in l for l in labels))
         self.assertFalse(any("†" in l for l in labels), "tight rows must not be stamped")
 
-    def test_upper_bound_rows_are_stamped(self):
-        r = load_jsonl(cells(["M1"], [0.0, 0.2], [20], tight=False))
-        fig = plot.curve(r, x="occlusion.fn_rate", metric="final_largest_cluster_fraction")
+    def test_searched_and_hand_designed_rows_are_marked_differently(self):
+        # A search that found nothing is weak evidence; a hand-written guess is
+        # none at all. The figure must not let them look alike.
+        searched = load_jsonl(cells(["M1"], [0.0, 0.2], [20], tight=False,
+                                    provenance="optimiser_found"))
+        fig = plot.curve(searched, x="occlusion.fn_rate",
+                         metric="final_largest_cluster_fraction")
         labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
         self.assertTrue(any("†" in l for l in labels))
-        self.assertTrue(any("UPPER BOUND" in t.get_text() for t in fig.texts))
+        self.assertFalse(any("‡" in l for l in labels))
+        self.assertTrue(any("searched" in t.get_text() for t in fig.texts))
+
+        hand = load_jsonl(cells(["B2"], [0.0, 0.2], [20], tight=False,
+                                provenance="hand_designed"))
+        fig = plot.curve(hand, x="occlusion.fn_rate",
+                         metric="final_largest_cluster_fraction")
+        labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+        self.assertTrue(any("‡" in l for l in labels))
+        self.assertFalse(any("†" in l for l in labels))
+
+    def test_enumerated_rows_carry_no_marker(self):
+        r = load_jsonl(cells(["M0"], [0.0, 0.2], [20], tight=True))
+        fig = plot.curve(r, x="occlusion.fn_rate", metric="final_largest_cluster_fraction")
+        labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+        self.assertFalse(any("†" in l or "‡" in l for l in labels))
+
+    def test_parameters_are_annotated_when_constant(self):
+        import json as _json
+
+        rows = [
+            _json.dumps({
+                "minimum_is_tight": True, "provenance": "enumerated",
+                "survival_fraction": 0.5, "n": 20, "duration": 120.0,
+                "pursuer_speed_ratio": 1.5, "pursuer_handling_time": h,
+                "cell": {"row": "B0", "pursuer.range": 0.2, "pursuer.confusion": 0.0},
+            })
+            for h in (5.0, 5.0, 5.0)
+        ]
+        r = load_jsonl(rows)
+        fig = plot.curve(r, x="pursuer.range", metric="survival_fraction")
+        plot.annotate_params(fig, r, ["pursuer_speed_ratio", "pursuer_handling_time",
+                                      "n", "duration"])
+        text = " ".join(t.get_text() for t in fig.texts)
+        self.assertIn("ρ = 1.5", text)
+        self.assertIn("h = 5", text)
+        self.assertIn("τ = 120", text)
 
     def test_surface_makes_one_panel_per_row_with_contours(self):
         r = load_jsonl(cells(["M0", "M1"], [0.0, 0.2, 0.4, 0.6], [10, 20, 50]))

@@ -78,7 +78,15 @@ pub struct RunRecord {
     pub fraction_time_single_cluster: f64,
     pub realised_fn_rate: f64,
     pub realised_fp_rate: f64,
+    /// Radius of the disk the swarm was placed in. Reported because "survival"
+    /// means nothing without knowing how spread out the swarm started.
+    pub start_radius: f64,
     pub pursuers: usize,
+    /// Pursuer parameters, echoed so a figure can state them without the config.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pursuer_speed_ratio: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pursuer_handling_time: Option<f64>,
     pub captures: u64,
     pub survivors: usize,
     /// Share of the swarm still alive at tau.
@@ -436,7 +444,14 @@ impl World {
             fraction_time_single_cluster: samples_single as f64 / samples_taken as f64,
             realised_fn_rate: self.tally.realised_fn_rate(),
             realised_fp_rate: self.tally.realised_fp_rate(),
+            start_radius: self
+                .cfg
+                .swarm
+                .init
+                .start_radius(self.cfg.swarm.n, self.cfg.robot.radius),
             pursuers: self.pursuers.len(),
+            pursuer_speed_ratio: self.cfg.pursuer.map(|p| p.speed_ratio),
+            pursuer_handling_time: self.cfg.pursuer.map(|p| p.handling_time),
             captures: self.captures,
             survivors: self.survivors(),
             survival_fraction: self.survivors() as f64 / self.cfg.swarm.n as f64,

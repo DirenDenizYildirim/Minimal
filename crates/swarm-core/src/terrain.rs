@@ -55,6 +55,35 @@ pub struct TerrainConfig {
     pub correlation_length: f64,
     /// Std. dev. of per-wheel slip noise (m/s), scaled by `|sin alpha|`.
     pub slip_noise: f64,
+    /// Lower bound on the traction multiplier.
+    ///
+    /// A safety net, not a modelling choice. The field reaches `|f| = 1`, so at
+    /// `theta_m = 1` the multiplier `1 + theta_m*f` can reach zero and a wheel
+    /// stalls outright — a different dynamical regime (the robot pivots), not
+    /// terrain deformation. Sweeps are cut at `theta_m = 0.9`, below the
+    /// `1/max|f| = 1.0` at which that becomes possible, so this floor should
+    /// never bind inside the swept range;
+    /// `tests::the_traction_floor_does_not_bind_in_the_swept_range` holds that.
+    pub traction_floor: f64,
+    /// Whether the wheels sample the field at their own contact points, or both
+    /// take one value sampled at the robot's centre.
+    ///
+    /// `ScalarCentre` is the *control condition* for the mechanism test: it is
+    /// the v1 model the build doc rejected, in which one multiplier scales both
+    /// wheels, the instantaneous centre of rotation is unmoved, and no
+    /// trajectory is deformed relative to any other.
+    pub traction_mode: TractionMode,
+}
+
+/// How the traction field is sampled. See `TerrainConfig::traction_mode`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TractionMode {
+    /// Each wheel samples at its own contact point: the corrected model.
+    PerWheel,
+    /// Both wheels take one multiplier sampled at the robot centre: a pure
+    /// scalar speed field, which cannot change the turn radius.
+    ScalarCentre,
 }
 
 impl Default for TerrainConfig {
@@ -66,6 +95,8 @@ impl Default for TerrainConfig {
             friction_amplitude: 0.0,
             correlation_length: 0.25,
             slip_noise: 0.0,
+            traction_floor: 0.05,
+            traction_mode: TractionMode::PerWheel,
         }
     }
 }
@@ -101,7 +132,8 @@ impl Terrain {
         if self.cfg.friction_amplitude == 0.0 {
             return 1.0;
         }
-        (1.0 + self.cfg.friction_amplitude * self.field.sample(contact)).max(0.0)
+        (1.0 + self.cfg.friction_amplitude * self.field.sample(contact))
+            .max(self.cfg.traction_floor)
     }
 
     /// The heading-dependent gravity term, in m/s. Positive means "subtract
@@ -119,12 +151,18 @@ impl Terrain {
         if self.cfg.is_flat() {
             return cmd;
         }
-        let (left_contact, right_contact) = pose.wheel_contacts(axle);
+        let (m_left, m_right) = match self.cfg.traction_mode {
+            TractionMode::PerWheel => {
+                let (l, r) = pose.wheel_contacts(axle);
+                (self.traction(l), self.traction(r))
+            }
+            TractionMode::ScalarCentre => {
+                let m = self.traction(pose.p);
+                (m, m)
+            }
+        };
         let g = self.gravity_term(pose.heading());
-        let mut out = [
-            cmd[0] * self.traction(left_contact) - g,
-            cmd[1] * self.traction(right_contact) - g,
-        ];
+        let mut out = [cmd[0] * m_left - g, cmd[1] * m_right - g];
         let sigma = self.cfg.slip_noise * self.cfg.slope_angle.sin().abs();
         if sigma > 0.0 {
             let n = Normal::new(0.0, sigma).expect("slip sigma is finite and positive");
@@ -158,6 +196,76 @@ mod tests {
             t.apply(&Pose::new(3.0, -2.0, 0.9), 0.051, cmd, &mut rng),
             cmd
         );
+    }
+
+    #[test]
+    fn the_traction_floor_does_not_bind_in_the_swept_range() {
+        // Sweeps are cut at theta_m = 0.9 precisely so the floor is inert. If
+        // this fails, a figure is showing wheel stall rather than terrain.
+        let cfg = TerrainConfig {
+            friction_amplitude: 0.9,
+            correlation_length: 0.1,
+            ..Default::default()
+        };
+        let t = Terrain::new(cfg, 17);
+        let mut at_floor = 0;
+        for i in 0..20_000 {
+            let p = Vec2::new(i as f64 * 0.0073 - 70.0, i as f64 * 0.0041 - 40.0);
+            if t.traction(p) <= cfg.traction_floor + 1e-12 {
+                at_floor += 1;
+            }
+        }
+        assert_eq!(
+            at_floor, 0,
+            "the floor bound {at_floor} times at theta_m = 0.9"
+        );
+    }
+
+    #[test]
+    fn a_scalar_centre_field_cannot_change_the_turn_radius() {
+        // The v1 model, and the reason it could not break symmetry: one
+        // multiplier scales both wheels, so the instantaneous centre of rotation
+        // is unmoved and the loop keeps its shape.
+        let cfg = TerrainConfig {
+            friction_amplitude: 0.9,
+            correlation_length: 0.05,
+            traction_mode: TractionMode::ScalarCentre,
+            ..Default::default()
+        };
+        let t = Terrain::new(cfg, 3);
+        let mut rng = rng_from(0);
+        let (axle, vmax): (f64, f64) = (0.051, 0.128);
+        let cmd = [-0.7 * vmax, -vmax];
+        let nominal = crate::robot::turn_radius(cmd[0], cmd[1], axle).unwrap();
+        for i in 0..500 {
+            let pose = Pose::new(i as f64 * 0.031, i as f64 * -0.017, i as f64 * 0.1);
+            let r = t.apply(&pose, axle, cmd, &mut rng);
+            if let Some(radius) = crate::robot::turn_radius(r[0], r[1], axle) {
+                assert!(
+                    (radius - nominal).abs() < 1e-9,
+                    "scalar field changed the turn radius: {radius} vs {nominal}"
+                );
+            }
+        }
+        // Stronger: the traced path is the *same circle*, only traversed at a
+        // position-dependent rate. Scaling both wheels by m gives v' = m*v and
+        // omega' = m*omega, so dp/dtheta = v/omega is independent of m — a time
+        // reparameterisation, which is exactly the build doc's diagnosis of the
+        // v1 model. (It is also why a fixed step count no longer covers one
+        // period, so a bounding box would be the wrong check here.)
+        let start = Pose::new(0.0, 0.0, 0.0);
+        let signed_r = 0.5 * (cmd[0] + cmd[1]) * axle / (cmd[1] - cmd[0]);
+        let centre = start.p + start.heading().perp() * signed_r;
+        let mut pose = start;
+        for _ in 0..5000 {
+            let r = t.apply(&pose, axle, cmd, &mut rng);
+            pose = crate::robot::integrate(pose, r[0], r[1], axle, 0.01);
+            let d = (pose.p - centre).norm();
+            assert!(
+                (d - nominal).abs() < 1e-9,
+                "left the circle: {d} vs R0 {nominal}"
+            );
+        }
     }
 
     #[test]
