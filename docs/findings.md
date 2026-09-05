@@ -111,8 +111,6 @@ sees a clean monotone signal. **Set `T` on dispersion for Idea A.**
 
 ### H1 is not supported by this sweep
 
-### H1 is not supported by this sweep
-
 H1 predicts that *small* α and θ_m help, as motion noise did in Daymude et al.
 The trend here is monotone degradation on both dials. The only hints in H1's
 direction are marginal: θ_m = 0.1 sits a hair below the θ_m = 0 column at 0° and
@@ -275,20 +273,27 @@ and it is the natural next piece of analysis.
 time 5 s, start radius 0.74 m, four capability rows on a **5 × 5** grid of
 `r_p` × `κ`, 100 runs/cell, 10 000 trials. 8.8% of runs ended in a wipeout.
 
+**Reading r_p.** The metre value is meaningless on its own, so every r_p below is
+also given in start radii **R = 0.74 m**: 0.10 → 0.14 R, 0.20 → 0.27 R,
+0.35 → 0.47 R, 0.60 → 0.81 R, 1.00 → **1.35 R**. The last of these is the
+**perfect-perception corner** — r_p ≥ R means the pursuer sees the whole starting
+swarm from anywhere in it, so that column is not the hard end of a difficulty
+axis, it is the degenerate one. The figures mark it.
+
 **Rows B0–B3 only.** B4 needs a received alarm bit and communication is not
 wired — `rx` is held at 0, so a K = 1 row would silently behave as K = 0.
 B1–B3 are **hand-designed (‡), not searched**.
 
 ### Median survivors out of 20
 
-| κ | r_p | B0 blind | B1 ternary ‡ | B2 ternary+side ‡ | B3 ternary+memory ‡ |
-|---|---|---|---|---|---|
-| 0 | 0.10 | 5.0 [4.0, 14.0] | 18.0 [17.0, 19.0] | 17.5 [15.0, 18.0] | 18.0 [16.0, 19.0] |
-| 0 | 0.35 | 0.0 [0.0, 0.0] | 5.0 [5.0, 7.0] | 1.0 [1.0, 2.0] | 6.0 [5.0, 8.5] |
-| 0 | 1.00 | 0.0 [0.0, 0.0] | 3.0 [3.0, 3.0] | 0.0 [0.0, 0.0] | 3.0 [3.0, 4.0] |
-| 1 | 0.35 | 2.0 [1.0, 5.0] | 12.5 [8.0, 14.0] | 12.0 [10.0, 16.0] | 13.0 [11.0, 15.5] |
-| 2.5 | 0.60 | 5.0 [5.0, 6.0] | 6.5 [6.0, 7.0] | 6.0 [6.0, 6.0] | 7.0 [6.0, 8.0] |
-| 5 | 1.00 | 8.0 [8.0, 8.5] | 8.0 [8.0, 9.0] | 8.0 [8.0, 8.0] | 9.0 [8.0, 9.0] |
+| κ | r_p (m) | r_p / R | B0 blind | B1 ternary ‡ | B2 ternary+side ‡ | B3 ternary+memory ‡ |
+|---|---|---|---|---|---|---|
+| 0 | 0.10 | 0.14 | 5.0 [4.0, 14.0] | 18.0 [17.0, 19.0] | 17.5 [15.0, 18.0] | 18.0 [16.0, 19.0] |
+| 0 | 0.35 | 0.47 | 0.0 [0.0, 0.0] | 5.0 [5.0, 7.0] | 1.0 [1.0, 2.0] | 6.0 [5.0, 8.5] |
+| 0 | 1.00 | **1.35 †perfect perception** | 0.0 [0.0, 0.0] | 3.0 [3.0, 3.0] | 0.0 [0.0, 0.0] | 3.0 [3.0, 4.0] |
+| 1 | 0.35 | 0.47 | 2.0 [1.0, 5.0] | 12.5 [8.0, 14.0] | 12.0 [10.0, 16.0] | 13.0 [11.0, 15.5] |
+| 2.5 | 0.60 | 0.81 | 5.0 [5.0, 6.0] | 6.5 [6.0, 7.0] | 6.0 [6.0, 6.0] | 7.0 [6.0, 8.0] |
+| 5 | 1.00 | **1.35 †perfect perception** | 8.0 [8.0, 8.5] | 8.0 [8.0, 9.0] | 8.0 [8.0, 8.0] | 9.0 [8.0, 9.0] |
 
 Median survival fraction over the whole grid: B0 **0.350** [0.300, 0.375],
 B1 **0.650** [0.600, 0.700], B2 **0.450** [0.450, 0.525],
@@ -297,7 +302,8 @@ B3 **0.700** [0.650, 0.750].
 ### One sensor state is worth more than everything else on the capability axis
 
 Going from S = 2 to S = 3 — being able to tell a pursuer from a robot — is the
-whole story. The blind row is wiped out at κ = 0 for every range beyond 0.10 m;
+whole story. The blind row is wiped out at κ = 0 for every range beyond 0.10 m
+(0.14 R);
 any row that can see the pursuer keeps 3–18. Adding the memory bit on top (B3)
 buys a further robot or two consistently, but nothing like as much.
 
@@ -313,12 +319,16 @@ shows exactly how that mistake gets made and what control prevents it.
 
 ### The environment dials dominate the capability rows
 
-At κ = 5 the rows converge: every row keeps 8–9 robots at r_p = 1.0 and 18–19 at
-r_p = 0.35. At κ = 0, r_p = 0.35 they run 0 to 6. Confusion and range move the
+At κ = 5 the rows converge: every row keeps 8–9 robots at r_p = 1.0 m (1.35 R,
+the perfect-perception corner) and 18–19 at r_p = 0.35 m (0.47 R). At κ = 0,
+r_p = 0.35 m they run 0 to 6. Confusion and range move the
 outcome more than any capability step does over the ranges swept — which §8 then
 shows is *because* of aggregation rather than in spite of it.
 
-Figure: `figures/pursuer_idea_b_surface.png`.
+Figure: `figures/pursuer_idea_b_surface.png`
+(regenerate with `harness/figures_idea_b.py first_pass`). Its r_p axis is ticked
+in metres and in start radii, with the perfect-perception boundary at R = 0.74 m
+drawn as a dashed line.
 
 ---
 
@@ -513,8 +523,11 @@ Figure: `figures/terrain_h3_capability.png`.
 ## 8. Idea B: is the blind row's survival actually attributable to aggregation?
 
 `configs/sweeps/pursuer_dispersive.toml` — n = 20, τ = 120 s, ρ = 1.5, start
-radius 0.74 m, **5 × 5 grid** of (r_p, κ) at two handling times, 100 runs/cell,
-15 000 trials.
+radius **R = 0.74 m**, **5 × 5 grid** of (r_p, κ) at two handling times, 100
+runs/cell, 15 000 trials. r_p is reported in metres and in start radii
+(0.10 → 0.14 R, 0.20 → 0.27 R, 0.35 → 0.47 R, 0.60 → 0.81 R,
+1.00 → **1.35 R = the perfect-perception corner**, where the pursuer sees the
+whole starting swarm from anywhere in it).
 
 §5 found survival rising steeply with confusion and read it as dilution. But
 every row there aggregated identically when no pursuer was in view, so nothing
@@ -562,16 +575,18 @@ busy; making it busier makes clustering pay more.
 
 Survival pooled over κ, at h = 1.93:
 
-| r_p | B0-blind | B1-ternary ‡ | D-dispersive ‡ |
-|---|---|---|---|
-| 0.10 | 0.90 [0.90, 0.95] | 0.95 [0.95, 0.95] | 0.90 [0.85, 0.90] |
-| 0.20 | 0.85 [0.80, 0.85] | 0.85 [0.85, 0.90] | 0.75 [0.75, 0.78] |
-| 0.35 | 0.00 [0.00, 0.23] | 0.55 [0.45, 0.65] | 0.65 [0.60, 0.65] |
-| 0.60 | 0.00 [0.00, 0.00] | 0.05 [0.05, 0.05] | 0.50 [0.45, 0.50] |
-| 1.00 | 0.00 [0.00, 0.00] | 0.00 [0.00, 0.00] | 0.35 [0.30, 0.35] |
+| r_p (m) | r_p / R | B0-blind | B1-ternary ‡ | D-dispersive ‡ |
+|---|---|---|---|---|
+| 0.10 | 0.14 | 0.90 [0.90, 0.95] | 0.95 [0.95, 0.95] | 0.90 [0.85, 0.90] |
+| 0.20 | 0.27 | 0.85 [0.80, 0.85] | 0.85 [0.85, 0.90] | 0.75 [0.75, 0.78] |
+| 0.35 | 0.47 | 0.00 [0.00, 0.23] | 0.55 [0.45, 0.65] | 0.65 [0.60, 0.65] |
+| 0.60 | 0.81 | 0.00 [0.00, 0.00] | 0.05 [0.05, 0.05] | 0.50 [0.45, 0.50] |
+| 1.00 | **1.35 — perfect perception** | 0.00 [0.00, 0.00] | 0.00 [0.00, 0.00] | 0.35 [0.30, 0.35] |
 
-Whenever the pursuer's range exceeds ~0.35 m the dispersive row wins, and by a
-lot. Confusion narrows the gap — mean survival at κ = 5 is 0.592 (B0), 0.628
+Whenever the pursuer's range exceeds ~0.35 m (0.47 R) the dispersive row wins, and
+by a lot. Two of the five columns are at or past half the start radius and one —
+r_p = 1.0 m = 1.35 R — is the perfect-perception corner, so the claim below is
+about a grid whose upper half is deliberately brutal. Confusion narrows the gap — mean survival at κ = 5 is 0.592 (B0), 0.628
 (B1), 0.666 (D) — but does not close it. Over this grid, clustering never
 becomes the better bet on average; it only stops being catastrophic.
 
@@ -588,7 +603,8 @@ at 0 there. It is concentrated exactly where the claim is strongest — B0 loses
 the whole swarm in 72% of runs at κ = 0, falling to 27% at κ = 5, while D wipes
 out in ≤ 1% anywhere.
 
-Time to wipeout is the readable measure in those cells (r_p = 0.35, h = 1.93):
+Time to wipeout is the readable measure in those cells (r_p = 0.35 m = 0.47 R,
+h = 1.93):
 
 | κ | B0-blind | B1-ternary ‡ | D-dispersive ‡ |
 |---|---|---|---|
@@ -608,7 +624,9 @@ B1 in exactly one respect — but nothing they show is evidence about what S = 3
 sensing can achieve. The S = 5 result in §5 stays labelled ‡ for the same reason.
 
 Figures: `figures/pursuer_dispersive_kappa.png`,
-`figures/pursuer_dispersive_surface.png`.
+`figures/pursuer_dispersive_surface.png`
+(regenerate with `harness/figures_idea_b.py dispersive`). Both carry the r_p
+normalisation; the surface marks the perfect-perception boundary at R = 0.74 m.
 
 ---
 
@@ -866,7 +884,10 @@ Figure: `figures/terrain_mechanism_regression.png`
 ## 12. Idea B Pareto front: what survival costs
 
 `configs/sweeps/pursuer_pareto.toml` — five rows at h = 1.93 s, ρ = 1.5, n = 20,
-τ = 120 s, start radius 0.74 m, 100 runs/cell.
+τ = 120 s, start radius **R = 0.74 m**, 100 runs/cell. The three cells are
+r_p = 0.2 m (**0.27 R**), 0.35 m (**0.47 R**) and 1.0 m (**1.35 R — the
+perfect-perception corner**, where the pursuer sees the whole starting swarm from
+anywhere in it).
 
 Every earlier Idea B figure scored survival alone, which cannot see what
 surviving cost. `final_dispersion` is already computed over *surviving* robots in
@@ -884,17 +905,17 @@ that has been wiped out. Runs kept per cell are reported.
 
 | cell | row | survival at τ | dispersion (survivors ≥ 3) | runs kept | wiped out | median t_wipeout |
 |---|---|---|---|---|---|---|
-| **r_p = 0.2, κ = 0** | B0-blind | 0.000 [0.000, 0.000] | 1.426 [1.363, 1.497] | 23 | 72% | 47.1 s |
+| **r_p = 0.2 m = 0.27 R, κ = 0** | B0-blind | 0.000 [0.000, 0.000] | 1.426 [1.363, 1.497] | 23 | 72% | 47.1 s |
 | | B1-ternary ‡ | 0.475 [0.200, 0.750] | 1.630 [1.510, 1.787] | 68 | 12% | 81.0 s |
 | | B2-ternary-side ‡ | 0.150 [0.100, 0.275] | 1.443 [1.417, 1.560] | 52 | 21% | 63.8 s |
 | | B3-ternary-memory ‡ | 0.650 [0.400, 0.800] | 1.597 [1.538, 1.749] | 79 | 1% | 109.8 s |
 | | **D-dispersive ‡** | **0.750 [0.675, 0.750]** | **379.9 [344.3, 399.9]** | 100 | 0% | — |
-| **r_p = 0.35, κ = 3** | B0-blind | 0.800 [0.750, 0.850] | 1.451 [1.412, 1.501] | 97 | 2% | 91.4 s |
+| **r_p = 0.35 m = 0.47 R, κ = 3** | B0-blind | 0.800 [0.750, 0.850] | 1.451 [1.412, 1.501] | 97 | 2% | 91.4 s |
 | | B1-ternary ‡ | 0.800 [0.800, 0.850] | 1.508 [1.461, 1.573] | 98 | 2% | 106.5 s |
 | | B2-ternary-side ‡ | 0.850 [0.800, 0.850] | 1.502 [1.445, 1.558] | 98 | 2% | 91.5 s |
 | | B3-ternary-memory ‡ | 0.800 [0.800, 0.850] | 1.523 [1.484, 1.575] | 97 | 0% | — |
 | | **D-dispersive ‡** | 0.650 [0.600, 0.700] | 386.3 [357.9, 431.3] | 100 | 0% | — |
-| **r_p = 1.0, κ = 3** | B0-blind | 0.000 [0.000, 0.000] | not estimable (1/100) | 1 | 96% | 97.6 s |
+| **r_p = 1.0 m = 1.35 R, κ = 3** ⟵ perfect perception | B0-blind | 0.000 [0.000, 0.000] | not estimable (1/100) | 1 | 96% | 97.6 s |
 | | B1-ternary ‡ | 0.000 [0.000, 0.000] | 10.3 [6.8, 15.1] | 12 | 66% | 107.9 s |
 | | B2-ternary-side ‡ | 0.000 [0.000, 0.000] | not estimable (4/100) | 4 | 90% | 103.6 s |
 | | B3-ternary-memory ‡ | 0.000 [0.000, 0.000] | not estimable (9/100) | 9 | 66% | 105.3 s |
@@ -907,21 +928,24 @@ That is the price of its survival, stated in the units of the task the swarm
 exists to perform. Survival-only figures make D look like the best row; on both
 axes it is a different animal.
 
-**At r_p = 0.35, κ = 3 there is no trade-off at all.** Every aggregating row
+**At r_p = 0.35 m = 0.47 R, κ = 3 there is no trade-off at all.** Every aggregating row
 beats D on *both* coordinates — survival 0.80–0.85 against 0.65, dispersion
 ~1.5 against 386. D is Pareto-dominated. This is the regime where confusion has
 made clustering safe (§8) and clustering is also what the task wants, so nothing
 is given up.
 
-**At the other two cells the trade-off is real.** At r_p = 0.2, κ = 0 D has the
-highest survival (0.750) and the worst task performance by 250×. At r_p = 1.0,
-κ = 3 D is the only row that survives at all, and the aggregating rows are wiped
-out in 66–96% of runs.
+**At the other two cells the trade-off is real.** At r_p = 0.2 m = 0.27 R,
+κ = 0 D has the highest survival (0.750) and the worst task performance by 250×.
+At r_p = 1.0 m = 1.35 R, κ = 3 D is the only row that survives at all, and the
+aggregating rows are wiped out in 66–96% of runs — but that cell is the
+**perfect-perception corner**: r_p exceeds the whole starting disc, so it says
+what happens when hiding is impossible, not what happens at long range.
 
 ### Where survival saturates, timing still separates the rows
 
 Both cells with median survival 0.000 would be indistinguishable on a survival
-axis alone. Time to wipeout is not: at r_p = 0.2, κ = 0 it runs 47.1 s (B0),
+axis alone. Time to wipeout is not: at r_p = 0.2 m = 0.27 R, κ = 0 it runs
+47.1 s (B0),
 63.8 s (B2), 81.0 s (B1), 109.8 s (B3) — the same ordering the survival medians
 show at the unsaturated cells, recovered where they are pinned.
 
@@ -930,10 +954,13 @@ show at the unsaturated cells, recovered where they are pinned.
 * Four of five rows are hand-designed (‡). The front is between *spatial
   strategies* and specific tables, not between capabilities. B0 is enumerated and
   is the only row here whose constants are not a guess.
-* At r_p = 1.0, κ = 3 the base-task axis is not estimable for three of the four
-  aggregating rows — too few runs leave three survivors. The panel says so rather
+* At r_p = 1.0 m = 1.35 R, κ = 3 the base-task axis is not estimable for three of
+  the four aggregating rows — too few runs leave three survivors. The panel says so rather
   than plotting an interval built from one or four runs.
-* One handling time, one ρ, one n, one τ.
+* One handling time, one ρ, one n, one τ, one start radius. Because r_p only
+  means anything against the start radius, all three cells move together if the
+  swarm starts in a different disc: 1.0 m is the perfect-perception corner at
+  R = 0.74 m and would be 0.67 R — an ordinary long range — at R = 1.5 m.
 
 Figure: `figures/pursuer_pareto.png`
 (regenerate with `harness/figures_pareto.py`).
@@ -1066,7 +1093,9 @@ answered (§§6, 10, 12); what remains, plus what these four experiments surface
    strategies. Searching both ends would say whether the front is a property of
    the strategies or of two guesses.
 5. **Where the D-vs-aggregating crossover sits in r_p.** §12 brackets it between
-   0.2 and 0.35 m at κ = 3; a denser r_p axis would locate it.
+   0.2 and 0.35 m (0.27 R and 0.47 R) at κ = 3; a denser r_p axis would locate
+   it. Worth doing at two start radii, since r_p is only meaningful relative to
+   R and the whole grid slides when R changes.
 6. **Row B4** — the received alarm bit — still needs communication wired, and the
    delivery model (broadcast radius vs line-of-sight) is itself a capability
    claim to be counted in `K`.

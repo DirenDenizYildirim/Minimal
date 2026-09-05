@@ -17,6 +17,7 @@ from swarm_harness.plot import UPPER_BOUND_NOTE
 from swarm_harness.stats import median_ci
 
 ROWS = ["B0-blind", "B1-ternary", "B2-ternary-side", "B3-ternary-memory", "D-dispersive"]
+R_START = 0.74  # metres — the disc the swarm starts inside, and the unit r_p is read in.
 CELLS = [(0.2, 0.0), (0.35, 3.0), (1.0, 3.0)]
 # Below three survivors the dispersion of "the survivors" is degenerate: one or
 # zero survivors scores 0, which is a perfect aggregation score for a swarm that
@@ -77,7 +78,13 @@ for ax, (rp, k) in zip(axes, CELLS):
     ax.set_xscale("log")
     ax.set_xlim(right=ax.get_xlim()[1] * 2.2)  # room for the right-hand label
     ax.set_xlabel("base task among survivors\nfinal dispersion, centroid frame (lower better)")
-    ax.set_title(f"r_p = {rp} m,  κ = {k:g}", fontsize=10)
+    # r_p in metres alone is uninterpretable: the swarm starts inside a disc of
+    # radius R_START, so r_p = 1.0 m is a pursuer that sees the whole starting
+    # swarm from anywhere in it, not merely a longer-ranged one.
+    corner = "  — perfect perception" if rp >= R_START else ""
+    ax.set_title(f"r_p = {rp} m = {rp / R_START:.2f} R,  κ = {k:g}{corner}",
+                 fontsize=10,
+                 color="#8a3b00" if rp >= R_START else "black")
     ax.grid(alpha=0.25, lw=0.6)
 axes[0].set_ylabel("survival fraction at τ\n(median, bootstrap 95%)")
 
@@ -99,8 +106,12 @@ fig.suptitle(
     "At the other two cells the trade-off is real.",
     fontsize=9, y=0.985, va="top",
 )
-fig.text(0.5, 0.845, "ρ = 1.5   h = 1.93 s   n = 20   τ = 120 s   start radius = 0.74 m   100 runs/cell",
+fig.text(0.5, 0.845, "ρ = 1.5   h = 1.93 s   n = 20   τ = 120 s   start radius R = 0.74 m   100 runs/cell",
          ha="center", fontsize=8, color="0.3")
+fig.text(0.5, 0.805,
+         "r_p is given in metres and in start radii R.  r_p ≥ R is the perfect-perception corner: "
+         "the pursuer sees the whole starting swarm from anywhere in it.",
+         ha="center", fontsize=7.5, color="#8a3b00")
 fig.subplots_adjust(top=0.74, bottom=0.29, wspace=0.12)
 fig.text(0.5, 0.015, UPPER_BOUND_NOTE, ha="center", fontsize=7.5, style="italic", color="#8a3b00")
 fig.savefig("figures/pursuer_pareto.png", dpi=160)

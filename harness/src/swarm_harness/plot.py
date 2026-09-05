@@ -83,6 +83,56 @@ _PARAM_LABELS = {
 }
 
 
+#: The pursuer's sensing range is only interpretable against the space the swarm
+#: occupies. r_p = 1.0 m around a swarm started inside 0.74 m is not "long
+#: range" — it is a pursuer that sees the entire swarm from anywhere in it, and
+#: a reader who sees only the metre value will take the top of the axis for the
+#: hardest case when it is in fact the degenerate one.
+PURSUER_RANGE_FIELD = "pursuer.range"
+
+PERFECT_PERCEPTION_NOTE = (
+    "r_p ≥ start radius: the perfect-perception corner — the pursuer sees the "
+    "whole starting swarm from anywhere in it."
+)
+
+
+def _start_radius(records: Records) -> float | None:
+    """The one start radius on this figure, or None if it is a swept axis."""
+    values = {r.get("start_radius") for r in records if r.get("start_radius") is not None}
+    return float(values.pop()) if len(values) == 1 else None
+
+
+def label_pursuer_range(ax, records: Records, values, axis: str = "x") -> bool:
+    """Tick a pursuer-range axis in metres *and* in start radii, and mark the
+    perfect-perception corner.
+
+    Returns True if the axis was relabelled, so callers can decide whether to
+    print the accompanying note.
+    """
+    r_start = _start_radius(records)
+    if r_start is None or r_start <= 0:
+        return False
+    values = [float(v) for v in values]
+    ticks = getattr(ax, f"set_{axis}ticks")
+    labels = getattr(ax, f"set_{axis}ticklabels")
+    ticks(values)
+    # Two short lines, and the unit lives in the axis label: at the spacing an
+    # r_p grid actually uses, "(0.27 R)" under "0.2" overlaps its neighbour and
+    # the axis becomes unreadable, which is worse than not normalising at all.
+    labels([f"{v:g}\n{v / r_start:.2f}" for v in values], fontsize=7)
+
+    # The boundary as a line, not the corner as a shaded band: a band sits under
+    # the pcolormesh on a surface panel and is simply invisible there.
+    (ax.axvline if axis == "x" else ax.axhline)(
+        r_start, color="#8a3b00", ls="--", lw=1.1, zorder=3
+    )
+    for tick, v in zip(getattr(ax, f"get_{axis}ticklabels")(), values):
+        if v >= r_start:
+            tick.set_color("#8a3b00")
+            tick.set_fontweight("bold")
+    return True
+
+
 def curve(
     records: Records,
     x: str,
@@ -128,12 +178,18 @@ def curve(
             color="0.3",
         )
 
-    ax.set_xlabel(x)
+    marked = False
+    if x == PURSUER_RANGE_FIELD:
+        marked = label_pursuer_range(ax, records, records.unique(x), axis="x")
+    ax.set_xlabel(f"{x}   (m; second line = start radii R)" if marked else x)
     ax.set_ylabel(ylabel or metric)
     ax.set_title(title or f"{metric} vs {x}", fontsize=10, wrap=True)
     ax.grid(alpha=0.25, linewidth=0.6)
     ax.legend(fontsize=8, frameon=False)
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.tight_layout(rect=(0, 0.09 if marked else 0.04, 1, 1))
+    if marked:
+        fig.text(0.5, 0.045, PERFECT_PERCEPTION_NOTE, ha="center", fontsize=7.5,
+                 color="#8a3b00")
     _stamp(fig, records)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
@@ -203,6 +259,7 @@ def surface(
         vmax = max(np.nanmax(g[2]) for g in grids.values())
 
     mesh = None
+    marked: set[str] = set()
     for ax, (name, (xs, ys, z, sub)) in zip(axes, grids.items()):
         mesh = ax.pcolormesh(xs, ys, z, shading="nearest", vmin=vmin, vmax=vmax, cmap="viridis")
         levels = [t for t in sorted(thresholds) if np.nanmin(z) < t < np.nanmax(z)]
@@ -221,8 +278,14 @@ def surface(
                 va="bottom",
             )
         ax.set_title(_label(name, sub), fontsize=10)
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
+        for field, axis, setter in ((x, "x", ax.set_xlabel), (y, "y", ax.set_ylabel)):
+            if field == PURSUER_RANGE_FIELD and label_pursuer_range(
+                ax, records, records.unique(field), axis=axis
+            ):
+                marked.add(axis)
+                setter(f"{field}   (m; second line = start radii R)")
+            else:
+                setter(field)
 
     label = metric if baseline_y is None else f"{metric} / value at {y}={baseline_y}"
     caption = title or f"{label} over ({x}, {y})"
@@ -236,9 +299,14 @@ def surface(
     top = 0.93 - 0.045 * caption_lines - (0.04 if annotate else 0.0)
     fig.subplots_adjust(bottom=0.22, top=top, right=0.88)
     if annotate:
-        annotate_params(fig, records, annotate)
+        # Below the caption, whatever its height — the default sits at 0.955 and
+        # a three-line title prints straight through it.
+        annotate_params(fig, records, annotate, y=0.985 - 0.045 * caption_lines)
     if mesh is not None:
         fig.colorbar(mesh, ax=list(axes), label=label, fraction=0.03, pad=0.02)
+    if marked:
+        fig.text(0.5, 0.055, PERFECT_PERCEPTION_NOTE, ha="center", fontsize=7.5,
+                 color="#8a3b00")
     _stamp(fig, records, y=0.02)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
@@ -296,6 +364,7 @@ def paired_panels(
 
     group = [g for g in group if g in records.fields()]
     handles: dict[str, object] = {}
+    rp_marked = False
     for ri, spec in enumerate(metrics):
         field, label, baseline_x = spec[0], spec[1], spec[2]
         summarise = proportion_ci if (len(spec) > 3 and spec[3] == "proportion") else median_ci
@@ -327,8 +396,13 @@ def paired_panels(
                              fontsize=9)
             if ci == 0:
                 ax.set_ylabel(label, fontsize=9)
+            if x == PURSUER_RANGE_FIELD and label_pursuer_range(
+                ax, records, records.unique(x), axis="x"
+            ):
+                rp_marked = True
             if ri == n_rows - 1:
-                ax.set_xlabel(x)
+                ax.set_xlabel(f"{x}   (m; second line = start radii R)"
+                              if rp_marked else x)
             ax.grid(alpha=0.25, linewidth=0.6)
 
     fig.subplots_adjust(bottom=bottom_in / fig_h, top=1.0 - top_in / fig_h)
@@ -344,6 +418,9 @@ def paired_panels(
     fig.suptitle(title or "", fontsize=9.5, y=1.0 - 0.12 / fig_h, va="top")
     if annotate:
         annotate_params(fig, records, annotate, y=1.0 - (0.22 + 0.20 * caption_lines) / fig_h)
+    if rp_marked:
+        fig.text(0.5, 0.20 / fig_h, PERFECT_PERCEPTION_NOTE, ha="center",
+                 fontsize=7.5, color="#8a3b00")
     _stamp(fig, records, y=0.05 / fig_h)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)

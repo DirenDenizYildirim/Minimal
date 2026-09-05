@@ -222,3 +222,77 @@ class TestPairedPanels(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPursuerRangeNormalisation(unittest.TestCase):
+    """r_p in metres is not interpretable on its own.
+
+    A pursuer that sees 1.0 m around a swarm started inside 0.74 m sees the
+    whole swarm from anywhere in it — that is the degenerate corner of the grid,
+    not the hard end of a difficulty axis. Every figure with r_p on an axis has
+    to say so, or a reader will read the corner backwards.
+    """
+
+    def _rows(self, start_radius=0.74, ranges=(0.1, 0.35, 1.0)):
+        import json as _json
+
+        return [
+            _json.dumps({
+                "minimum_is_tight": True, "provenance": "enumerated",
+                "survival_fraction": 1.0 - rp, "start_radius": start_radius,
+                "n": 20,
+                "cell": {"row": "B0", "pursuer.range": rp, "pursuer.confusion": k},
+            })
+            for rp in ranges
+            for k in (0.0, 1.0)
+            for _ in range(3)
+        ]
+
+    def test_curve_ticks_carry_start_radius_multiples(self):
+        r = load_jsonl(self._rows())
+        fig = plot.curve(r, x="pursuer.range", metric="survival_fraction")
+        ax = fig.axes[0]
+        labels = [t.get_text() for t in ax.get_xticklabels()]
+        self.assertIn("0.35\n0.47", labels)
+        self.assertIn("1\n1.35", labels)
+        self.assertIn("start radii", ax.get_xlabel())
+        self.assertTrue(any("perfect-perception" in t.get_text() for t in fig.texts))
+
+    def test_the_perfect_perception_corner_is_marked(self):
+        r = load_jsonl(self._rows())
+        fig = plot.curve(r, x="pursuer.range", metric="survival_fraction")
+        ax = fig.axes[0]
+        # The boundary is drawn at the start radius itself...
+        boundary = [ln for ln in ax.get_lines()
+                    if len(set(ln.get_xdata())) == 1 and ln.get_xdata()[0] == 0.74]
+        self.assertEqual(len(boundary), 1)
+        # ...and only the ticks past it are called out.
+        marked = {t.get_text().split("\n")[0]
+                  for t in ax.get_xticklabels() if t.get_color() == "#8a3b00"}
+        self.assertEqual(marked, {"1"})
+
+    def test_no_corner_no_marked_ticks(self):
+        # Every r_p below the start radius: nothing to call out, but the axis is
+        # still labelled in start radii.
+        r = load_jsonl(self._rows(ranges=(0.1, 0.2, 0.35)))
+        fig = plot.curve(r, x="pursuer.range", metric="survival_fraction")
+        ax = fig.axes[0]
+        self.assertEqual(
+            [t for t in ax.get_xticklabels() if t.get_color() == "#8a3b00"], []
+        )
+        self.assertIn("start radii", ax.get_xlabel())
+
+    def test_a_swept_start_radius_is_left_alone(self):
+        # Normalising by "the" start radius is only meaningful when there is one.
+        r = load_jsonl(self._rows(start_radius=0.74) + self._rows(start_radius=1.5))
+        fig = plot.curve(r, x="pursuer.range", metric="survival_fraction")
+        self.assertEqual(fig.axes[0].get_xlabel(), "pursuer.range")
+
+    def test_surface_marks_the_corner_on_the_r_p_axis(self):
+        r = load_jsonl(self._rows())
+        fig = plot.surface(r, x="pursuer.range", y="pursuer.confusion",
+                           metric="survival_fraction", thresholds=[0.5])
+        panels = [a for a in fig.axes if "pursuer.range" in a.get_xlabel()]
+        self.assertEqual(len(panels), 1)
+        self.assertIn("start radii", panels[0].get_xlabel())
+        self.assertTrue(any("perfect-perception" in t.get_text() for t in fig.texts))
