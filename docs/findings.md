@@ -868,9 +868,10 @@ decomposition above accounts for the discrepancy exactly.
 
 ### Limitations
 
-* One θ_m, one λ. The ℓ/λ trend is established across three axle values at a
-  single correlation length; whether it collapses on ℓ/λ across λ as well is
-  untested and is on the next list.
+* One θ_m. The ℓ/λ trend here is established across three axle values at a
+  single correlation length. **§16 crosses it with three λ and the collapse
+  holds** — matched ℓ/λ agrees to 0.0201 in slope over a 4× range of λ — so this
+  limitation is discharged.
 * Four of the five rows are hand-picked constants (‡). That mark is about how the
   constants were obtained; nothing here is a minimality claim.
 * `axle-x2-R0-same` puts the wheel contacts outside the 7.4 cm body — a numerical
@@ -1439,6 +1440,107 @@ Figure: `figures/terrain_lambda_sweep.png`
 
 ---
 
+## 16. Experiment 4: the gradient-steering fit collapses on ℓ/λ, across λ too
+
+**§11's ℓ/λ reading survives the obvious objection.** §11 varied the axle at a
+single correlation length, so "a function of ℓ/λ" and "a function of ℓ" were the
+same claim there. Crossing three axles with three λ separates them: at matched
+ℓ/λ the slope agrees to **0.0201** over a 4× range of λ, against a **0.86** span
+in slope along the trend itself.
+
+`configs/sweeps/terrain_lambda_collapse.toml` — θ_m = 0.9, λ ∈ {5, 10, 20} cm,
+axle ∈ {2.55, 5.10, 10.20} cm with the controller constants adjusted to hold
+R₀ = 14.45 cm in all three rows, 100 runs/cell, **12 million robot-timesteps
+pooled per point**, accumulated as OLS sufficient statistics and summed across
+runs. §11 already showed R₀ does not touch the fit — three rows spanning 4× in R₀
+agreed to 0.007 in slope — so the R₀ controls are not repeated.
+
+The grid is built so that the same ℓ/λ is reached by different (ℓ, λ) pairs:
+
+| ℓ \ λ | 5 cm | 10 cm | 20 cm |
+|---|---|---|---|
+| 2.55 cm | 0.51 | 0.255 | 0.1275 |
+| 5.10 cm | 1.02 | 0.51 | 0.255 |
+| 10.20 cm | 2.04 | 1.02 | 0.51 |
+
+### Result
+
+| ℓ/λ | axle | λ | full slope | full R² | gradient-only slope | gradient-only R² |
+|---|---|---|---|---|---|---|
+| 0.128 | 2.55 cm | 20 cm | **0.9943** | **0.9999** | −0.496 | 0.0046 |
+| 0.255 | 2.55 cm | 10 cm | 0.9762 | 0.9983 | 0.522 | 0.0215 |
+| 0.255 | 5.10 cm | 20 cm | 0.9760 | 0.9986 | 0.299 | 0.0059 |
+| 0.510 | 2.55 cm | 5 cm | 0.8800 | 0.9667 | 0.807 | 0.1631 |
+| 0.510 | 5.10 cm | 10 cm | 0.9001 | 0.9738 | 0.681 | 0.1367 |
+| 0.510 | 10.20 cm | 20 cm | 0.8994 | 0.9749 | 0.610 | 0.0790 |
+| 1.020 | 5.10 cm | 5 cm | 0.6068 | 0.7429 | 0.572 | 0.3830 |
+| 1.020 | 10.20 cm | 10 cm | 0.6228 | 0.7373 | 0.539 | 0.2776 |
+| 2.040 | 10.20 cm | 5 cm | **0.1351** | **0.0870** | 0.131 | 0.0633 |
+
+Spread at matched ℓ/λ:
+
+| ℓ/λ | points | λ values | slope spread | R² spread |
+|---|---|---|---|---|
+| 0.255 | 2 | 10, 20 cm | **0.0001** | 0.0003 |
+| 0.510 | 3 | 5, 10, 20 cm | **0.0201** | 0.0082 |
+| 1.020 | 2 | 5, 10 cm | **0.0160** | 0.0055 |
+
+**Max slope spread at matched ℓ/λ: 0.0201**, and the same excluding the widest
+axle — the outlier at ℓ/λ = 0.51 is the *narrowest* axle at the *smallest* λ
+(0.8800 against 0.9001 and 0.8994), not the caveated wide one. 0.0201 is 2.3% of
+the 0.86 range the trend covers.
+
+Two further things the added λ values buy:
+
+* **A cleaner top end.** ℓ/λ = 0.128 gives slope **0.9943** with R² **0.9999**.
+  The residual is the first-order per-wheel traction effect and essentially
+  nothing else; §11's best point was 0.976 / 0.998.
+* **A bottom end that shows the expansion failing outright.** ℓ/λ = 2.04 gives
+  slope 0.135 and R² 0.087. Past ℓ/λ ≈ 1 the linearisation does not merely
+  degrade, it stops explaining the residual: 0.994 → 0.976 → 0.89 → 0.61 →
+  0.135, monotone.
+
+The gradient-only column behaves as §11 described and is reported for the same
+reason: it is a *biased* regressor, not merely a noisy one, because the two terms
+of the expansion are built from the same field. Its slopes run −0.50 to 0.81 with
+R² 0.005 to 0.38 — nowhere near 1 at any ℓ/λ, and non-monotone. Nothing here
+proposes a mechanism to explain that; the decomposition in §11 accounts for it
+exactly.
+
+### What this closes
+
+Next-list item 2 — "ℓ/λ across more than one λ" — is answered. §11's limitation
+("whether it collapses on ℓ/λ across λ as well is untested") can be struck, and
+the ℓ/λ statement can be made without the single-λ caveat: **how well a
+first-order expansion about the robot centre describes a single robot's turn rate
+is set by ℓ/λ, to within 0.02 in slope over a 4× range of λ and a 4× range of
+axle.**
+
+That remains a different claim from §4's and §15's. ℓ/λ governs the *linearisation
+of one robot's turn rate*; it does not govern *where a swarm's aggregation
+degrades worst*, which §15 finds at a fixed λ ≈ 7.5 cm that neither R₀ nor, on
+its own evidence, this ratio predicts.
+
+### Limitations
+
+* One θ_m, one n, one τ, one start radius. The fit is a per-timestep regression
+  pooled over 12 million samples, so its sampling error is negligible; its
+  *systematic* dependence on those settings is untested.
+* Four of the nine points come from rows whose constants are hand-picked (‡) to
+  hold R₀ fixed while the axle moves. The mark is about how the constants were
+  obtained; nothing here is a minimality claim.
+* `axle-x2` (10.20 cm) puts the wheel contacts outside the 7.4 cm body — a
+  numerical device for reaching ℓ/λ ≥ 1, not a buildable robot. It carries the
+  ℓ/λ = 2.04 point and one of the two at 1.02. The reported spread is the same
+  with and without it, but the *shape* of the curve past ℓ/λ = 1 rests on it.
+* Three λ over a 4× range, at one decade of ℓ/λ. Whether the collapse holds at
+  λ = 1 cm or 1 m is untested and there is no reason from this data to assume it.
+
+Figure: `figures/terrain_lambda_collapse.png`
+(regenerate with `harness/figures_lambda_collapse.py`).
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1, 2 and 3 from the previous list are now
@@ -1447,9 +1549,8 @@ answered (§§6, 10, 12); what remains, plus what these four experiments surface
 1. ~~**Does S2-searched hold up at a λ matched to its own R₀?**~~ **Answered in
    §15.** It does: both rows share a worst λ of 7.46 cm, so the terrain effect
    does not follow the controller down and §13's λ was near-worst for both.
-2. **ℓ/λ across more than one λ.** §11's trend is three axle values at a single
-   correlation length. Whether slope and R² collapse on ℓ/λ when λ varies too is
-   the obvious completion, and it is one sweep.
+2. ~~**ℓ/λ across more than one λ.**~~ **Answered in §16.** It collapses: 0.0201
+   max slope spread at matched ℓ/λ over a 4× range of λ.
 3. **The scalar-field row's ~2% improvement** (§6), pooled 0.980 [0.976, 0.986].
    Still unexplained, still small, still a real interval.
 4. **A searched dispersive row.** §12's front is between hand-designed spatial

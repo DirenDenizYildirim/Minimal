@@ -15,11 +15,17 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FixedLocator, NullLocator, ScalarFormatter
 
 from swarm_harness.load import load_jsonl
 from swarm_harness.plot import UPPER_BOUND_NOTE
 
-SUPTITLE = "PLACEHOLDER"
+SUPTITLE = (
+    "Experiment 4: the gradient-steering fit collapses on ℓ/λ across λ, not just across the axle\n"
+    "θ_m = 0.9, n = 20, τ = 600 s, 12 million robot-timesteps pooled per point.  Three axles × three λ, arranged so the\n"
+    "same ℓ/λ is reached by different (ℓ, λ) pairs.  Max slope spread at matched ℓ/λ is 0.0201 over a 4× range of λ,\n"
+    "against a 0.86 span in slope along the trend itself — §11's ℓ/λ reading was not an axle effect wearing a ratio for a name."
+)
 
 r = load_jsonl("results/terrain_lambda_collapse.jsonl")
 AXLE = {"axle-half-R0-same": 0.0255, "base": 0.051, "axle-x2-R0-same": 0.102}
@@ -97,7 +103,11 @@ for ax, key, label in ((axes[0], "slope", "OLS slope, full first-order expansion
     ax.set_xscale("log")
     ax.set_xlabel("axle length / correlation length  (ℓ / λ)")
     ax.set_ylabel(label, fontsize=9)
-    ax.grid(alpha=0.25, lw=0.6, which="both")
+    ax.grid(alpha=0.25, lw=0.6)
+    # Log minor ticks label themselves into a smear over this one-decade range.
+    ax.xaxis.set_major_locator(FixedLocator([0.125, 0.25, 0.5, 1.0, 2.0]))
+    ax.xaxis.set_minor_locator(NullLocator())
+    ax.xaxis.set_major_formatter(ScalarFormatter())
 for lam in LAMS:
     axes[0].scatter([], [], marker=MARKERS[lam], color=COLOURS[lam], edgecolor="0.2",
                     linewidth=0.6, label=f"λ = {lam * 100:g} cm")
