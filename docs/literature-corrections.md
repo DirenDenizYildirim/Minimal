@@ -203,38 +203,72 @@ Housekeeping, but it changes a published figure. The traction field reaches
 and the robot pivots. Any sweep above that is measuring stall, not terrain.
 Sweeps here are cut at θ_m = 0.9 and figures at 1.0.
 
-## 11. Along the terrain dial the capability minimum does not move — the parameters do
+## 11. Re-tuning does not solve terrain — it hides terrain behind a much larger objective mismatch, in one initial condition
 
 **Build doc §2, the whole programme.** The plan is to measure how the capability
 minimum `c*(θ)` moves under hostility. Along `θ_terr`, over 0 ≤ θ_m ≤ 0.9 at
-λ/R₀ = 0.69, **it does not move**: `c = (2, 0, 0, 0)` suffices at every point
-(`docs/findings.md` §9).
+λ/R₀(gauci) = 0.69, **it does not move**: `c = (2, 0, 0, 0)` suffices at every
+point, at start radius 0.74 m and at 1.5 m (`docs/findings.md` §§9, 13, 14). That
+part stands.
 
-What moves is the *parameter setting inside* that fixed capability. A
-four-constant controller re-searched at the worst terrain cell beats Gauci's at
-every θ_m tested, including flat ground, with disjoint CIs — so there is not even
-a specialist/generalist trade-off for an extra sensor state to arbitrate. The
-hand-built composite that switches between the two is worse than either.
+What §9 got wrong was the *explanation*. It read "a re-searched four-constant
+controller beats Gauci's at every θ_m" as re-tuning solving the terrain problem.
+Two controls since say it is not:
 
-Three consequences for the papers:
+1. **The 2×2 control (§13).** S2-flat was searched with the same optimiser, the
+   same budget and the same training seeds as S2-rough, differing only in being
+   trained at θ_m = 0 — it never saw terrain. Decomposing the Gauci → S2-rough
+   gap at θ_m = 0.9: **96.9% is objective-tuning and 3.1% is terrain-tuning**,
+   and on flat ground the terrain-tuning term reverses sign and costs 4.1%. At
+   start radius 1.5 m the same decomposition is **99.7% / 0.3%** (§14). Terrain
+   training is worth a few per cent of dispersion in either direction; matching
+   the controller to *this objective at all* is worth about 120%.
+2. **The regime control (§14).** The searched rows' advantage does not survive
+   the initial condition they were found in. At 4× the training start radius,
+   with the trial length extended sixfold so slowness cannot be mistaken for
+   failure, **S2-rough forms a cluster in 34% of runs against Gauci's 100%** and
+   S2-flat at best draws level; at n = 50 both are worse than Gauci **on flat
+   ground** at every radius, and 3600 s does not close that either. The search
+   traded gathering rate for holding quality — on flat ground at 3.0 m it takes
+   S2-rough 330 s to first form a cluster against Gauci's 140 s — and the tuned
+   start radius made the trade look free.
+
+**Experiment 1's crossing is regime-specific too.** At 0.74 m the two searched
+rows cross, with S2-rough significantly better at θ_m = 0.6; at 1.5 m the same
+grid and protocol give no θ_m at which S2-rough is better. So the trade-off that
+would justify a terrain-sensing bit is a property of one initial condition, not
+of the controllers.
+
+Four consequences for the papers:
 
 1. **Capability and parameters are different axes, and the build doc treats only
-   the first as the dependent variable.** A result that reads "hostility θ
-   requires capability c" is not established until the cheaper capability has
-   been re-searched *at that θ*. Both §7 and §9 show the un-re-searched version
-   of that claim being wrong.
-2. **Every frontier figure needs a re-searched baseline row**, not just the
-   published constants. Otherwise the frontier measures how badly the baseline
-   was tuned for the new environment, which is a different quantity.
-3. **A flat frontier is a result, not a null.** "The minimum does not move along
+   the first as the dependent variable.** A result reading "hostility θ requires
+   capability c" is not established until the cheaper capability has been
+   re-searched *at that θ*. §§7 and 9 both show the un-re-searched version of
+   that claim being wrong.
+2. **A re-searched baseline row is necessary but not sufficient.** It must also
+   be shown to transfer: re-searched at the hostile setting, *and* evaluated
+   outside the initial condition it was searched in. Otherwise the frontier
+   measures how well the optimiser overfitted the training condition, which is a
+   third quantity on top of the two above. §14 is the cheapest form of that
+   check — vary the start radius and the swarm size, keep everything else.
+3. **A degradation curve measured on published constants is a statement about
+   those constants.** At λ/R₀(gauci) = 0.69, Gauci's constants degrade 2.208×
+   where a controller that never saw terrain degrades 1.195×. Reporting ~2.2× as
+   "what terrain does" overstates it by about a factor of six for a well-matched
+   controller. The dial still bites — 1.195 is not 1.0.
+4. **A flat frontier is a result, not a null.** "The minimum does not move along
    this dial" is a direct answer to the project's question and belongs in the
-   abstract, next to the dials where it does move.
+   abstract, next to the dials where it does move. It should be stated with the
+   initial conditions it was measured in, since §14 shows those carry it.
 
-A caveat that has to travel with it: the re-searched controller beating Gauci on
-*flat ground* is a statement about this repository's objective — median final
-dispersion at n = 20, τ = 600 s under its own normalisation and collision model —
-and not a claim that Gauci's exhaustive grid search was wrong. Different
-objectives, different optima.
+Two caveats that travel with all of this. The re-searched controllers beating
+Gauci on *flat ground* is a statement about this repository's objective — median
+final dispersion under its own normalisation and collision model — and not a
+claim that Gauci's exhaustive grid search was wrong; different objectives,
+different optima. And every searched row is an upper bound (†) from a
+diagonal-covariance optimiser at a fixed budget: §14 shows that *these two*
+controllers fail to transfer, not that a four-constant controller cannot.
 
 ## 12. Report Idea B on two axes, not one
 

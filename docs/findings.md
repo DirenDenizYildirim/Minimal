@@ -1059,20 +1059,282 @@ Two consequences:
    of that difference was objective-tuning, which a terrain bit cannot supply.
    The pair with a genuine crossing is **S2-flat ↔ S2-rough**, and a composite
    over those two is worth at most the ±4% the crossing spans. On the next list,
-   not run here.
+   not run here. **Closed again by §14**: the crossing does not survive a change
+   of start radius, so there is nothing for a terrain bit to switch between.
 
 ### Limitations
 
-* One λ, one n, one start radius, one τ. Experiment 2 tests whether the searched
-  rows' advantage survives outside the initial condition they were tuned in.
+* One λ, one n, one start radius, one τ. **§14 answers this and the answer is
+  no**: the advantage holds at 1.5 m, and at 3.0 m S2-rough fails outright while
+  S2-flat draws level; at n = 50 both are worse than Gauci on flat ground. Every
+  number in this section is a statement about its own initial condition.
 * Both searched rows are upper bounds (†) from a diagonal-covariance optimiser at
   a fixed budget.
 * The crossing is located to θ_m ∈ [0.3, 0.45] by a sign flip in point estimates;
   the CIs at 0.30 and 0.45 both include zero, so a finer grid would be needed to
-  pin it.
+  pin it. **§14 re-runs this grid at start radius 1.5 m and the crossing is not
+  there at all** — branch (b), not (c). The crossing belongs to this initial
+  condition, not to the two controllers.
 
 Figure: `figures/terrain_tuning_control.png`
 (regenerate with `harness/figures_tuning_control.py`).
+
+## 14. Experiment 2: the searched rows' advantage is regime-specific
+
+**§9's comparison was regime-specific, and §13's decomposition inherits the
+limit.** The searched rows beat Gauci at the start radius they were searched at
+and at twice it. At four times it, with the trial length extended sixfold so that
+slowness cannot be mistaken for failure, **S2-rough fails outright** — 34% of
+runs form a cluster against Gauci's 100% — and **S2-flat at best draws level**.
+At n = 50 both are worse than Gauci on flat ground at every radius, and that
+deficit does not close with trial length either. Nothing below contradicts §13's
+arithmetic; it says where that arithmetic applies.
+
+`configs/sweeps/terrain_regime_robustness.toml` — S2-gauci, S2-flat † and
+S2-rough † at θ_m ∈ {0, 0.9}, start radius ∈ {0.74, 1.5, 3.0} m, n ∈ {20, 50},
+λ = 0.10 m, 100 runs/cell, 3 600 trials, evaluation seeds as in §§9 and 13. Both
+searched rows were found at n = 20, start radius 0.74 m, τ = 600 s; 1.5 m and
+3.0 m are 2× and 4× that radius, so 4× and 16× the start area at fixed n.
+
+**τ.** Kept at 600 s for the main grid, checked rather than assumed: a probe at
+3.0 m, n = 20, θ_m = 0, 30 runs/cell at τ = 600, 1800, 3600 and 7200 s gives
+reach 1.00 at every τ for all three rows with dispersion converged by 600 s. That
+probe was run on flat ground, which turned out not to cover the cell that
+produces the inversion; the τ extension for that cell is its own sub-section
+below and it changes part of the reading.
+
+Rows are paired by run index: within a cell, run *i* is the same initial
+placement and the same traction field for all three controllers, so every ratio
+below is a per-run ratio, not a quotient of independent medians.
+
+### The advantage inverts with start radius
+
+#### n = 20
+
+| start radius | row | reach θ_m=0 | reach θ_m=0.9 | dispersion θ_m=0 | dispersion θ_m=0.9 | paired ratio vs Gauci at θ_m=0.9 |
+|---|---|---|---|---|---|---|
+| **0.74 m** | S2-gauci | 1.00 | 0.86 [0.78, 0.91] | 1.427 | 3.150 [2.716, 3.439] | — |
+|  | S2-flat † | 1.00 | 0.99 [0.95, 1.00] | 1.203 | 1.438 [1.378, 1.522] | **1.942** [1.645, 2.267] |
+|  | S2-rough † | 1.00 | 1.00 [0.96, 1.00] | 1.253 | 1.383 [1.350, 1.441] | **2.129** [1.807, 2.446] |
+| **1.5 m** | S2-gauci | 1.00 | 0.79 [0.70, 0.86] | 1.394 | 2.899 [2.554, 3.224] | — |
+|  | S2-flat † | 1.00 | 0.82 [0.73, 0.88] | 1.206 | 1.608 [1.453, 1.910] | **1.541** [1.285, 1.647] |
+|  | S2-rough † | 1.00 | 0.74 [0.65, 0.82] | 1.280 | 1.604 [1.425, 1.817] | **1.475** [1.199, 1.729] |
+| **3 m** | S2-gauci | 1.00 | 0.46 [0.37, 0.56] | 1.385 | 3.902 [3.047, 5.623] | — |
+|  | S2-flat † | 1.00 | 0.23 [0.16, 0.32] | 1.226 | 19.512 [13.541, 31.661] | **0.296** [0.170, 0.638] |
+|  | S2-rough † | 1.00 | 0.11 [0.06, 0.19] | 1.296 | 37.995 [28.656, 48.557] | **0.137** [0.098, 0.210] |
+
+#### n = 50
+
+| start radius | row | reach θ_m=0 | reach θ_m=0.9 | dispersion θ_m=0 | dispersion θ_m=0.9 | paired ratio vs Gauci at θ_m=0.9 |
+|---|---|---|---|---|---|---|
+| **0.74 m** | S2-gauci | 1.00 | 0.99 [0.95, 1.00] | 1.206 | 1.756 [1.642, 1.980] | — |
+|  | S2-flat † | 1.00 | 1.00 [0.96, 1.00] | 1.253 | 1.466 [1.364, 1.558] | **1.181** [1.096, 1.235] |
+|  | S2-rough † | 1.00 | 1.00 [0.96, 1.00] | 1.285 | 1.433 [1.362, 1.501] | **1.191** [1.117, 1.282] |
+| **1.5 m** | S2-gauci | 1.00 | 0.96 [0.90, 0.98] | 1.203 | 2.130 [1.933, 2.338] | — |
+|  | S2-flat † | 1.00 | 0.99 [0.95, 1.00] | 1.386 | 1.609 [1.501, 1.842] | **1.280** [1.158, 1.438] |
+|  | S2-rough † | 1.00 | 0.96 [0.90, 0.98] | 1.473 | 1.632 [1.481, 1.830] | **1.216** [1.099, 1.374] |
+| **3 m** | S2-gauci | 1.00 | 0.79 [0.70, 0.86] | 1.204 | 2.375 [1.997, 2.879] | — |
+|  | S2-flat † | 1.00 | 0.65 [0.55, 0.74] | 1.545 | 2.964 [2.233, 3.714] | **0.902** [0.628, 1.094] |
+|  | S2-rough † | 1.00 | 0.62 [0.52, 0.71] | 1.548 | 3.139 [2.454, 4.117] | **0.807** [0.643, 0.944] |
+
+Reading the last column: **> 1 means the searched row beats Gauci**. It goes
+1.94 / 2.13 at the tuned radius, 1.54 / 1.48 at 1.5 m, and **0.30 / 0.14** at
+3.0 m — where Gauci's median dispersion is 3.9 and S2-rough's is **38.0**, with
+reach 0.46 against **0.11**. Those 3.0 m figures are at τ = 600 s and are partly
+a trial-length effect; the τ sub-section below separates the two and shrinks the
+gap without removing it.
+
+At n = 50 the picture is worse for the searched rows before terrain is applied at
+all. On flat ground Gauci holds 1.204–1.206 at every radius while S2-flat and
+S2-rough drift from 1.25 to 1.55; the paired flat-ground ratios are 0.973 /
+0.944 at 0.74 m, 0.870 / 0.818 at 1.5 m and 0.775 / 0.777 at 3.0 m. Neither
+searched row transfers to a swarm 2.5× the size it was tuned for, in any terrain.
+
+The hold ratio — the statistic §13's headline is stated in — reverses with it.
+At n = 20: at 0.74 m it is Gauci 2.149 [1.853, 2.455], S2-flat 1.200
+[1.124, 1.272], S2-rough 1.099 [1.044, 1.145], reproducing §13; at 3.0 m it is
+Gauci **2.810** [2.187, 3.902], S2-flat **15.998** [11.326, 25.132], S2-rough
+**28.540** [20.789, 35.070].
+
+### Why: they bought holding with gathering rate
+
+Median time to first single cluster, **on flat ground**, n = 20, among runs that
+reached one:
+
+| start radius | S2-gauci | S2-flat † | S2-rough † |
+|---|---|---|---|
+| 0.74 m | 20 s [20, 20] | 30 s [20, 30] | 30 s [20, 30] |
+| 1.5 m | 60 s [50, 60] | 90 s [80, 90] | 90 s [90, 100] |
+| 3.0 m | 140 s [130, 150] | 280 s [260, 295] | **330 s [310, 345]** |
+
+The search shrank the blind-state turning circle from R₀ = 14.45 cm to about
+5 cm (§13's parameter table). A tight circle holds a cluster that already exists;
+it also covers ground slowly, and the blind state *is* the search behaviour. On
+flat ground the cost is invisible at 0.74 m — 30 s against 20 s inside a 600 s
+budget — and it grows to 2.0–2.4× at 3.0 m. Terrain multiplies travel time on top
+of that, and the budget runs out.
+
+That is a rate difference, not obviously a capability difference, so it has to be
+separated from the trial length before the inversion can be called a failure.
+
+### Failure or truncation? τ extended 6×
+
+`configs/sweeps/terrain_regime_tau.toml` — the inverted cell (3.0 m, θ_m = 0.9)
+re-run at τ = 600, 1800 and 3600 s, **all three rows and both swarm sizes**, so
+the comparison stays matched. 100 runs/cell.
+
+#### n = 20
+
+| τ | row | reach (Wilson 95%) | dispersion (median, 95%) | paired ratio Gauci/row |
+|---|---|---|---|---|
+| **600 s** | S2-gauci | 0.46 [0.37, 0.56] | 3.902 [3.047, 5.623] | — |
+|  | S2-flat † | 0.23 [0.16, 0.32] | 19.512 [13.541, 31.661] | **0.296** [0.170, 0.638] |
+|  | S2-rough † | 0.11 [0.06, 0.19] | 37.995 [28.656, 48.557] | **0.137** [0.098, 0.210] |
+| **1800 s** | S2-gauci | 0.99 [0.95, 1.00] | 2.927 [2.474, 3.168] | — |
+|  | S2-flat † | 0.53 [0.43, 0.62] | 2.054 [1.740, 10.077] | **0.996** [0.338, 1.333] |
+|  | S2-rough † | 0.29 [0.21, 0.39] | 26.275 [15.561, 33.772] | **0.141** [0.091, 0.245] |
+| **3600 s** | S2-gauci | 1.00 [0.96, 1.00] | 2.888 [2.570, 3.410] | — |
+|  | S2-flat † | 0.60 [0.50, 0.69] | 1.907 [1.682, 4.217] | **1.297** [0.960, 1.495] |
+|  | S2-rough † | 0.34 [0.25, 0.44] | 24.006 [12.328, 34.901] | **0.148** [0.104, 0.300] |
+
+#### n = 50
+
+| τ | row | reach (Wilson 95%) | dispersion (median, 95%) | paired ratio Gauci/row |
+|---|---|---|---|---|
+| **600 s** | S2-gauci | 0.79 [0.70, 0.86] | 2.375 [1.997, 2.879] | — |
+|  | S2-flat † | 0.65 [0.55, 0.74] | 2.964 [2.233, 3.714] | **0.902** [0.628, 1.094] |
+|  | S2-rough † | 0.62 [0.52, 0.71] | 3.139 [2.454, 4.117] | **0.807** [0.643, 0.944] |
+| **1800 s** | S2-gauci | 0.99 [0.95, 1.00] | 1.768 [1.663, 2.005] | — |
+|  | S2-flat † | 0.87 [0.79, 0.92] | 1.635 [1.465, 1.893] | **1.105** [0.987, 1.202] |
+|  | S2-rough † | 0.76 [0.67, 0.83] | 1.734 [1.568, 2.311] | **1.006** [0.830, 1.193] |
+| **3600 s** | S2-gauci | 1.00 [0.96, 1.00] | 1.741 [1.648, 1.876] | — |
+|  | S2-flat † | 0.94 [0.88, 0.97] | 1.510 [1.424, 1.637] | **1.098** [1.056, 1.161] |
+|  | S2-rough † | 0.86 [0.78, 0.91] | 1.589 [1.409, 1.814] | **1.137** [0.992, 1.208] |
+
+The two searched rows separate.
+
+**S2-flat's collapse at n = 20 was largely truncation.** Its reach goes
+0.23 → 0.53 → 0.60 and the paired ratio against Gauci goes 0.296 → 0.996 →
+**1.297 [0.960, 1.495]** — from a 3.4× deficit to level, with the interval still
+containing 1 at 3600 s. Given six times the budget it draws with Gauci; it does
+not beat it, and it does not come near the 1.94 it manages at the tuned radius.
+
+**S2-rough's collapse is not.** Reach 0.11 → 0.29 → **0.34** against Gauci's
+0.46 → 0.99 → **1.00**, and the paired ratio does not move at all: 0.137, 0.141,
+**0.148**. Two thirds of its runs never form a cluster inside six times the
+budget that was enough for every Gauci run. That is a failure, not a rate.
+
+**At n = 50 the inversion was truncation.** Every ratio crosses back above 1 as
+τ grows — S2-flat 0.902 → 1.105 → **1.098 [1.056, 1.161]**, S2-rough 0.807 →
+1.006 → **1.137 [0.992, 1.208]** — so at 3.0 m with a long enough trial the
+searched rows recover a small advantage. Small: ~1.1×, against ~1.2× at the tuned
+radius for this n and ~2× at the tuned radius for n = 20.
+
+So the honest statement is narrower than "the ordering inverts", and worse for
+the searched rows than a rate story would be: **at 4× the tuned start radius,
+S2-rough fails outright and S2-flat at best draws level, no matter how long the
+trial runs.** τ = 600 s exaggerated the size of the gap in every cell; it did not
+create it.
+
+#### And the same question on flat ground
+
+`configs/sweeps/terrain_regime_tau_flat.toml` — the n = 50 flat-ground deficit is
+the other claim above that a 600 s budget could have manufactured, because at
+3.0 m the rows do not finish gathering at the same time: 100 s (Gauci), 180 s
+(S2-flat), 200 s (S2-rough), so Gauci has had ~500 s to contract and the searched
+rows ~400 s. Same cell, same τ values, θ_m = 0.
+
+| τ | n = 20: S2-flat † / S2-rough † vs Gauci | n = 50: S2-flat † / S2-rough † vs Gauci |
+|---|---|---|
+| 600 s | 1.125 [1.103, 1.146] / 1.064 [1.019, 1.099] | 0.775 [0.738, 0.834] / 0.777 [0.755, 0.798] |
+| 1800 s | 1.168 [1.147, 1.192] / 1.122 [1.098, 1.156] | 0.829 [0.766, 0.870] / 0.798 [0.765, 0.822] |
+| 3600 s | 1.173 [1.150, 1.193] / 1.148 [1.116, 1.165] | **0.839** [0.795, 0.880] / **0.805** [0.779, 0.835] |
+
+**The flat-ground deficit at n = 50 is not truncation.** Six times the budget
+moves it from 0.78 to 0.82 and no further; Gauci's own dispersion moves 1.204 →
+1.209, i.e. it was converged at 600 s. Neither searched row transfers to a swarm
+2.5× the size it was tuned for, on flat ground, at any trial length tested.
+
+### Experiment 1's decision rule, re-run where the rows are still comparable
+
+`configs/sweeps/terrain_tuning_control_r15.toml` — experiment 1's grid and
+protocol unchanged at start radius 1.5 m, the largest radius at which both
+searched rows still beat Gauci, so the comparison is between two controllers
+that are both doing the task rather than two that are both failing at it.
+n = 20, 24 cells, 2 400 trials.
+
+| θ_m | paired median (S2-flat † − S2-rough †) | 95% CI | verdict |
+|---|---|---|---|
+| 0.00 | −0.0730 | [−0.0896, −0.0462] | **flat better** |
+| 0.10 | −0.0801 | [−0.0938, −0.0672] | **flat better** |
+| 0.20 | −0.0578 | [−0.0694, −0.0438] | **flat better** |
+| 0.30 | −0.0236 | [−0.0402, −0.0034] | **flat better** |
+| 0.45 | +0.0037 | [−0.0166, +0.0114] | no difference |
+| 0.60 | −0.0008 | [−0.0134, +0.0433] | no difference |
+| 0.75 | +0.0340 | [−0.0112, +0.0648] | no difference |
+| 0.90 | −0.0124 | [−0.1116, +0.0775] | no difference |
+
+**Branch (b), not branch (c).** S2-flat is significantly better at θ_m ≤ 0.3 and
+there is no θ_m at which S2-rough is significantly better. The one cell that
+decided experiment 1 — θ_m = 0.6, where S2-rough won by +0.0421
+[+0.0107, +0.0659] at 0.74 m — is null here: −0.0008 [−0.0134, +0.0433]. Doubling
+the start radius removes the crossing.
+
+The decomposition goes the same way, harder. At 1.5 m, θ_m = 0.9: S2-gauci 2.899
+→ S2-flat 1.608 → S2-rough 1.604, i.e. **99.7% objective-tuning and 0.3%
+terrain-tuning**, against 96.9 / 3.1 at 0.74 m. The terrain-tuning term was 3% of
+a real effect at one start radius and is indistinguishable from zero at twice it.
+
+Hold ratios at 1.5 m: S2-gauci 2.053 [1.804, 2.383], S2-flat 1.302 [1.201, 1.592],
+S2-rough 1.231 [1.139, 1.470].
+
+### What this does to §13 and to correction #11
+
+1. **§13's 97% / 3% split survives as a statement about its own regime and does
+   not generalise.** At 1.5 m it becomes 99.7% / 0.3%; the terrain share shrinks
+   toward zero as the initial condition moves away from the training one, which is
+   what a small tuning artefact does and not what a mechanism does.
+2. **Experiment 1's branch (c) does not replicate.** The crossing exists at the
+   tuned start radius and is gone at twice it. §13's "a trade-off exists,
+   crossing at θ_m ≈ 0.3–0.45" must be read as a property of that initial
+   condition, not of the two controllers.
+3. **The terrain bit stays closed.** §13 reopened it at the S2-flat ↔ S2-rough
+   pair on the strength of the crossing. Without a crossing outside the tuned
+   radius there is nothing for a terrain bit to switch between, and it goes back
+   on the next list as a question about *where* a crossing exists at all.
+4. **§13's re-attribution of the H2 curve stands and strengthens.** The claim was
+   that ~2.2× degradation is a property of Gauci's constants rather than of
+   terrain in general, since a controller that never saw terrain degrades 1.195×.
+   That holds at 0.74 m and 1.5 m. It does *not* extend to 3.0 m, where the
+   controller that never saw terrain degrades 16.0× — but there the failure is
+   gathering, not holding, and the H2 curve is a holding measurement.
+
+### Limitations
+
+* Two θ_m values on the main grid (0 and 0.9). The full θ_m grid was re-run at
+  1.5 m only.
+* Three start radii and two swarm sizes, at one λ and one arena. τ was extended
+  only in the 3.0 m cell, at both θ_m and both n; the 1.5 m cells are at 600 s
+  and their (smaller) gaps carry the same unresolved rate component.
+* Start radius and n are crossed but density is confounded with both: n = 50 at
+  0.74 m is 2.5× the density of n = 20 there.
+* Absolute dispersion is compared **within** a cell, never across n — the
+  normalisation makes cross-n comparison of the raw number meaningless. Every
+  cross-cell claim above is a paired ratio inside a fixed (radius, n, θ_m).
+* Both searched rows remain upper bounds (†) from a diagonal-covariance optimiser
+  at a fixed budget. A different search at the same budget might transfer better;
+  nothing here says the *capability* fails to transfer, only that these two
+  controllers do.
+* The 1.5 m re-run of the decision rule inherits experiment 1's resolution
+  limit: the crossing is located by sign flips in point estimates on an eight-step
+  grid.
+
+Figures: `figures/terrain_regime_robustness.png`
+(regenerate with `harness/figures_regime_robustness.py`),
+`figures/terrain_decision_rule_regimes.png`
+(regenerate with `harness/figures_decision_rule_regimes.py`).
+
+---
 
 ## Next (noted, not run)
 

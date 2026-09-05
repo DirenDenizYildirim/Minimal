@@ -1,0 +1,71 @@
+# EXPERIMENT 4 -- does the gradient-steering fit collapse on l/lambda when
+# lambda varies, or only when the axle does?
+#
+# Section 11 measured the full first-order expansion at ONE correlation length
+# and found slope and R^2 falling monotonically with l/lambda: 0.976/0.998 at
+# l/lambda = 0.25, 0.900/0.974 at 0.51, 0.623/0.737 at 1.02. Every one of those
+# points came from varying the AXLE at lambda = 10 cm, so "l/lambda decides the
+# quality of the linearisation" is, strictly, "the axle does, at lambda = 10 cm".
+# That is section 11's own stated limitation and this closes it.
+#
+# THE DESIGN. Three axles crossed with three correlation lengths, chosen so that
+# the same l/lambda is reached by different (l, lambda) pairs:
+#
+#   l \ lambda      5 cm    10 cm   20 cm
+#   2.55 cm         0.51    0.255   0.1275
+#   5.10 cm         1.02    0.51    0.255
+#   10.20 cm        2.04    1.02    0.51
+#
+# l/lambda = 0.51 is reached three ways, 0.255 and 1.02 two ways each. If the fit
+# is a function of l/lambda alone, those repeats agree; if lambda enters on its
+# own, they separate and the section-11 trend was an axle effect wearing a ratio
+# for a name. The reported statistic is the max spread in slope at matched
+# l/lambda.
+#
+# ROWS. The base row and the two axle-varying rows from section 11, with their
+# constants adjusted so R0 stays at 14.45 cm in all three -- section 11 already
+# showed R0 does not touch the fit (three rows spanning 4x in R0 agreed to 0.007
+# in slope), so the R0 controls are not repeated here.
+#
+# CAVEAT, carried from section 11: axle-x2 puts the wheel contacts outside the
+# 7.4 cm body. It is a numerical device for reaching l/lambda >= 1, not a
+# buildable robot, and it carries the top row of the table. Both the pooled
+# spread and the spread excluding it are reported.
+#
+# theta_m = 0.9, 100 runs/cell, regression accumulated as OLS sufficient
+# statistics and summed across runs. Both fits recorded: the full expansion and
+# the gradient term alone, which is biased rather than merely noisy because the
+# two terms are built from the same field.
+
+name = "terrain-lambda-collapse"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.9]
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.05, 0.10, 0.20]
+
+[[rows]]
+label = "axle-half-R0-same"
+[rows.overrides]
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.0255
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "base"
+[rows.overrides]
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "axle-x2-R0-same"
+[rows.overrides]
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.102
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }

@@ -1,0 +1,57 @@
+# EXPERIMENT 2, part 3b -- the same tau question on FLAT ground.
+#
+# Part 1 reports that at n = 50 the searched rows are worse than Gauci on flat
+# ground at every start radius. At 0.74 m that is not in doubt: every row reaches
+# a cluster in 15-20 s inside a 600 s budget. At 3.0 m it is, because the rows do
+# not reach at the same time -- 100 s (Gauci), 180 s (S2-flat), 200 s (S2-rough)
+# -- so at tau = 600 s Gauci has had ~500 s to contract and the searched rows
+# ~400 s. A deficit measured there could be residual contraction rather than a
+# worse asymptote, and the tau extension in part 3 was run at theta_m = 0.9 only.
+#
+# Same cell, same taus, theta_m = 0. If the searched rows' flat-ground dispersion
+# keeps falling with tau while Gauci's does not, the flat-ground deficit at the
+# large radii is a rate artefact and only the 0.74 m figure survives.
+
+name = "terrain-regime-tau-flat"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [3.0]
+
+[[axis]]
+path = "swarm.n"
+values = [20, 50]
+
+[[axis]]
+path = "sim.duration"
+values = [600.0, 1800.0, 3600.0]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-flat"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.328887, -0.892324] },
+  { wheels = [0.998251, -0.658854] },
+] }
+
+[[rows]]
+label = "S2-rough"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }

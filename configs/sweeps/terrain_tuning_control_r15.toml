@@ -1,0 +1,63 @@
+# EXPERIMENT 2, part 2 -- experiment 1's decision rule, re-run at the largest
+# start radius where the searched rows still beat Gauci.
+#
+# Experiment 2 (part 1, terrain_regime_robustness.toml) found that the searched
+# rows' advantage over Gauci is regime-specific: it holds at start radius 0.74 m
+# and 1.5 m and INVERTS at 3.0 m, where S2-rough's median dispersion is 38.0
+# against Gauci's 3.9 and its reach is 0.11 against 0.46. Experiment 1's
+# crossing -- S2-flat better at theta_m <= 0.2, S2-rough better at 0.6 -- was
+# therefore measured inside a regime that does not generalise, and correction #11
+# cannot be finalised from it without asking whether the crossing is still there
+# where the rows are still worth comparing.
+#
+# This is experiment 1's grid and protocol, unchanged, at start radius 1.5 m:
+# the largest radius at which both searched rows still beat Gauci (paired ratio
+# 1.54 and 1.48 at theta_m = 0.9), so the comparison is between two controllers
+# that are both doing the task rather than two that are both failing at it.
+#
+# The reported statistic is the same paired difference by run index, S2-flat
+# minus S2-rough, and the same three-branch rule:
+#   (a) flat degrades like Gauci while rough holds -> terrain moves the optimum
+#   (b) CIs overlap at every theta_m              -> terrain is a flat tax
+#   (c) they cross                                -> a trade-off, report where
+#
+# n = 20, tau = 600 s, lambda = 0.10 m, 100 runs/cell, the same evaluation seeds.
+
+name = "terrain-tuning-control-r1.5"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.1, 0.2, 0.3, 0.45, 0.6, 0.75, 0.9]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [1.5]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-flat"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.328887, -0.892324] },
+  { wheels = [0.998251, -0.658854] },
+] }
+
+[[rows]]
+label = "S2-rough"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }

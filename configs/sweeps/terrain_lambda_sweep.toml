@@ -1,0 +1,62 @@
+# EXPERIMENT 3 -- does the terrain effect follow the controller down in lambda?
+#
+# Section 4 (H2) located the worst correlation length at lambda/R0 ~ 0.7 for
+# Gauci's R0 = 14.45 cm, i.e. lambda ~ 10 cm, and every terrain sweep since has
+# been run at exactly that lambda. S2-rough has R0 = 4.74 cm, so if H2 is a
+# statement about the controller's own turning circle rather than about a
+# privileged length in the arena, S2-rough's worst lambda is near 3.3 cm -- a
+# value no sweep in this repository has ever visited.
+#
+# That matters for section 13's headline. "A controller tuned for this objective
+# degrades 1.195x where Gauci's degrades 2.208x" was measured at lambda = 10 cm,
+# which is 0.69 R0 for Gauci and 2.11 R0 for S2-rough. If S2-rough's degradation
+# peaks at its own 0.7 R0, the 1.195 figure is measured off-peak and understates
+# what terrain costs it.
+#
+# GRID. lambda log-spaced 2 cm -> 20 cm in 8 steps, which brackets BOTH predicted
+# peaks: 3.3 cm (S2-rough) sits between the second and third points, 10.1 cm
+# (Gauci) is the sixth.
+#
+#   lambda (cm)      2.0   2.78  3.86  5.37  7.46  10.36 14.39 20.0
+#   lambda/R0 rough  0.42  0.59  0.81  1.13  1.57  2.19  3.04  4.22
+#   lambda/R0 gauci  0.14  0.19  0.27  0.37  0.52  0.72  1.00  1.38
+#
+# theta_m = 0 is included at every lambda so the hold ratio has a PAIRED
+# baseline by run index at each point. With amplitude 0 the field is identically
+# 1, so those cells must not depend on lambda; that they don't is a cheap
+# invariance check on the terrain sampler, and any drift there invalidates the
+# ratios above it.
+#
+# DECISION RULE, pre-registered. If S2-rough's hold ratio peaks near
+# lambda/R0 ~ 0.7 (its own R0), H2 is a controller-relative law and it follows
+# the controller into l/lambda > 1 -- the axle is 5.1 cm, so at lambda = 3.3 cm
+# the wheels straddle more than one correlation length. If the peak is elsewhere
+# or absent, report where it is and stop; no third mechanism is proposed here.
+#
+# n = 20, tau = 600 s, start radius 0.74 m, 100 runs/cell, evaluation seeds as
+# in sections 9 and 13. Both searched rows carry the dagger.
+
+name = "terrain-lambda-sweep"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.02, 0.0278, 0.0386, 0.0537, 0.0746, 0.1036, 0.1439, 0.2]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-rough"
+[rows.overrides]
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
