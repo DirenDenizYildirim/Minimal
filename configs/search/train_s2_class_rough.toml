@@ -1,0 +1,79 @@
+# Training condition for S2-class-rough: theta_m = 0.9, the peak terrain cell, searched against an
+# ENVIRONMENT CLASS rather than one arena.
+#
+# Section 14 showed that S2-flat and S2-rough -- both searched at n = 20, start
+# radius 0.74 m -- do not transfer. At 4x that radius S2-rough forms a cluster in
+# 34% of runs against Gauci's 100%, and at n = 50 both are worse than Gauci on
+# flat ground at every radius. That is a statement about two controllers, not
+# about the capability: nothing had asked the optimiser to work anywhere but the
+# arena it was given.
+#
+# This asks. The class is
+#
+#   swarm.init.radius in {0.74, 1.5, 3.0} m   x   swarm.n in {20, 50}
+#
+# passed on the command line as --class, giving six conditions. The objective is
+# the GEOMETRIC MEAN of the per-condition medians: the conditions span median
+# dispersion from about 1.2 to tens, so an arithmetic mean would be the 3.0 m
+# cells wearing a disguise and the optimiser could abandon the rest of the class.
+# Averaging logs weights a 10% improvement the same everywhere, and reduces to
+# the ordinary median objective when the class has one member.
+#
+# BUDGET. 1200 evaluations x 12 runs -- DOUBLE section 9's 600 x 12. The single-
+# condition searches optimised a four-constant controller against one condition;
+# this optimises the same four constants against six. Giving both the same budget
+# would confound "a transferring controller does not exist" with "the class
+# search was not given enough evaluations to find one", and the doubling is
+# stated here so the comparison is quotable rather than implied.
+#
+# With 12 runs over 6 conditions each condition gets 2 runs per evaluation, so a
+# single evaluation's estimate of any one condition is very noisy. sep-CMA-ES
+# tolerates that as long as the noise is unbiased and shared across candidates,
+# which it is: every candidate in the search is scored on the same (condition,
+# seed) pairs.
+#
+# Training seed base 920000, disjoint from the evaluation seeds (20260904) and
+# from the section 13 searches' base (900000), so this row is not evaluated on
+# anything it was trained on and is not paired with the single-condition rows by
+# accident.
+
+[robot]
+radius = 0.037
+axle_length = 0.051
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[swarm.init]
+# Overridden per condition by --class; the shape has to be named here or the
+# override creates a partial init block.
+shape = "disk"
+coverage = 0.05
+
+[sim]
+dt = 0.1
+duration = 600.0
+seed = 20260904
+
+[sensor]
+fov_half_angle = 0.0
+encoding = "binary"
+
+[controller]
+kind = "table"
+memory_bits = 0
+provenance = "optimiser_found"
+entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+]
+
+[terrain]
+slope_angle = 0.0
+friction_amplitude = 0.9
+correlation_length = 0.1
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 0.0

@@ -1,0 +1,56 @@
+# QUESTION A, EXPERIMENT 1, COMPANION -- the same grid at section 15's start
+# radius.
+#
+# The 1.5 m run (terrain_lambda_r0_family.toml) turned out not to measure what it
+# was for. The hold ratio only means "how much looser is the cluster" while there
+# IS a cluster, and at 1.5 m two things break that:
+#
+#   * at lambda >= 20 cm every row's reach falls to 0.4-0.5, so the ratio is
+#     driven by runs that never aggregated rather than by holding;
+#   * the R0-x2 row does not aggregate at 1.5 m even on FLAT ground -- median
+#     dispersion 2.938 against 1.249 (R0-half) and 1.394 (base) -- and its reach
+#     under terrain is 0.05-0.29 across most of the grid.
+#
+# Section 15 ran at 0.74 m and kept reach between 0.89 and 1.00 over the whole
+# lambda grid, which is why its peaks were readable. This repeats the three-row
+# family there. Everything else is identical: same lambda grid, same theta_m,
+# same n, same tau, same seeds.
+#
+# The decision rule is applied to THIS sweep. The 1.5 m sweep is reported
+# alongside it as the regime where the metric stops working, which is a result
+# about the metric rather than about the length scale.
+#
+# VALIDITY WINDOW, applied to both: a peak is only read where the row reaches a
+# single cluster in at least 80% of runs at theta_m = 0.9. That threshold was
+# chosen after seeing the 1.5 m data, so its use there is post hoc and is
+# labelled as such; for this sweep it is fixed in advance.
+
+name = "terrain-lambda-r0-family-r074"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.02, 0.0278, 0.0386, 0.0537, 0.0746, 0.1036, 0.1439, 0.2, 0.2779, 0.3861]
+
+[[rows]]
+label = "R0-half-axle-same"
+[rows.overrides]
+"swarm.init.radius" = 0.74
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "base"
+[rows.overrides]
+"swarm.init.radius" = 0.74
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "R0-x2-axle-same"
+[rows.overrides]
+"swarm.init.radius" = 0.74
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }

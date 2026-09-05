@@ -1021,15 +1021,18 @@ The sign flips between θ_m = 0.30 and 0.45, and the effect is **significant on
 both sides** — flat wins at θ_m ≤ 0.2, rough wins at θ_m = 0.6. That is branch
 (c): a trade-off exists, crossing at **θ_m ≈ 0.3–0.45**.
 
-### But it is a 3% trade-off inside a 97% effect
+### But it is a 3% trade-off inside a 97% effect — and a 0.3% one at 1.5 m
 
-Decomposing the Gauci → S2-rough gap at θ_m = 0.9 (absolute dispersion):
+Decomposing the Gauci → S2-rough gap at θ_m = 0.9 (absolute dispersion) gives
+**96.9% objective-tuning and 3.1% terrain-tuning at this start radius, against
+99.7% / 0.3% at 1.5 m** (§14) — the two numbers travel together, because the
+terrain share is the part that does not survive a change of initial condition:
 
 | | value | share of the gap |
 |---|---|---|
 | S2-gauci | 3.150 | |
-| S2-flat † | 1.438 | **96.9% — objective-tuning** |
-| S2-rough † | 1.383 | **3.1% — terrain-tuning** |
+| S2-flat † | 1.438 | **96.9% — objective-tuning** (99.7% at 1.5 m) |
+| S2-rough † | 1.383 | **3.1% — terrain-tuning** (0.3% at 1.5 m) |
 
 And on flat ground the terrain-tuning term *reverses*: S2-rough costs 4.1%
 against S2-flat there. So terrain-tuning is worth about ±4% of dispersion in
@@ -1345,6 +1348,14 @@ for S2-rough. H2's "worst at λ/R₀ ≈ 0.7" is not a controller-relative law; 
 was a statement about one controller, and the length it names is fixed in the
 arena rather than carried by the robot's turning circle.
 
+**§17 retests this inside a single controller family** — three rows of Gauci's
+table differing only in the state-0 forward constant — and reaches the same
+verdict with an interval on it: doubling R₀ moves the peak by 1.39×
+[0.72, 1.93], which excludes proportionality and contains a fixed scale. The
+statement H2 should carry is therefore *"there is a worst length scale, it is
+about 7.5 cm in this arena, and it is not proportional to R₀"*, not
+*"worst at λ/R₀ ≈ 0.7"*.
+
 `configs/sweeps/terrain_lambda_sweep.toml` — λ log-spaced 2 → 20 cm in eight
 steps, θ_m ∈ {0, 0.9}, n = 20, τ = 600 s, start radius 0.74 m, 100 runs/cell,
 3 200 trials, evaluation seeds as in §§9 and 13. The grid brackets both predicted
@@ -1538,6 +1549,139 @@ its own evidence, this ratio predicts.
 
 Figure: `figures/terrain_lambda_collapse.png`
 (regenerate with `harness/figures_lambda_collapse.py`).
+
+---
+
+## 17. Question A, experiment 1: doubling R₀ does not double the worst λ
+
+**Branch (b), on the two rows that can be measured: H2 as a λ/R₀ law is dead.**
+Doubling R₀ moves the peak correlation length by **1.39× [0.72, 1.93]** — an
+interval that excludes the ratio law's prediction of 2.00 and contains a fixed
+scale's 1.00. The third row yields no peak at all, so the branch is satisfied in
+substance rather than literally, and the qualification is in *What this does and
+does not settle* below.
+
+`configs/sweeps/terrain_lambda_r0_family_r074.toml` (the decision sweep) and
+`configs/sweeps/terrain_lambda_r0_family.toml` (start radius 1.5 m). Three rows
+of Gauci's table differing **only in the state-0 forward constant**, so the
+sensor model, the state-1 spin and the axle are identical and R₀ is the only
+thing that moves:
+
+| row | state-0 constants | R₀ | ratio-law prediction for its peak λ |
+|---|---|---|---|
+| R0-half-axle-same ‡ | (−0.4783, −1.0) | 7.23 cm | 3.76 cm |
+| base | (−0.7000, −1.0) | 14.45 cm | 7.51 cm |
+| R0-x2-axle-same ‡ | (−0.8378, −1.0) | 28.89 cm | 15.02 cm |
+
+(The predictions use 0.52 R₀, the base row's *measured* peak ratio from §15,
+rather than H2's nominal 0.7; the two differ by less than one grid step.)
+
+λ log-spaced 2 → 38.6 cm in ten steps — §15's eight-point grid continued at the
+same ratio so the R₀-x2 row's predicted peak is interior. θ_m ∈ {0, 0.9},
+n = 20, τ = 600 s, 100 runs/cell, 6 000 trials per start radius. Hold ratios are
+paired by run index against the same run on flat ground.
+
+§15's headline rested on two controllers differing in every constant, so "the
+peak is at a fixed λ" could still have been a fact about one searched row. This
+tests it inside one family, where the only difference is the number the ratio law
+is about.
+
+### The validity window, and why the 1.5 m sweep needed a companion
+
+A hold ratio means "how much looser is the cluster" only while there **is** a
+cluster. The experiment was specified at start radius 1.5 m, §14's realistic
+radius, and there the metric stops working: at λ ≥ 20 cm every row's reach falls
+to 0.4–0.5, so the ratio is driven by runs that never aggregated. The base row's
+apparent maximum at 1.5 m is **5.112 at λ = 38.6 cm with reach 0.41** — a peak in
+failure, not in holding.
+
+So a window: **a peak is read only where reach at θ_m = 0.9 is at least 0.8.**
+The threshold was fixed after seeing the 1.5 m sweep, so its use *there* is post
+hoc and labelled; the 0.74 m companion was run afterwards with it fixed in
+advance, and the decision rule is read from that sweep. Points outside the window
+are hollow in the figure and excluded from every peak.
+
+### Peaks at start radius 0.74 m
+
+| row | R₀ | λ inside the window | peak λ | 95% CI | λ/R₀ at the peak | ratio-law prediction |
+|---|---|---|---|---|---|---|
+| R0-half-axle-same ‡ | 7.23 cm | 10/10 | **5.37 cm** | [3.86, 10.36] | 0.74 | 3.76 cm |
+| base | 14.45 cm | 10/10 | **7.46 cm** | [5.37, 7.46] | 0.52 | 7.51 cm |
+| R0-x2-axle-same ‡ | 28.89 cm | **0/10** | — | — | — | 15.02 cm |
+
+**Peak ratio, base ÷ R0-half: 1.39 [0.72, 1.93].** Both peak CIs contain §15's
+7.46 cm. The interval is the result: 2.00 is outside it, 1.00 is inside it.
+
+The CI on the ratio is computed by resampling the **run-index axis**, which the
+three rows share, and recomputing both peaks on each replicate — so it is a
+paired interval on the ratio and not the quotient of two independent CIs.
+
+**The R₀-x2 row cannot be measured, and that is itself informative.** Its reach
+at θ_m = 0.9 never exceeds 0.73, and on *flat* ground its median dispersion is
+2.902 against 1.427 (base) and 1.264 (R0-half): a 28.9 cm turning circle is 39%
+of the 0.74 m start radius, so its blind-state orbit is comparable to the whole
+swarm and it does not form a tight cluster at all. Its unrestricted argmax is
+10.36 cm — still nowhere near its 15.02 cm prediction, and within 1.4× of the
+other two — but it is excluded from the numbers above rather than used as
+corroboration.
+
+### The λ/R₀ panel is where the law is rejected
+
+On the λ axis the three peaks sit at 5.37, 7.46 and (excluded) 10.36 cm while R₀
+spans 4×. On the λ/R₀ axis the same peaks sit at 0.74, 0.52 and 0.36 — spread by
+almost exactly the R₀ ratios, which is what a *fixed* λ looks like when you
+divide it by a moving R₀. Under the ratio law the second panel is where the
+curves should coincide, and it is the panel where they are furthest apart.
+
+### The 1.5 m sweep, reported as a result about the metric
+
+| row | λ inside the window | peak λ (restricted) | 95% CI |
+|---|---|---|---|
+| R0-half-axle-same ‡ | 6/10 | 10.36 cm | [5.37, 10.36] |
+| base | 4/10 | 5.37 cm | [3.86, 5.37] |
+| R0-x2-axle-same ‡ | 0/10 | — | — |
+
+Peak ratio base ÷ R0-half = **0.52 [0.37, 1.00]** — the ordering *reverses*, on
+four and six usable λ out of ten. Two readings are available and only one is
+supportable: either the peak λ depends on start radius in the opposite direction
+to R₀, or the restricted windows are too small and too different between rows for
+the comparison to mean anything. The second is the honest one, and it is the
+reason the companion sweep exists. **§14 established 1.5 m as the largest radius
+where these controllers are still doing the task at λ = 10 cm; that does not
+extend to λ = 38 cm, and this sweep is where that shows.**
+
+### What this does and does not settle
+
+1. **The λ/R₀ form of H2 is rejected inside a controller family.** §15 rejected
+   it across two unrelated controllers; the objection that the searched row was
+   peculiar is now answered, because these three rows differ in one constant.
+2. **"Fixed" is consistent; "sub-proportional" is not excluded.** The point
+   estimate 1.39 lies between 1.00 and 2.00 and the interval spans both ends of
+   that gap on the low side. What the data rejects is proportionality. A weak
+   dependence of the peak on R₀ would survive it, and §15's exact coincidence at
+   7.46 cm for two controllers is the strongest evidence for the fixed reading —
+   from a different pair of rows.
+3. **The resolution is one grid step.** Peaks are located to a log grid of ratio
+   1.39, which is also, by coincidence, the size of the effect being measured.
+   A finer grid around 4–12 cm would separate 1.39 from 1.00; this one cannot.
+4. **Experiment 2 follows**, because branch (b) fired: the shared peak sits
+   within 1% of the 7.4 cm body diameter, and body diameter is the one length in
+   the model that no row here varied.
+
+### Limitations
+
+* One θ_m (0.9), one n, one τ, two start radii, one arena, one controller family.
+* The two R₀-varied rows are hand-picked constants (‡). The mark is about how the
+  constants were obtained; nothing here is a minimality claim.
+* One of three rows produced no measurement, so "all three peaks coincide" was
+  never testable at this start radius. At 1.5 m it produced none either.
+* Flat-ground dispersion is identical to four decimals across all ten λ for every
+  row (1.264, 1.427, 2.902), which is the invariance check that says these ratios
+  are terrain rather than a baseline artefact — but it also shows how far apart
+  the three rows are *before* any terrain is applied.
+
+Figure: `figures/terrain_lambda_r0_family.png`
+(regenerate with `harness/figures_lambda_r0_family.py`).
 
 ---
 

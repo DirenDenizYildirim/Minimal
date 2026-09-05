@@ -1,0 +1,76 @@
+# QUESTION A, EXPERIMENT 1 -- what sets the peak correlation length?
+#
+# Section 15 found Gauci (R0 = 14.45 cm) and S2-rough (R0 = 4.74 cm) degrading
+# worst at the SAME lambda in metres, 7.46 cm, and concluded that H2's
+# "worst at lambda/R0 ~ 0.7" is not a controller-relative law. That conclusion
+# rests on two controllers whose constants differ in every respect, so a reader
+# can still say the searched row is simply peculiar.
+#
+# This tests it inside one controller family. All three rows are Gauci's table
+# with only the state-0 forward constant changed, so the sensor model, the
+# state-1 spin and the axle are identical and R0 is the ONLY thing that moves:
+#
+#   R0-half-axle-same   R0 =  7.22 cm   ratio law predicts a peak near  3.75 cm
+#   base                R0 = 14.45 cm   ratio law predicts a peak near  7.51 cm
+#   R0-x2-axle-same     R0 = 28.90 cm   ratio law predicts a peak near 15.03 cm
+#
+# (0.52 R0, using section 15's measured peak ratio for the base row rather than
+# H2's nominal 0.7; the two differ by less than one grid step.)
+#
+# GRID. Section 15's eight log-spaced lambda from 2 to 20 cm, continued at the
+# same ratio (10^(1/7) = 1.3895) for two more steps to 38.6 cm. The extension is
+# needed so the R0-x2 row's predicted peak at 15 cm is interior rather than one
+# step from the top; it is applied to ALL rows, not only that one, so the three
+# curves stay on a common grid and the peak comparison is like for like.
+#
+# CONDITIONS. Start radius 1.5 m, tau = 600 s (section 14's value for that
+# radius), n = 20, theta_m in {0, 0.9}, 100 runs/cell. Section 14 established
+# 1.5 m as the largest radius where controllers of this kind are all still doing
+# the task, which is where a degradation curve means something. theta_m = 0 is
+# carried at every lambda so the hold ratio is paired by run index against the
+# same run on flat ground, and as an invariance check: with amplitude 0 the field
+# is identically 1, so those cells must not depend on lambda.
+#
+# PRE-REGISTERED DECISION RULE:
+#   (a) peaks near 3.7, 7.5 and 15 cm -> the ratio law survives, and section 15's
+#       S2-rough is the outlier; note it as such.
+#   (b) all three peaks within CI of ~7.5 cm -> H2 as a lambda/R0 law is dead and
+#       the length scale is fixed and R0-independent. Rewrite the H2 statement in
+#       findings.md and add the correction.
+#   (c) mixed -> report which rows fall where and stop.
+#
+# Peak locations carry a bootstrap CI over run indices: one resample of the
+# paired run-index set per replicate, applied to every lambda at once, then argmax.
+#
+# The two R0-varied rows are hand-picked constants (double dagger). The mark is
+# about how the constants were obtained; nothing here is a minimality claim.
+
+name = "terrain-lambda-r0-family"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[axis]]
+path = "terrain.correlation_length"
+values = [0.02, 0.0278, 0.0386, 0.0537, 0.0746, 0.1036, 0.1439, 0.2, 0.2779, 0.3861]
+
+[[rows]]
+label = "R0-half-axle-same"
+[rows.overrides]
+"swarm.init.radius" = 1.5
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "base"
+[rows.overrides]
+"swarm.init.radius" = 1.5
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "R0-x2-axle-same"
+[rows.overrides]
+"swarm.init.radius" = 1.5
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }

@@ -85,6 +85,14 @@ enum Command {
         /// only question left is whether using the bit improves on not using it.
         #[arg(long)]
         init: Option<String>,
+        /// Train against an environment CLASS rather than one arena. Repeatable,
+        /// `--class path=v1,v2,...`; the axes are crossed, and the objective
+        /// becomes the geometric mean of the per-condition medians. Use it when
+        /// the claim is "this controller works across these conditions" rather
+        /// than "this controller is best here" — §14 shows the two differ.
+        /// `runs_per_eval` must divide by the number of conditions.
+        #[arg(long = "class", value_name = "PATH=V1,V2,...")]
+        class: Vec<String>,
         #[arg(short, long)]
         out: PathBuf,
         #[arg(short, long)]
@@ -130,6 +138,7 @@ fn main() -> Result<()> {
             seed,
             training_seed,
             init,
+            class,
             out,
             threads,
         } => {
@@ -141,6 +150,7 @@ fn main() -> Result<()> {
                 seed,
                 training_seed,
                 init,
+                &class,
                 &out,
             )
         }
@@ -424,6 +434,35 @@ fn sweep_cmd(path: &Path, out: &Path, dry_run: bool, series: bool) -> Result<()>
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Parse repeated `--class path=v1,v2,...` into crossed axes.
+///
+/// Values are parsed as JSON so a config path taking an integer (`swarm.n`) gets
+/// an integer and one taking a float (`swarm.init.radius`) gets a float —
+/// passing 20 as 20.0 would fail the config's own typing.
+fn parse_class(specs: &[String]) -> Result<Vec<(String, Vec<Value>)>> {
+    specs
+        .iter()
+        .map(|spec| {
+            let (path, list) = spec
+                .split_once('=')
+                .with_context(|| format!("--class expects PATH=V1,V2,...; got {spec:?}"))?;
+            let values: Result<Vec<Value>> = list
+                .split(',')
+                .map(|t| {
+                    serde_json::from_str(t.trim())
+                        .with_context(|| format!("parsing {t:?} in --class {path}"))
+                })
+                .collect();
+            let values = values?;
+            if values.is_empty() {
+                anyhow::bail!("--class {path} lists no values");
+            }
+            Ok((path.to_string(), values))
+        })
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
 fn search_cmd(
     path: &Path,
     budget: usize,
@@ -431,6 +470,7 @@ fn search_cmd(
     seed: u64,
     training_seed: u64,
     init: Option<String>,
+    class: &[String],
     out: &Path,
 ) -> Result<()> {
     let value = read_config_value(path)?;
@@ -456,6 +496,18 @@ fn search_cmd(
         }
         None => None,
     };
+    let class_axes = parse_class(class)?;
+    if !class_axes.is_empty() {
+        let n = search::class_conditions(&class_axes).len();
+        eprintln!(
+            "training class: {n} conditions from {}",
+            class_axes
+                .iter()
+                .map(|(p, v)| format!("{p}={v:?}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
     let result = search::run_search(
         &value,
         &encoding,
@@ -465,6 +517,7 @@ fn search_cmd(
         seed,
         training_seed,
         init,
+        &class_axes,
     )?;
     search::write_result(out, &result)?;
     eprintln!(

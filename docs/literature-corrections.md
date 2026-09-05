@@ -296,6 +296,15 @@ It does not (`docs/findings.md` §15). Over eight log-spaced λ from 2 to 20 cm,
 predicted worst λ its hold ratio is 1.05–1.09, in the bottom half of its range,
 and the profile rises monotonically from λ/R₀ = 0.42 to 1.57.
 
+**Confirmed inside one controller family, with an interval on it** (§17). Those
+two rows differ in every constant, so the obvious objection was that the searched
+row is peculiar. §17 answers it with three rows of Gauci's own table differing
+*only* in the state-0 forward constant, so R₀ is the only thing that moves:
+doubling R₀ moves the peak by **1.39× [0.72, 1.93]**, an interval that excludes
+the ratio law's 2.00 and contains a fixed scale's 1.00. Proportionality is
+rejected; a weak sub-proportional dependence is not, and the peak is located only
+to a log grid of ratio 1.39.
+
 Suggested amendment: keep H2 as the question — *is there a worst length scale?* —
 and report the answer as a length, "worst at λ ≈ 7.5 cm in this arena", with
 λ/R₀ as a derived number rather than the statement. The R₀-relative form should

@@ -214,42 +214,133 @@ pub struct SearchResult {
     pub best_training_objective: f64,
     /// Objective of the incumbent after each generation, for a convergence plot.
     pub history: Vec<f64>,
+    /// The environment class the objective was averaged over. Empty for a
+    /// single-condition search; a row searched over a class and a row searched
+    /// at one point are different claims and the file has to say which it is.
+    pub training_class: Vec<(String, Vec<Value>)>,
+    pub training_conditions: usize,
     pub objective: String,
     pub optimiser: String,
 }
 
-/// Median final dispersion over `runs` trials of `base` with these constants.
-fn evaluate(base: &Value, constants: &[f64], runs: usize, seed_base: u64) -> Result<f64> {
+/// One training condition: config-path overrides applied on top of the base.
+///
+/// An empty condition is the ordinary single-condition search; a list of them is
+/// a **mission class**, and the objective below is then a statement about the
+/// class rather than about one arena.
+pub type Condition = Vec<(String, Value)>;
+
+/// Cartesian product of named axes, in the order given.
+///
+/// `[("swarm.init.radius", [0.74, 1.5, 3.0]), ("swarm.n", [20, 50])]` becomes
+/// the six conditions of the mission class, each carrying both overrides.
+pub fn class_conditions(axes: &[(String, Vec<Value>)]) -> Vec<Condition> {
+    let mut out: Vec<Condition> = vec![Vec::new()];
+    for (path, values) in axes {
+        let mut next = Vec::with_capacity(out.len() * values.len());
+        for base in &out {
+            for v in values {
+                let mut c = base.clone();
+                c.push((path.clone(), v.clone()));
+                next.push(c);
+            }
+        }
+        out = next;
+    }
+    out
+}
+
+fn median(mut xs: Vec<f64>) -> f64 {
+    xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    xs[xs.len() / 2]
+}
+
+/// The training objective.
+///
+/// With a single condition this is the median final dispersion over `runs`
+/// trials — exactly the objective sections 9 and 13 searched against, unchanged.
+///
+/// With several, it is the **geometric mean of the per-condition medians**. Two
+/// reasons, both of which bite here:
+///
+/// * The conditions are not on a common scale. Median dispersion runs from about
+///   1.2 at a 0.74 m start radius to tens at 3.0 m under terrain, so a plain mean
+///   — or a median over the pooled runs — is the hardest condition wearing a
+///   disguise, and the optimiser would be free to abandon the rest of the class.
+///   Averaging logs weights a 10% improvement the same everywhere.
+/// * It reduces to the single-condition objective exactly when the class has one
+///   member, so a class search and a fixed-condition search are one procedure at
+///   two class sizes rather than two protocols that cannot be compared.
+///
+/// Runs are split evenly across conditions, each condition drawing its own
+/// disjoint block of run indices, so every candidate in the search is scored on
+/// the same (condition, seed) pairs and candidates are compared on identical
+/// work. `runs` must divide by the class size.
+fn evaluate(
+    base: &Value,
+    constants: &[f64],
+    runs: usize,
+    seed_base: u64,
+    class: &[Condition],
+) -> Result<f64> {
     let entries: Vec<Value> = constants
         .chunks(2)
         .map(|c| serde_json::json!({ "wheels": [c[0], c[1]] }))
         .collect();
-    let mut value = base.clone();
-    crate::sweep::set_path(
-        &mut value,
-        "controller",
-        serde_json::json!({
-            "kind": "table",
-            "memory_bits": 0,
-            "provenance": "optimiser_found",
-            "entries": entries,
-        }),
-    )?;
-    crate::sweep::set_path(&mut value, "sim.seed", Value::from(seed_base))?;
-    crate::sweep::set_path(&mut value, "metrics.store_series", Value::from(false))?;
-    let cfg = SimConfig::from_json_value(value).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let per_condition = runs / class.len();
+    let mut configs = Vec::with_capacity(class.len());
+    for condition in class {
+        let mut value = base.clone();
+        crate::sweep::set_path(
+            &mut value,
+            "controller",
+            serde_json::json!({
+                "kind": "table",
+                "memory_bits": 0,
+                "provenance": "optimiser_found",
+                "entries": entries,
+            }),
+        )?;
+        for (path, v) in condition {
+            crate::sweep::set_path(&mut value, path, v.clone())?;
+        }
+        crate::sweep::set_path(&mut value, "sim.seed", Value::from(seed_base))?;
+        crate::sweep::set_path(&mut value, "metrics.store_series", Value::from(false))?;
+        configs.push(SimConfig::from_json_value(value).map_err(|e| anyhow::anyhow!("{e}"))?);
+    }
 
-    let mut scores: Vec<f64> = (0..runs as u64)
-        .into_par_iter()
-        .map(|i| -> Result<f64> {
-            Ok(World::new(cfg.clone(), i)
-                .map_err(|e| anyhow::anyhow!("{e}"))?
-                .run()
-                .final_dispersion)
+    // Parallelise over every (condition, run) pair rather than over the runs of
+    // one condition at a time: with six conditions and two runs each, a loop of
+    // parallel pairs leaves all but two cores idle.
+    let jobs: Vec<(usize, u64)> = (0..class.len())
+        .flat_map(|k| (0..per_condition as u64).map(move |i| (k, i)))
+        .collect();
+    let scores: Vec<(usize, f64)> = jobs
+        .par_iter()
+        .map(|&(k, i)| -> Result<(usize, f64)> {
+            let offset = (k * per_condition) as u64;
+            Ok((
+                k,
+                World::new(configs[k].clone(), offset + i)
+                    .map_err(|e| anyhow::anyhow!("{e}"))?
+                    .run()
+                    .final_dispersion,
+            ))
         })
         .collect::<Result<Vec<_>>>()?;
-    scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(scores[scores.len() / 2])
+
+    let mut by_condition = vec![Vec::with_capacity(per_condition); class.len()];
+    for (k, v) in scores {
+        by_condition[k].push(v);
+    }
+    // A swarm that ends exactly on top of itself scores 0 and has no log, so the
+    // floor is the smallest dispersion the metric can resolve rather than an
+    // arbitrary epsilon.
+    let logs: Vec<f64> = by_condition
+        .into_iter()
+        .map(|xs| median(xs).max(1e-6).ln())
+        .collect();
+    Ok((logs.iter().sum::<f64>() / logs.len() as f64).exp())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -262,8 +353,17 @@ pub fn run_search(
     seed: u64,
     training_seed_base: u64,
     init: Option<Vec<f64>>,
+    class_axes: &[(String, Vec<Value>)],
 ) -> Result<SearchResult> {
     let dims = 2 * states;
+    let class = class_conditions(class_axes);
+    if runs_per_eval % class.len() != 0 {
+        anyhow::bail!(
+            "runs_per_eval ({runs_per_eval}) must divide by the class size ({}), \
+             or the conditions are unequally weighted",
+            class.len()
+        );
+    }
     // Default: Gauci's constants tiled across the extra states, so the search
     // begins at a known-good four-constant controller rather than at random.
     //
@@ -290,7 +390,7 @@ pub fn run_search(
         let candidates = es.ask();
         let mut fitness = Vec::with_capacity(candidates.len());
         for (x, penalty) in &candidates {
-            let f = evaluate(base, x, runs_per_eval, training_seed_base)? + 10.0 * penalty;
+            let f = evaluate(base, x, runs_per_eval, training_seed_base, &class)? + 10.0 * penalty;
             if f < best.0 {
                 best = (f, x.clone());
             }
@@ -317,9 +417,24 @@ pub fn run_search(
         best_constants: best.1,
         best_training_objective: best.0,
         history,
-        objective: "median final_dispersion over runs_per_evaluation trials, \
-                    lower is better; +10x squared box-repair penalty"
-            .into(),
+        training_class: class_axes
+            .iter()
+            .map(|(p, v)| (p.clone(), v.clone()))
+            .collect(),
+        training_conditions: class.len(),
+        objective: if class.len() == 1 {
+            "median final_dispersion over runs_per_evaluation trials, \
+             lower is better; +10x squared box-repair penalty"
+                .into()
+        } else {
+            format!(
+                "geometric mean over {} training conditions of the median \
+                 final_dispersion in each ({} trials per condition), lower is \
+                 better; +10x squared box-repair penalty",
+                class.len(),
+                runs_per_eval / class.len()
+            )
+        },
         optimiser: "sep-CMA-ES (Ros & Hansen 2008), diagonal covariance".into(),
     })
 }
@@ -338,6 +453,55 @@ pub fn write_result(path: &std::path::Path, result: &SearchResult) -> Result<()>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_class_is_the_cartesian_product_of_its_axes() {
+        let axes = vec![
+            (
+                "swarm.init.radius".to_string(),
+                vec![Value::from(0.74), Value::from(1.5), Value::from(3.0)],
+            ),
+            (
+                "swarm.n".to_string(),
+                vec![Value::from(20), Value::from(50)],
+            ),
+        ];
+        let conditions = class_conditions(&axes);
+        assert_eq!(conditions.len(), 6);
+        // Every condition carries every axis, or a condition would silently
+        // inherit the base config's value for the axis it is meant to vary.
+        for c in &conditions {
+            assert_eq!(c.len(), 2);
+            assert_eq!(c[0].0, "swarm.init.radius");
+            assert_eq!(c[1].0, "swarm.n");
+        }
+        let radii: Vec<f64> = conditions
+            .iter()
+            .map(|c| c[0].1.as_f64().unwrap())
+            .collect();
+        assert_eq!(radii, vec![0.74, 0.74, 1.5, 1.5, 3.0, 3.0]);
+    }
+
+    #[test]
+    fn no_axes_is_a_single_empty_condition() {
+        // The single-condition search must stay exactly what it was: one
+        // condition applying no overrides, so `evaluate` reduces to the median.
+        let conditions = class_conditions(&[]);
+        assert_eq!(conditions.len(), 1);
+        assert!(conditions[0].is_empty());
+    }
+
+    #[test]
+    fn the_class_objective_is_the_geometric_mean_of_condition_medians() {
+        // Stated as arithmetic rather than as a simulation: the property that
+        // matters is that a condition scoring 100 cannot be averaged away by
+        // one scoring 1, which is what an arithmetic mean would allow.
+        let medians = [1.0_f64, 100.0];
+        let geometric = (medians.iter().map(|m| m.ln()).sum::<f64>() / medians.len() as f64).exp();
+        assert!((geometric - 10.0).abs() < 1e-9);
+        let arithmetic = medians.iter().sum::<f64>() / medians.len() as f64;
+        assert!(arithmetic > 5.0 * geometric);
+    }
 
     /// A convex quadratic with a known optimum, offset so the answer is not the
     /// starting point and not zero.
