@@ -385,7 +385,7 @@ mod tests {
         // Tiling a 4-constant controller into an 8-constant table gives a table
         // whose halves are equal: an S = 4 row that starts out ignoring its
         // extra bit. That is the whole point of the warm start.
-        let source = vec![-0.7, -1.0, 1.0, -1.0];
+        let source = [-0.7, -1.0, 1.0, -1.0];
         let tiled: Vec<f64> = (0..8).map(|i| source[i % source.len()]).collect();
         assert_eq!(tiled, vec![-0.7, -1.0, 1.0, -1.0, -0.7, -1.0, 1.0, -1.0]);
         assert_eq!(tiled[..4], tiled[4..]);
