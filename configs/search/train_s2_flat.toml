@@ -1,0 +1,54 @@
+# Training condition for S2-flat: FLAT GROUND, theta_m = 0.
+#
+# This is the other half of the 2x2 tuning control. S2-rough (formerly
+# "S2-searched") was tuned at theta_m = 0.9; it also beat Gauci on FLAT ground,
+# which is ambiguous: Gauci's constants were found for a different objective —
+# a different metric normalisation, swarm size, trial length and collision model
+# — so "tuned for this objective" and "tuned for terrain" were confounded.
+#
+# S2-flat is tuned for this objective on flat ground. Comparing the two isolates
+# the terrain half:
+#
+#   S2-flat vs S2-rough differ ONLY in the theta_m of their training condition.
+#   Everything else — optimiser, budget, training seed base, evaluation seeds,
+#   n, tau, start radius, metric — is identical.
+#
+# Training seed base is deliberately the SAME as S2-rough's (900000), so the two
+# searches are paired and the only difference between them is the terrain they
+# were trained on. 900000 is disjoint from the evaluation seeds (20260904), so
+# held-out evaluation is preserved.
+
+[robot]
+radius = 0.037
+axle_length = 0.051
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[sim]
+dt = 0.1
+duration = 600.0
+seed = 20260904
+
+[sensor]
+fov_half_angle = 0.0
+encoding = "binary"
+
+[controller]
+kind = "table"
+memory_bits = 0
+provenance = "optimiser_found"
+entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+]
+
+[terrain]
+slope_angle = 0.0
+friction_amplitude = 0.0
+correlation_length = 0.1
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 0.0

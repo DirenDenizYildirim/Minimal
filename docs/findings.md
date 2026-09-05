@@ -938,6 +938,115 @@ show at the unsaturated cells, recovered where they are pinned.
 Figure: `figures/pursuer_pareto.png`
 (regenerate with `harness/figures_pareto.py`).
 
+---
+
+## 13. The 2×2 tuning control: how much of §9 was terrain?
+
+`configs/sweeps/terrain_tuning_control.toml` — λ = 0.10 m (λ/R₀(gauci) = 0.69),
+θ_m swept 0 → 0.9 in eight steps, n = 20, τ = 600 s, 100 runs/cell, evaluation
+seeds 20260904 as in §9.
+
+§9 concluded "re-tuning solves it", and that conflated two things. S2-rough
+(§7–§10's "S2-searched", renamed here) was tuned against **this objective** —
+median final dispersion at n = 20, τ = 600 s, start radius 0.74 m, under this
+repository's normalisation and collision model — while Gauci's constants were
+found for a different one. "Tuned for this objective" and "tuned for terrain"
+were not separated.
+
+**S2-flat** is the missing cell: same optimiser, same budget (600 evaluations ×
+12 runs), **same training seed base (900 000)**, differing from S2-rough only in
+the θ_m of its training condition. Both are disjoint from the evaluation seeds.
+
+### The three controllers
+
+| row | state | constants | R₀ | forward speed | rotation rate |
+|---|---|---|---|---|---|
+| S2-gauci | 0 (blind) | (−0.7000, −1.0000) | 14.45 cm | −10.88 cm/s | −0.753 rad/s |
+| | 1 (seen) | (+1.0000, −1.0000) | 0 (spin) | 0 | −5.020 rad/s |
+| S2-flat † | 0 (blind) | (−0.3289, −0.8923) | 5.53 cm | −7.82 cm/s | −1.414 rad/s |
+| | 1 (seen) | (+0.9983, −0.6589) | 0.52 cm | +2.17 cm/s | −4.159 rad/s |
+| S2-rough † | 0 (blind) | (−0.2852, −0.9495) | 4.74 cm | −7.90 cm/s | −1.667 rad/s |
+| | 1 (seen) | (+0.9354, −0.2262) | 1.56 cm | +4.54 cm/s | −2.915 rad/s |
+
+L2 distances: **S2-flat ↔ S2-rough 0.443**, S2-flat ↔ S2-gauci 0.516,
+S2-rough ↔ S2-gauci 0.882. The two searched controllers are closer to each other
+than either is to Gauci, and *both* shrink the state-0 circle from 14.45 cm to
+about 5 cm — the one trained on flat ground did so without ever seeing terrain.
+
+### The decision rule: branch (c). They cross.
+
+Because both rows share a seed base, run index *i* is the same initial placement
+and the same traction field in both, so the difference can be taken run by run:
+
+| θ_m | paired median (S2-flat − S2-rough) | 95% CI | verdict |
+|---|---|---|---|
+| 0.00 | −0.0596 | [−0.0763, −0.0371] | **flat better** |
+| 0.10 | −0.0424 | [−0.0692, −0.0280] | **flat better** |
+| 0.20 | −0.0359 | [−0.0482, −0.0172] | **flat better** |
+| 0.30 | −0.0014 | [−0.0125, +0.0129] | no difference |
+| 0.45 | +0.0089 | [−0.0176, +0.0219] | no difference |
+| 0.60 | +0.0421 | [+0.0107, +0.0659] | **rough better** |
+| 0.75 | +0.0273 | [−0.0160, +0.0658] | no difference |
+| 0.90 | +0.0818 | [−0.0008, +0.1331] | no difference |
+
+The sign flips between θ_m = 0.30 and 0.45, and the effect is **significant on
+both sides** — flat wins at θ_m ≤ 0.2, rough wins at θ_m = 0.6. That is branch
+(c): a trade-off exists, crossing at **θ_m ≈ 0.3–0.45**.
+
+### But it is a 3% trade-off inside a 97% effect
+
+Decomposing the Gauci → S2-rough gap at θ_m = 0.9 (absolute dispersion):
+
+| | value | share of the gap |
+|---|---|---|
+| S2-gauci | 3.150 | |
+| S2-flat † | 1.438 | **96.9% — objective-tuning** |
+| S2-rough † | 1.383 | **3.1% — terrain-tuning** |
+
+And on flat ground the terrain-tuning term *reverses*: S2-rough costs 4.1%
+against S2-flat there. So terrain-tuning is worth about ±4% of dispersion in
+either direction, while tuning for this objective at all is worth 119%.
+
+Hold ratio at θ_m = 0.9, each row against its own flat baseline: S2-gauci
+**2.208 [1.904, 2.410]**, S2-flat **1.195 [1.146, 1.265]**, S2-rough
+**1.104 [1.078, 1.150]**. A controller that never saw terrain degrades by 20%
+where Gauci's degrades by 121%.
+
+### What this does to §9 and to correction #11
+
+**§9's headline was right about the direction and wrong about the cause.**
+Re-tuning does recover almost all of the loss, but not because it adapts to
+terrain — because Gauci's constants are badly matched to *this objective*, and a
+controller matched to it is far more terrain-robust as a side effect.
+
+Two consequences:
+
+1. **The H2 degradation curve is largely a property of Gauci's specific
+   constants, not of terrain sensitivity in general.** At λ/R₀(gauci) = 0.69 a
+   controller tuned only for this objective degrades 1.195× where Gauci's
+   degrades 2.208×. The dial still bites — 1.195 is not 1.0 — but the published
+   figure of ~2.2× overstates what terrain does to a well-matched controller by
+   about a factor of six.
+2. **The terrain bit is reopened, at the right pair.** §9's composite switched
+   Gauci ↔ S2-rough, which the decomposition now shows was the wrong pair: most
+   of that difference was objective-tuning, which a terrain bit cannot supply.
+   The pair with a genuine crossing is **S2-flat ↔ S2-rough**, and a composite
+   over those two is worth at most the ±4% the crossing spans. On the next list,
+   not run here.
+
+### Limitations
+
+* One λ, one n, one start radius, one τ. Experiment 2 tests whether the searched
+  rows' advantage survives outside the initial condition they were tuned in.
+* Both searched rows are upper bounds (†) from a diagonal-covariance optimiser at
+  a fixed budget.
+* The crossing is located to θ_m ∈ [0.3, 0.45] by a sign flip in point estimates;
+  the CIs at 0.30 and 0.45 both include zero, so a finer grid would be needed to
+  pin it.
+
+Figure: `figures/terrain_tuning_control.png`
+(regenerate with `harness/figures_tuning_control.py`).
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1, 2 and 3 from the previous list are now
