@@ -1336,16 +1336,117 @@ Figures: `figures/terrain_regime_robustness.png`
 
 ---
 
+## 15. Experiment 3: the worst correlation length does not follow the controller
+
+**The terrain effect does not track R₀.** Both controllers degrade worst at the
+same λ *in metres* — 7.46 cm — which is λ/R₀ = 0.52 for Gauci and λ/R₀ = 1.57
+for S2-rough. H2's "worst at λ/R₀ ≈ 0.7" is not a controller-relative law; it
+was a statement about one controller, and the length it names is fixed in the
+arena rather than carried by the robot's turning circle.
+
+`configs/sweeps/terrain_lambda_sweep.toml` — λ log-spaced 2 → 20 cm in eight
+steps, θ_m ∈ {0, 0.9}, n = 20, τ = 600 s, start radius 0.74 m, 100 runs/cell,
+3 200 trials, evaluation seeds as in §§9 and 13. The grid brackets both predicted
+peaks: 10.1 cm for Gauci (R₀ = 14.45 cm) and 3.3 cm for S2-rough
+(R₀ = 4.74 cm). Every hold ratio is paired by run index against the *same run
+index on flat ground*, so the ratio is per-run.
+
+This was next-list item 1, and it is the reason §13's headline needed checking:
+every terrain sweep in this repository had been run at λ = 10 cm, which is
+0.69 R₀ for Gauci and 2.11 R₀ for S2-rough. If S2-rough's own worst λ had been
+3.3 cm, §13's "1.195 against 2.208" would have been measured off-peak for one row
+and on-peak for the other.
+
+### Hold ratio against λ
+
+| λ (cm) | λ/R₀ gauci | λ/R₀ rough | S2-gauci | S2-rough † |
+|---|---|---|---|---|
+| 2.00 | 0.14 | 0.42 | 1.390 [1.287, 1.462] | 1.047 [1.011, 1.071] |
+| 2.78 | 0.19 | 0.59 | 1.482 [1.408, 1.617] | 1.052 [1.034, 1.077] |
+| 3.86 | 0.27 | 0.81 | 1.788 [1.654, 1.995] | 1.091 [1.070, 1.114] |
+| 5.37 | 0.37 | 1.13 | 2.155 [1.829, 2.622] | 1.082 [1.048, 1.112] |
+| **7.46** | **0.52** | **1.57** | **2.505 [2.263, 2.822]** | **1.121 [1.090, 1.222]** |
+| 10.36 | 0.72 | 2.19 | 2.082 [1.853, 2.510] | 1.086 [1.063, 1.166] |
+| 14.39 | 1.00 | 3.04 | 1.664 [1.492, 2.052] | 1.064 [1.041, 1.151] |
+| 20.00 | 1.38 | 4.22 | 1.519 [1.274, 1.714] | 1.012 [0.991, 1.083] |
+
+Flat-ground invariance check: with θ_m = 0 the field is identically 1, so those
+cells must not depend on λ. Median dispersion is **identical to four decimals
+across all eight λ** for both rows (1.4267 and 1.2530, spread 0). The terrain
+sampler is not leaking λ into the baseline, so every ratio in the table is a
+terrain effect and not a baseline artefact.
+
+### The decision rule: the peak is elsewhere
+
+Pre-registered: if S2-rough peaks near λ/R₀ ≈ 0.7, H2 is controller-relative and
+follows the controller into ℓ/λ > 1; if the peak is elsewhere or absent, report
+where it is and stop.
+
+**It is elsewhere.** S2-rough's hold ratio at λ/R₀ ≈ 0.7 — the grid points at
+0.59 and 0.81 — is 1.052 and 1.091, in the bottom half of its range; its maximum
+is at λ/R₀ = 1.57. The profile from λ/R₀ = 0.42 to 1.57 rises monotonically,
+which is the opposite of a peak at 0.7.
+
+Two things worth stating exactly, and then stopping:
+
+* **The peak λ is shared and it is small.** 7.46 cm for both rows. It happens to
+  sit within 1% of the 7.4 cm robot body diameter and at ℓ/λ = 0.68 for the
+  5.1 cm axle. Those are observations about coincident lengths, **not a
+  mechanism** — this grid cannot separate a body-diameter effect from an axle
+  effect from a spacing effect, and nothing here proposes a third mechanism to
+  replace H2.
+* **S2-rough's peak is weakly located.** Its CI at 7.46 cm overlaps those at
+  3.86, 5.37 and 10.36 cm, so "the peak is at 7.46 cm" is a point estimate on a
+  nearly flat curve whose whole range is 1.01 to 1.12. What the data *does*
+  settle is the negative: the peak is not at λ/R₀ ≈ 0.7, because the values there
+  are among the lowest measured. Gauci's peak is much better resolved but still
+  only to λ/R₀ ∈ [0.37, 0.72], which contains §4's 0.7.
+
+### What this does to §4 and §13
+
+1. **§4's H2 result survives as measured and loses its generalisation.** "Worst
+   at λ/R₀ ≈ 0.7" was measured with Gauci's R₀ and is consistent with the finer
+   grid here (peak at λ/R₀ = 0.52, interval containing 0.7). It should be
+   reported as *the worst λ is about 7.5 cm in this arena*, with λ/R₀ = 0.52 as a
+   derived number, not as a law that a different controller will obey.
+2. **§13's comparison was not off-peak.** λ = 10 cm sits one grid step from the
+   shared peak, at 83% of Gauci's peak excess and 57% of S2-rough's. Both rows
+   were measured near their own worst λ, so "S2-flat degrades 1.195× where
+   Gauci's degrades 2.208×" is not an artefact of a λ chosen to suit one of them.
+   Next-list item 1 is closed: re-tuning does not move the worst λ, so there was
+   nothing to qualify.
+3. **The R₀ scaling in §4 and the ℓ/λ scaling in §11 are about different
+   objects, and only the second is a ratio law.** §11 measures how well a
+   first-order expansion describes one robot's turn rate and collapses on ℓ/λ
+   (§16). §4 measures where a swarm's aggregation degrades worst, and this
+   section says that does *not* collapse on λ/R₀.
+
+### Limitations
+
+* One θ_m (0.9), one n, one start radius, one τ, two controllers. The claim is
+  about where the peak sits, not about its height.
+* Eight λ values over one decade. The peak is located to a grid step, and for
+  S2-rough not even that.
+* S2-rough is an upper bound (†). A different searched controller with the same
+  R₀ might peak elsewhere; nothing here says R₀ is irrelevant in general, only
+  that these two rows share a peak λ that their R₀ values do not predict.
+* λ = 2 cm is below the 3.7 cm robot radius, so at the small end of the grid a
+  robot's own footprint spans several correlation lengths. That is a regime, not
+  an error, but it is not a regime the model was built for.
+
+Figure: `figures/terrain_lambda_sweep.png`
+(regenerate with `harness/figures_lambda_sweep.py`).
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1, 2 and 3 from the previous list are now
 answered (§§6, 10, 12); what remains, plus what these four experiments surfaced:
 
-1. **Does S2-searched hold up at a λ matched to its own R₀?** §9 establishes
-   dominance at λ/R₀ = 0.69 for Gauci's R₀ = 14.45 cm. The searched controller has
-   R₀ = 4.7 cm, so H2 predicts *its* worst correlation length is near λ = 3.3 cm,
-   which this sweep never visits. If the terrain effect simply followed the
-   controller down, "re-tuning solves it" would need qualifying.
+1. ~~**Does S2-searched hold up at a λ matched to its own R₀?**~~ **Answered in
+   §15.** It does: both rows share a worst λ of 7.46 cm, so the terrain effect
+   does not follow the controller down and §13's λ was near-worst for both.
 2. **ℓ/λ across more than one λ.** §11's trend is three axle values at a single
    correlation length. Whether slope and R² collapse on ℓ/λ when λ varies too is
    the obvious completion, and it is one sweep.
