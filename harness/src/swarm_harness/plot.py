@@ -53,7 +53,7 @@ def _label(name: str, sub: Records) -> str:
     return f"{name}{sub.mark()}"
 
 
-def annotate_params(fig, records: Records, fields: Sequence[str] = ()) -> None:
+def annotate_params(fig, records: Records, fields: Sequence[str] = (), y: float = 0.955) -> None:
     """Print the run parameters a reader needs to interpret the figure.
 
     A pursuit result is meaningless without the speed ratio, the handling time,
@@ -70,7 +70,7 @@ def annotate_params(fig, records: Records, fields: Sequence[str] = ()) -> None:
                 parts.append(f"{_PARAM_LABELS.get(f, f)} = {v:g}" if isinstance(v, (int, float))
                              else f"{_PARAM_LABELS.get(f, f)} = {v}")
     if parts:
-        fig.text(0.5, 0.955, "   ".join(parts), ha="center", va="top",
+        fig.text(0.5, y, "   ".join(parts), ha="center", va="top",
                  fontsize=8, color="0.3")
 
 
@@ -153,6 +153,7 @@ def surface(
     vmin: float | None = None,
     vmax: float | None = None,
     baseline_y=None,
+    annotate: Sequence[str] = (),
 ):
     """The section-2.3 figure: one performance surface per capability row, with
     threshold contours drawn on it.
@@ -228,7 +229,9 @@ def surface(
     # Reserve room around the axes before the colorbar is attached: under them
     # so the upper-bound stamp cannot land on the tick labels, and at the right
     # so the colorbar and its label are not clipped.
-    fig.subplots_adjust(bottom=0.22, top=0.86, right=0.88)
+    fig.subplots_adjust(bottom=0.22, top=0.82 if annotate else 0.86, right=0.88)
+    if annotate:
+        annotate_params(fig, records, annotate)
     if mesh is not None:
         fig.colorbar(mesh, ax=list(axes), label=label, fraction=0.03, pad=0.02)
     _stamp(fig, records, y=0.02)
@@ -268,10 +271,15 @@ def paired_panels(
     """
     cols = records.unique(col_field) if col_field else [None]
     n_rows, n_cols = len(metrics), len(cols)
+    # Reserve fixed *inches* for the title, the parameter line, the legend and
+    # the provenance stamp, then convert to fractions. Fractional margins alone
+    # collapse onto the axis labels when there is only one panel-row.
+    top_in, bottom_in = (1.0 if annotate else 0.75), 1.15
+    fig_h = 3.4 * n_rows + top_in + bottom_in
     fig, axes = plt.subplots(
         n_rows,
         n_cols,
-        figsize=(4.2 * n_cols, 3.4 * n_rows),
+        figsize=(4.2 * n_cols, fig_h),
         squeeze=False,
         sharex=True,
     )
@@ -313,6 +321,7 @@ def paired_panels(
                 ax.set_xlabel(x)
             ax.grid(alpha=0.25, linewidth=0.6)
 
+    fig.subplots_adjust(bottom=bottom_in / fig_h, top=1.0 - top_in / fig_h)
     fig.legend(
         list(handles.values()),
         list(handles.keys()),
@@ -320,13 +329,12 @@ def paired_panels(
         ncol=min(4, len(handles)),
         fontsize=8,
         frameon=False,
-        bbox_to_anchor=(0.5, 0.055),
+        bbox_to_anchor=(0.5, 0.36 / fig_h),
     )
-    fig.suptitle(title or "", fontsize=10, wrap=True)
-    fig.subplots_adjust(bottom=0.20, top=0.86 if annotate else 0.90)
+    fig.suptitle(title or "", fontsize=10, wrap=True, y=1.0 - 0.22 / fig_h)
     if annotate:
-        annotate_params(fig, records, annotate)
-    _stamp(fig, records, y=0.005)
+        annotate_params(fig, records, annotate, y=1.0 - 0.62 / fig_h)
+    _stamp(fig, records, y=0.05 / fig_h)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(out, dpi=160)

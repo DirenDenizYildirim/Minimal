@@ -525,3 +525,126 @@ terrain-specific one. The hold ratio normalises each row by its own flat
 baseline precisely so this cannot be read as terrain robustness.
 
 Figure: `figures/terrain_h3_capability.png`.
+
+---
+
+## 8. Idea B: is the blind row's survival actually attributable to aggregation?
+
+`configs/sweeps/pursuer_dispersive.toml` — n = 20, τ = 120 s, ρ = 1.5, start
+radius 0.74 m, **5 × 5 grid** of (r_p, κ) at two handling times, 100 runs/cell,
+15 000 trials.
+
+§5 found survival rising steeply with confusion and read it as dilution. But
+every row there aggregated identically when no pursuer was in view, so nothing
+distinguished *the swarm aggregated* from *the pursuer's perception is poor*.
+This adds the missing control:
+
+| row | sensing | spatial strategy | mark |
+|---|---|---|---|
+| B0-blind | S = 2, cannot see the pursuer | aggregates (Gauci) | tight |
+| B1-ternary | S = 3, flees the pursuer | aggregates | ‡ |
+| **D-dispersive** | S = 3, flees the pursuer | **does not aggregate** | ‡ |
+
+D's state-0 is a 99 cm arc instead of Gauci's 14.45 cm circle, and its
+robot-seen state is identical to it, so a robot never stops for a neighbour and
+no cluster forms. Its pursuer response is byte-identical to B1's. The only
+difference between B1 and D is the spatial strategy.
+
+Handling times come from the pursuer's own travel time between touching
+neighbours in a formed cluster — 7.4 cm at ρ·v_max = 19.2 cm/s is 0.385 s — so
+h = 0.39 s is comparable to it and h = 1.93 s is 5×.
+
+### Yes. Confusion acts through aggregation, and the control proves it.
+
+Mean survival fraction over the whole grid, κ = 0 → κ = 5:
+
+| row | h = 0.39 | h = 1.93 |
+|---|---|---|
+| B0-blind | 0.180 → 0.548 (**×3.05**) | 0.144 → 0.592 (**×4.10**) |
+| B1-ternary ‡ | 0.258 → 0.575 (×2.23) | 0.328 → 0.628 (×1.91) |
+| D-dispersive ‡ | 0.530 → 0.638 (×1.20) | 0.591 → 0.666 (**×1.13**) |
+
+The two aggregating rows multiply their survival by 2–4× as confusion rises. The
+dispersive row, with identical pursuer sensing, gains 13–20%. Confusion enters
+the model only through `p_lock = 1/(1 + κ·n_local)`, and only a clustered swarm
+has a large `n_local`, so this is the mechanism doing exactly what it is written
+to do — but it had not been *shown* before, because nothing separated it from
+the pursuer simply being worse at its job.
+
+Handling time sharpens it in the predicted direction: B0's κ-response grows from
+×3.05 to ×4.10 when handling goes from comparable to the inter-neighbour travel
+time to 5× it, while D's shrinks slightly. Dilution needs the predator to be
+busy; making it busier makes clustering pay more.
+
+### But aggregation is still a net liability over this grid
+
+Survival pooled over κ, at h = 1.93:
+
+| r_p | B0-blind | B1-ternary ‡ | D-dispersive ‡ |
+|---|---|---|---|
+| 0.10 | 0.90 [0.90, 0.95] | 0.95 [0.95, 0.95] | 0.90 [0.85, 0.90] |
+| 0.20 | 0.85 [0.80, 0.85] | 0.85 [0.85, 0.90] | 0.75 [0.75, 0.78] |
+| 0.35 | 0.00 [0.00, 0.23] | 0.55 [0.45, 0.65] | 0.65 [0.60, 0.65] |
+| 0.60 | 0.00 [0.00, 0.00] | 0.05 [0.05, 0.05] | 0.50 [0.45, 0.50] |
+| 1.00 | 0.00 [0.00, 0.00] | 0.00 [0.00, 0.00] | 0.35 [0.30, 0.35] |
+
+Whenever the pursuer's range exceeds ~0.35 m the dispersive row wins, and by a
+lot. Confusion narrows the gap — mean survival at κ = 5 is 0.592 (B0), 0.628
+(B1), 0.666 (D) — but does not close it. Over this grid, clustering never
+becomes the better bet on average; it only stops being catastrophic.
+
+That is a sharper version of the build doc's own warning. The doc fixed v1 by
+giving the pursuer perception limits so that aggregation *could* protect. It can,
+in the sense that confusion helps it far more than it helps dispersal — and it
+still loses to simply not being in one place, unless the pursuer's range is short
+enough that nothing is found anyway.
+
+### Saturation, stated rather than hidden
+
+29% of all runs ended with the swarm wiped out, and `survival_fraction` is pinned
+at 0 there. It is concentrated exactly where the claim is strongest — B0 loses
+the whole swarm in 72% of runs at κ = 0, falling to 27% at κ = 5, while D wipes
+out in ≤ 1% anywhere.
+
+Time to wipeout is the readable measure in those cells (r_p = 0.35, h = 1.93):
+
+| κ | B0-blind | B1-ternary ‡ | D-dispersive ‡ |
+|---|---|---|---|
+| 0.0 | 46.6 s (n = 94) | 70.2 s (n = 19) | never |
+| 1.0 | 64.4 s (n = 71) | 82.6 s (n = 26) | never |
+| 2.5 | 88.8 s (n = 8) | 102.4 s (n = 3) | never |
+| 5.0 | never | never | never |
+
+Same story, unsaturated: confusion buys the aggregating rows time, and the
+dispersive row never needs it.
+
+### What these rows cannot say
+
+B1 and D are **hand-designed (‡), not searched**. They support a claim about
+*spatial strategy* — which is what they were built to isolate, and D differs from
+B1 in exactly one respect — but nothing they show is evidence about what S = 3
+sensing can achieve. The S = 5 result in §5 stays labelled ‡ for the same reason.
+
+Figures: `figures/pursuer_dispersive_kappa.png`,
+`figures/pursuer_dispersive_surface.png`.
+
+---
+
+## Next (noted, not run)
+
+Things these three experiments surfaced that are worth a design but were out of
+scope here:
+
+1. **The scalar-field row aggregates ~2% better than flat ground** (§6), pooled
+   0.980 [0.976, 0.986], CI excluding 1.0. Small, but it is a real interval.
+2. **Budget scaled with dimension** for the S = 4 row (§7). Equal *total* budget
+   over 8 constants is a thinner search per dimension than over 4, and that
+   confound is the obvious objection to the H3 result.
+3. **Where the D-vs-B crossover sits in r_p** (§8). It is between 0.20 and 0.35 m
+   on this grid; locating it properly needs a denser r_p axis and would say what
+   pursuer range makes clustering worth doing.
+4. **Whether a searched dispersive row beats a searched aggregating one.** Both
+   spatial rows here are hand-designed, so the comparison is between two guesses.
+5. **Row B4** — the received alarm bit — still needs communication wired, and the
+   delivery model (broadcast radius vs line-of-sight) is itself a capability
+   claim to be counted in `K`.

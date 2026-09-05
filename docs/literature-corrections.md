@@ -125,3 +125,37 @@ So a threshold `T` set on "did they aggregate" would see almost nothing, while
 one set on dispersion sees a clean monotone signal. The build doc lists
 dispersion first among Idea A's metrics already — this is a reason to make that
 binding rather than a preference.
+
+## 7. Handling time is required, not optional
+
+Not in the build doc, and Idea B does not work without it.
+
+The doc corrected v1's pursuer by giving it perception limits — finite range and
+confusion — so that aggregation *could* protect a swarm. But capture remained
+free: instantaneous on contact. With zero handling time a packed cluster is a
+buffet, the pursuer takes one robot per control step, and twenty robots are gone
+in two seconds. Aggregation is then maximally bad under any metric, which is the
+v1 failure mode reappearing one level down.
+
+Handling time — Holling's, the interval after a capture during which the predator
+is occupied — is what makes dilution exist at all. Measured here: with handling
+comparable to the pursuer's travel time between neighbours the aggregating rows
+multiply survival ×3.05 as confusion rises; at 5× that travel time the same
+figure is ×4.10, while a dispersive control with identical sensing gains ×1.13.
+
+Suggested amendment to Idea B's pursuer family: add `h`, the handling time, as a
+fourth pursuer dial alongside ρ, r_p and κ, and set it relative to the pursuer's
+travel time between neighbouring robots in a formed cluster.
+
+## 8. A dispersive control row belongs in Idea B's design
+
+The build doc's rows B0–B4 all aggregate when no pursuer is in view, so none of
+them can distinguish "the swarm aggregated" from "the pursuer's perception is
+poor". Adding one row with identical pursuer sensing and no clustering settles
+it in a single sweep (`docs/findings.md` §8), and without it the headline
+question — does aggregation protect the swarm? — is not answerable by that grid.
+
+The answer it gives is also worth carrying into the framing: confusion helps
+aggregating rows 2–4× and a dispersive row 1.1×, so the dilution mechanism is
+real; but over the swept grid the dispersive row still survives better on
+average. Aggregation stops being catastrophic; it does not become the better bet.
