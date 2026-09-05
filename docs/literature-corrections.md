@@ -1,9 +1,20 @@
 # Corrections to the build doc
 
 Points where `docs/build-doc-v2.md` needs amending — some from sources checked
-while building this repository, some from results it produced. The doc's
-structure and framing survive all of them; §5 is the only one that changes a
-prediction rather than a citation.
+while building this repository, some from results it produced.
+
+**The three that change the plan rather than a citation:**
+
+1. **Handling time is required** (§7). Idea B's pursuer does not work without it;
+   with capture free on contact, a cluster is a buffet and aggregation is
+   maximally bad under any metric.
+2. **The scalar-field mechanism claim is confirmed** (§9). The build doc's
+   correction to Idea A was necessary, and there is now a paired control saying
+   so rather than an argument.
+3. **The Steinberg & Solovey impossibility result is the framing anchor** (§2).
+   It belongs in the framing section, not the reading list: `c*(θ)` is a function
+   of swarm size as well as environment, and part of the answer to "minimality is
+   ill-defined" is now a theorem.
 
 ## 1. The Gauci n = 2 proof has been disproven
 
@@ -159,3 +170,33 @@ The answer it gives is also worth carrying into the framing: confusion helps
 aggregating rows 2–4× and a dispersive row 1.1×, so the dilution mechanism is
 real; but over the swept grid the dispersive row still survives better on
 average. Aggregation stops being catastrophic; it does not become the better bet.
+
+## 9. The corrected terrain model is necessary, and there is now a control for it
+
+**Build doc, Idea A, "What was wrong in v1".** The doc argues that a scalar speed
+field cannot deform one robot's path relative to another's, and replaces it with
+the per-wheel model. The argument is correct but it was never tested — and
+"cannot deform a trajectory" is not the same claim as "cannot break aggregation",
+since a scalar field still makes robots in different places move at different
+rates.
+
+Tested as a paired comparison, identical seeds and field, differing only in how
+the field is sampled (`docs/findings.md` §6). Pooled over every θ_m > 0 cell,
+1800 runs each:
+
+* per-wheel **1.175 [1.154, 1.190]**
+* scalar-centre **0.980 [0.976, 0.986]**
+
+The scalar field produces no degradation anywhere on the grid — no peak, flat
+within [0.96, 1.01]. So the v1 model would have measured nothing, and the paper
+can support the correction with a control rather than with reasoning.
+
+Suggested amendment: keep the argument, and add the measurement. It converts a
+methodological aside into a result, and it is cheap to state.
+
+## 10. Report θ_m only up to 1/max|f|
+
+Housekeeping, but it changes a published figure. The traction field reaches
+|f| = 1, so at θ_m = 1 the multiplier `1 + θ_m·f` can reach zero, a wheel stalls
+and the robot pivots. Any sweep above that is measuring stall, not terrain.
+Sweeps here are cut at θ_m = 0.9 and figures at 1.0.
