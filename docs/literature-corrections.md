@@ -282,3 +282,43 @@ Notably there is a regime (r_p = 0.35, κ = 3) where the front collapses: the
 aggregating rows dominate on *both* axes. That, not the trade-off cells, is where
 the build doc's "aggregation protects the swarm" claim is true without
 qualification.
+
+## 13. H2's worst correlation length is not a ratio law — state it as a length
+
+**Build doc, Idea A, H2.** The hypothesis is that terrain bites hardest when the
+correlation length is comparable to the controller's turning circle, λ/R₀ ≈ 0.7,
+and §4 measured exactly that with Gauci's R₀ = 14.45 cm. Read as a law, it
+predicts that a controller with R₀ = 4.74 cm degrades worst near λ = 3.3 cm.
+
+It does not (`docs/findings.md` §15). Over eight log-spaced λ from 2 to 20 cm,
+**both controllers peak at the same λ in metres — 7.46 cm** — which is
+λ/R₀ = 0.52 for Gauci and λ/R₀ = 1.57 for the searched row. At the searched row's
+predicted worst λ its hold ratio is 1.05–1.09, in the bottom half of its range,
+and the profile rises monotonically from λ/R₀ = 0.42 to 1.57.
+
+Suggested amendment: keep H2 as the question — *is there a worst length scale?* —
+and report the answer as a length, "worst at λ ≈ 7.5 cm in this arena", with
+λ/R₀ as a derived number rather than the statement. The R₀-relative form should
+be presented as the hypothesis that the measurement rejected, which is more
+useful than dropping it.
+
+What sits at 7.5 cm is not established here and is not guessed at: the body
+diameter (7.4 cm) and ℓ/λ = 0.68 for the axle both fall there, and one sweep at
+one θ_m cannot separate them. It is on the next list as a question, not written
+up as a mechanism.
+
+## 14. The ℓ/λ statement can now be made without its single-λ caveat
+
+**Build doc, Idea A, mechanism.** `docs/findings.md` §11 showed that how well a
+first-order expansion about the robot centre describes a robot's turn rate falls
+with ℓ/λ, but measured it by varying the axle at one λ — where "a function of
+ℓ/λ" and "a function of ℓ" are indistinguishable.
+
+§16 crosses three axles with three λ so the same ℓ/λ is reached by different
+(ℓ, λ) pairs. At matched ℓ/λ the slope agrees to **0.0201** over a 4× range of λ,
+against a 0.86 span along the trend, and to 0.0001 at ℓ/λ = 0.255.
+
+Suggested amendment: state the ℓ/λ result with its established range — 4× in λ,
+4× in axle, one decade of ℓ/λ, at θ_m = 0.9 — and keep it separate from #13.
+They are different objects: ℓ/λ governs the linearisation of one robot's turn
+rate; it does not govern where a swarm's aggregation degrades worst.

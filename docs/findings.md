@@ -1543,8 +1543,8 @@ Figure: `figures/terrain_lambda_collapse.png`
 
 ## Next (noted, not run)
 
-Carried forward and updated. Items 1, 2 and 3 from the previous list are now
-answered (§§6, 10, 12); what remains, plus what these four experiments surfaced:
+Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
+remains, plus what §§14–16 surfaced:
 
 1. ~~**Does S2-searched hold up at a λ matched to its own R₀?**~~ **Answered in
    §15.** It does: both rows share a worst λ of 7.46 cm, so the terrain effect
@@ -1565,3 +1565,20 @@ answered (§§6, 10, 12); what remains, plus what these four experiments surface
    claim to be counted in `K`.
 7. **Budget scaled with dimension**, as opposed to a warm start. §10 removed the
    direction of the equal-budget confound; scaling the budget would remove it.
+8. **A search whose objective spans initial conditions.** §14 shows both searched
+   rows fail to transfer in start radius and in n. The cheap test of whether that
+   is the optimiser or the objective is to re-run the same search with the
+   training objective averaged over start radius ∈ {0.74, 1.5, 3.0} m and
+   n ∈ {20, 50}, same budget, and evaluate on the same grid. If the transferring
+   controller is no worse at 0.74 m, §13's whole comparison should be rebuilt on
+   it.
+9. **Where the shared worst λ comes from.** §15 finds both rows peaking at
+   λ = 7.46 cm, within 1% of the body diameter and at ℓ/λ = 0.68. Three lengths
+   coincide there and this grid separates none of them; varying the body radius
+   at fixed axle, and the axle at fixed body, would.
+10. **The gathering-rate / holding-quality trade-off as an axis in its own
+    right.** §14 reads it off two searched controllers. Sweeping R₀ directly at
+    fixed everything else — time to first cluster against held dispersion — would
+    turn an explanation into a measurement, and it is one sweep.
+11. **Whether the ℓ/λ collapse survives outside one decade.** §16 covers
+    λ ∈ {5, 10, 20} cm. Nothing in it licenses λ = 1 cm or λ = 1 m.
