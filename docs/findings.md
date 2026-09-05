@@ -769,6 +769,98 @@ does not exist.
 
 Figure: `figures/terrain_warm_s4.png`.
 
+---
+
+## 11. Validating the gradient-steering mechanism
+
+`configs/sweeps/terrain_mechanism_regression.toml` — θ_m = 0.9, λ = 0.10 m
+(λ/R₀ = 0.69 for the base row), 100 runs/cell, **12 million robot-timesteps
+pooled per row**. Accumulated as OLS sufficient statistics rather than stored
+rows; they add across runs, so a sweep pools by summing.
+
+§§4 and 6 established *where* the terrain effect is and that a scalar speed field
+does not produce it. Neither measured the proposed mechanism. This regresses the
+per-timestep heading-rate residual against the field gradient across the axle.
+
+### The algebra first, because it decides what to regress
+
+With slope = 0, the residual is exactly
+
+```
+residual = ω_actual − ω_commanded
+         = v·(m_R − m_L)/ℓ  +  (ω/2)·(m_R + m_L − 2)
+```
+
+and to first order about the robot centre, with `n̂` running from the left wheel
+contact to the right,
+
+```
+residual  =  v·∂m/∂n   +   ω·(m(centre) − 1)
+             ⌞ gradient ⌟   ⌞ mean-traction ⌟
+```
+
+Both terms are the **same per-wheel traction mechanism**: the first is the wheels
+seeing different ground, the second is a turning robot on ground uniformly slower
+than nominal. This is arithmetic, verified to six decimals against the simulator,
+not a second hypothesis.
+
+It matters because the two terms are built from the same field and are therefore
+**correlated**, so regressing on the gradient term alone gives a *biased* slope,
+not merely a noisy one. Both fits are reported.
+
+`∂m/∂n` is differenced from the **field at the robot centre**, never from the two
+wheel samples — the wheel difference is what the residual is made of, so
+regressing on it would be an identity.
+
+### Result: slope → 1, and it degrades exactly as ℓ/λ → 1
+
+| row | axle | **ℓ/λ** | R₀ | full slope | full R² | gradient-only slope | gradient-only R² |
+|---|---|---|---|---|---|---|---|
+| axle-half-R0-same ‡ | 2.55 cm | **0.25** | 14.45 cm | **0.976** | **0.9983** | 0.522 | 0.0215 |
+| base | 5.10 cm | **0.51** | 14.45 cm | 0.900 | 0.9738 | 0.681 | 0.1367 |
+| R0-half-axle-same ‡ | 5.10 cm | **0.51** | 7.22 cm | 0.894 | 0.9719 | 0.652 | 0.0924 |
+| R0-x2-axle-same ‡ | 5.10 cm | **0.51** | 28.90 cm | 0.901 | 0.9760 | 0.809 | 0.2408 |
+| axle-x2-R0-same ‡ | 10.20 cm | **1.02** | 14.45 cm | **0.623** | **0.7373** | 0.539 | 0.2776 |
+
+Three things, all as predicted:
+
+1. **Slope 0.976 with R² 0.998** at the narrowest axle. The residual *is* the
+   first-order per-wheel traction effect; there is essentially nothing else in it.
+2. **Both fall monotonically with ℓ/λ** — slope 0.976 → 0.900 → 0.623, R² 0.998 →
+   0.974 → 0.737 — and the fall is steepest past ℓ/λ = 1, exactly where a
+   first-order expansion about the centre stops describing what the wheels see.
+3. **The control works.** The three rows at ℓ/λ = 0.51 span a **4× range of R₀**
+   (7.22, 14.45, 28.90 cm) and agree to **0.007 in slope** and 0.004 in R². ℓ/λ
+   decides the quality of the linearisation; R₀ does not touch it.
+
+Point 3 is worth separating from §4's result. R₀ sets *where the terrain effect
+peaks* — that is the swarm-level finding. ℓ/λ sets *how well a first-order
+expansion describes a single robot's turn rate* — that is this one. They are
+different questions about different objects, and the same sweep answers both
+because the rows were built to vary the two independently.
+
+### The gradient-only regression, as literally specified
+
+Slopes 0.52–0.81, R² 0.02–0.28 — nowhere near 1, at any ℓ/λ. That is the
+predicted consequence of omitting a correlated term, and its size is set by how
+large ω·(m̄ − 1) is relative to v·∂m/∂n: at these constants the mean-traction term
+is roughly ten times the gradient term, so it dominates both the variance and the
+bias. Reported, and stopped there — no third mechanism is proposed, because the
+decomposition above accounts for the discrepancy exactly.
+
+### Limitations
+
+* One θ_m, one λ. The ℓ/λ trend is established across three axle values at a
+  single correlation length; whether it collapses on ℓ/λ across λ as well is
+  untested and is on the next list.
+* Four of the five rows are hand-picked constants (‡). That mark is about how the
+  constants were obtained; nothing here is a minimality claim.
+* `axle-x2-R0-same` puts the wheel contacts outside the 7.4 cm body — a numerical
+  device, not a buildable robot, and it is the row carrying the ℓ/λ ≈ 1 point.
+
+Figure: `figures/terrain_mechanism_regression.png`
+(regenerate with `harness/figures_mechanism_regression.py`).
+
 ## Next (noted, not run)
 
 Things these three experiments surfaced that are worth a design but were out of

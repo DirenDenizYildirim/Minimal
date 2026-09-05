@@ -1,0 +1,91 @@
+# EXPERIMENT 3 — validate the gradient-steering mechanism directly.
+#
+# Sections 4 and 6 established WHERE the terrain effect is (peaks at
+# lambda/R0 ~ 0.7) and that a scalar speed field does not produce it. Neither
+# measured the proposed mechanism itself. This regresses, per timestep and per
+# robot, the heading-rate residual against the field gradient across the axle.
+#
+# THE ALGEBRA, which is exact rather than hypothesised. With slope = 0,
+#
+#   residual = omega_actual - omega_commanded
+#            = v (m_R - m_L)/l  +  (omega/2)(m_R + m_L - 2)
+#
+# and to first order about the robot centre, with n_hat running from the LEFT
+# wheel contact to the RIGHT one,
+#
+#   residual  =  v * dm/dn     +     omega * (m(centre) - 1)
+#                ^^^^^^^^^^          ^^^^^^^^^^^^^^^^^^^^^^^
+#                gradient term       mean-traction term
+#
+# Both terms are the SAME per-wheel traction mechanism: the first is the wheels
+# seeing different ground, the second is a turning robot on ground that is
+# uniformly slower than nominal. Two fits are therefore recorded:
+#
+#   steering_fit       residual on the gradient term alone;
+#   steering_fit_full  residual on the full first-order expansion.
+#
+# The gradient term alone is a BIASED regressor, not merely a noisy one: both
+# terms are built from the same field and are correlated, so omitting one moves
+# the other's slope. Measured on a tiny axle the single-regressor slope is about
+# -2 while the full one is 1.00. Both are reported.
+#
+# dm/dn is differenced from the FIELD at the robot centre, never from the two
+# wheel samples -- the wheel difference is what the residual is made of, so
+# regressing on it would be an identity.
+#
+# PREDICTION: the full-expansion slope is ~1 where the axle is small against the
+# correlation length, and falls as l/lambda approaches 1, because that is where a
+# first-order expansion about the centre stops describing what the wheels see.
+# At lambda = 0.10 m: l/lambda = 0.25 (axle-half), 0.51 (base), 1.02 (axle-x2).
+#
+# theta_m = 0.9, lambda = 0.10 m (lambda/R0 = 0.69). All five H2 rows, so the two
+# rows that vary R0 at fixed axle act as controls: if l/lambda is what matters,
+# they should track the base row rather than each other.
+
+name = "terrain-mechanism-regression"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.9]
+
+[[rows]]
+label = "axle-half-R0-same"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.0255
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "base"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "axle-x2-R0-same"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.102
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "R0-half-axle-same"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.4783, -1.0, 1.0, -1.0], provenance = "hand_designed" }
+
+[[rows]]
+label = "R0-x2-axle-same"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"metrics.terrain_regression" = true
+"robot.axle_length" = 0.051
+controller = { kind = "gauci", constants = [-0.8378, -1.0, 1.0, -1.0], provenance = "hand_designed" }
