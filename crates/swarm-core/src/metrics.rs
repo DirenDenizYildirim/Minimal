@@ -174,3 +174,147 @@ mod tests {
         assert_eq!(dispersion(&[Vec2::ZERO], 0.037), 0.0);
     }
 }
+
+/// Streaming sufficient statistics for an ordinary least-squares fit of
+/// `y = a + b x`, accumulated instead of storing per-timestep rows.
+///
+/// A single terrain run at dt = 0.1 s over tau = 600 s with 20 robots produces
+/// 120 000 samples; a hundred runs across five rows is 60 million. These six
+/// sums carry everything OLS needs, and they add across runs, so a whole sweep
+/// pools by summing accumulators.
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LinearFit {
+    pub n: u64,
+    pub sum_x: f64,
+    pub sum_y: f64,
+    pub sum_xx: f64,
+    pub sum_xy: f64,
+    pub sum_yy: f64,
+}
+
+impl LinearFit {
+    pub fn push(&mut self, x: f64, y: f64) {
+        if !x.is_finite() || !y.is_finite() {
+            return;
+        }
+        self.n += 1;
+        self.sum_x += x;
+        self.sum_y += y;
+        self.sum_xx += x * x;
+        self.sum_xy += x * y;
+        self.sum_yy += y * y;
+    }
+
+    pub fn merge(&mut self, other: &LinearFit) {
+        self.n += other.n;
+        self.sum_x += other.sum_x;
+        self.sum_y += other.sum_y;
+        self.sum_xx += other.sum_xx;
+        self.sum_xy += other.sum_xy;
+        self.sum_yy += other.sum_yy;
+    }
+
+    /// OLS slope of y on x. `None` when x has no spread.
+    pub fn slope(&self) -> Option<f64> {
+        let n = self.n as f64;
+        if self.n < 2 {
+            return None;
+        }
+        let sxx = self.sum_xx - self.sum_x * self.sum_x / n;
+        if sxx.abs() < 1e-30 {
+            return None;
+        }
+        Some((self.sum_xy - self.sum_x * self.sum_y / n) / sxx)
+    }
+
+    pub fn intercept(&self) -> Option<f64> {
+        let n = self.n as f64;
+        self.slope().map(|b| self.sum_y / n - b * self.sum_x / n)
+    }
+
+    /// Coefficient of determination.
+    pub fn r_squared(&self) -> Option<f64> {
+        let n = self.n as f64;
+        if self.n < 2 {
+            return None;
+        }
+        let sxx = self.sum_xx - self.sum_x * self.sum_x / n;
+        let syy = self.sum_yy - self.sum_y * self.sum_y / n;
+        let sxy = self.sum_xy - self.sum_x * self.sum_y / n;
+        if sxx.abs() < 1e-30 || syy.abs() < 1e-30 {
+            return None;
+        }
+        Some(sxy * sxy / (sxx * syy))
+    }
+}
+
+#[cfg(test)]
+mod fit_tests {
+    use super::*;
+
+    #[test]
+    fn recovers_an_exact_line() {
+        let mut f = LinearFit::default();
+        for i in 0..100 {
+            let x = i as f64 * 0.01 - 0.5;
+            f.push(x, 3.0 * x - 0.25);
+        }
+        assert!((f.slope().unwrap() - 3.0).abs() < 1e-9);
+        assert!((f.intercept().unwrap() + 0.25).abs() < 1e-9);
+        assert!((f.r_squared().unwrap() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_known_omitted_term_lowers_r_squared_without_biasing_the_slope() {
+        // Exactly the situation in the gradient-steering regression: the true
+        // model is y = x + z, only x is regressed, and z is independent of x.
+        let mut f = LinearFit::default();
+        let mut z = 0.0f64;
+        for i in 0..20_000 {
+            let x = ((i * 37) % 101) as f64 / 101.0 - 0.5;
+            z = (z * 1.1 + 0.37).fract() - 0.5;
+            f.push(x, x + z);
+        }
+        let slope = f.slope().unwrap();
+        let r2 = f.r_squared().unwrap();
+        assert!((slope - 1.0).abs() < 0.05, "slope {slope}");
+        assert!(
+            r2 < 0.8,
+            "R^2 {r2} should be well below 1 with an omitted term"
+        );
+    }
+
+    #[test]
+    fn merging_matches_pushing_everything_into_one() {
+        let (mut a, mut b, mut all) = (
+            LinearFit::default(),
+            LinearFit::default(),
+            LinearFit::default(),
+        );
+        for i in 0..50 {
+            let (x, y) = (i as f64, 2.0 * i as f64 + 1.0);
+            if i % 2 == 0 {
+                a.push(x, y)
+            } else {
+                b.push(x, y)
+            }
+            all.push(x, y);
+        }
+        a.merge(&b);
+        assert_eq!(a, all);
+    }
+
+    #[test]
+    fn degenerate_inputs_return_none_rather_than_nan() {
+        assert_eq!(LinearFit::default().slope(), None);
+        let mut flat = LinearFit::default();
+        for _ in 0..10 {
+            flat.push(1.0, 5.0);
+        }
+        assert_eq!(flat.slope(), None, "no spread in x");
+        let mut with_nan = LinearFit::default();
+        with_nan.push(f64::NAN, 1.0);
+        with_nan.push(1.0, f64::INFINITY);
+        assert_eq!(with_nan.n, 0, "non-finite samples must be dropped");
+    }
+}

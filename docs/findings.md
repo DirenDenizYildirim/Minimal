@@ -705,6 +705,70 @@ cost anything elsewhere.
 
 Figure: `figures/terrain_retune_cost.png`.
 
+---
+
+## 10. Warm-started S = 4 search
+
+`configs/sweeps/terrain_warm_s4.toml`, from `results/search_s4_warm.json`.
+
+§7's result — no S = 4 controller better than the searched S = 2 one — carried an
+obvious objection: equal *total* budget over 8 constants is a thinner search per
+dimension than over 4, so the S = 4 row might have lost on search effort rather
+than on capability. This removes the **direction** of that confound.
+
+The search starts at `[S2-searched | S2-searched]`: an eight-constant table whose
+two halves are equal, which is an S = 4 controller that ignores its own terrain
+bit and behaves exactly like the S = 2 controller achieving 1.10 at the peak. The
+optimiser therefore begins holding the S = 2 optimum, and the only question it
+can be asked is whether *using* the bit beats *not* using it. Same optimiser,
+same budget (600 evaluations × 12 runs = 7 200 simulation runs), training seeds
+950 000 — disjoint from the cold search's 900 000 and from the evaluation seeds.
+
+The search did move: L2 distance 0.464 from its start, and the two halves
+diverged by up to 0.254, so the found controller genuinely uses the bit.
+
+### It ties, and does not beat, the S = 2 row it started from
+
+Absolute final dispersion on held-out seeds:
+
+| θ_m | S2-searched † | S4-searched † (cold) | S4-warm † |
+|---|---|---|---|
+| 0.00 | 1.253 [1.234, 1.283] | 1.222 [1.211, 1.235] | 1.216 [1.204, 1.226] |
+| 0.45 | 1.212 [1.201, 1.222] | 1.212 [1.205, 1.224] | 1.218 [1.203, 1.227] |
+| 0.75 | 1.322 [1.280, 1.358] | 1.330 [1.288, 1.366] | 1.297 [1.273, 1.340] |
+| **0.90** | **1.383 [1.350, 1.441]** | 1.486 [1.424, 1.535] | **1.412 [1.349, 1.503]** |
+
+At the peak cell — the cell both searches trained on — S4-warm is
+**1.412 [1.349, 1.503]** against S2-searched's **1.383 [1.350, 1.441]**. The
+intervals **overlap**; the point estimate is 2.1% *worse*. Given the S = 2
+optimum as a starting point and an equal budget, using the terrain bit did not
+improve on ignoring it.
+
+The warm start does help relative to the cold S = 4 search at the peak (1.412
+against 1.486), which is what a better starting point should do. It just does not
+get past S = 2.
+
+### Why the disjoint-seed protocol earns its keep here
+
+The warm search's *training* objective was **1.2595**, better than the cold
+search's 1.3012 and than the S = 2 search's 1.3009. On held-out seeds that
+advantage disappears. The training objective is the minimum of a noisy sample —
+12 runs per candidate over 600 candidates — so the best-looking candidate is
+partly the luckiest one. Reporting it would have shown a warm-start "win" that
+does not exist.
+
+### Limitations
+
+* **Equal budget across unequal dimensions still applies.** Eight dimensions
+  still receive the same total evaluations as four. What the warm start rules out
+  is the specific objection that the S = 4 row never had access to the S = 2
+  optimum — it started there.
+* sep-CMA-ES is diagonal-only and not exhaustive; the row stays an upper bound
+  (†). A stronger searcher could still find something.
+* One λ, one training cell, n = 20.
+
+Figure: `figures/terrain_warm_s4.png`.
+
 ## Next (noted, not run)
 
 Things these three experiments surfaced that are worth a design but were out of

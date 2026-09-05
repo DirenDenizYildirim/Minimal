@@ -191,6 +191,13 @@ pub struct MetricsConfig {
     /// series would dominate the output size — the aggregate time-resolved
     /// metrics are computed either way.
     pub store_series: bool,
+    /// Accumulate the gradient-steering regression: heading-rate residual
+    /// against `v * dm/dn` at the robot centre, every robot every timestep.
+    ///
+    /// A diagnostic, not a dial — it changes nothing about the dynamics, only
+    /// what is recorded, and costs two extra field samples per robot per step
+    /// when on. Off by default.
+    pub terrain_regression: bool,
 }
 
 impl Default for MetricsConfig {
@@ -199,6 +206,7 @@ impl Default for MetricsConfig {
             cluster_link_radii: 3.0,
             sample_interval: 10.0,
             store_series: true,
+            terrain_regression: false,
         }
     }
 }

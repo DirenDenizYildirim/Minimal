@@ -1,0 +1,44 @@
+# EXPERIMENT 2 — warm-started S = 4 search, evaluated.
+#
+# The section 7 objection was that equal TOTAL budget over 8 constants is a
+# thinner search per dimension than over 4, so the S = 4 row may have lost on
+# search effort rather than on capability. A warm start removes the DIRECTION of
+# that confound without removing its existence.
+#
+# The search began at [S2-searched | S2-searched]: an eight-constant table whose
+# two halves are equal, i.e. an S = 4 controller that ignores its own terrain
+# bit and behaves exactly like the S = 2 controller achieving 1.10 at the peak.
+# From there the only question the optimiser can be asked is whether USING the
+# bit beats NOT using it. A null result now means "no improvement found from a
+# known-good point", which is a much sharper statement than "nothing good found".
+#
+# Same optimiser, same budget (600 evaluations x 12 runs), training seeds 950000
+# -- disjoint from the cold search's 900000 and from the evaluation seeds here.
+#
+# LIMITATION, unchanged: this removes the direction of the equal-budget confound,
+# not its existence. Eight dimensions still get the same total evaluations as
+# four. What it rules out is the specific objection that the S = 4 row never had
+# access to the S = 2 optimum.
+#
+# Grid identical to terrain_retune_cost.toml so the rows there are directly
+# comparable, run under the same base seeds.
+
+name = "terrain-warm-s4"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.1, 0.2, 0.3, 0.45, 0.6, 0.75, 0.9]
+
+[[rows]]
+label = "S4-warm"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.250759, -0.693480] },
+  { wheels = [0.614411, -0.318877] },
+  { wheels = [-0.134207, -0.947583] },
+  { wheels = [0.829046, -0.279431] },
+] }

@@ -155,6 +155,23 @@ impl Terrain {
         (self.traction(p) - 1.0).abs() > threshold
     }
 
+    /// Directional derivative of the traction multiplier along `dir`, evaluated
+    /// at `p` by central difference on the **field itself**.
+    ///
+    /// Deliberately not computed from the two wheel samples. `m_R - m_L` over
+    /// the axle is what the residual is *made of*, so regressing the residual on
+    /// it would be an identity and would test nothing. Differencing the field at
+    /// the robot's centre instead asks a real question: does the first-order
+    /// expansion about the centre predict what the wheels actually did? That is
+    /// what fails as the axle grows towards the correlation length.
+    ///
+    /// `eps` is fixed well below both the axle and any swept correlation length.
+    pub fn traction_gradient(&self, p: Vec2, dir: Vec2) -> f64 {
+        const EPS: f64 = 1e-4;
+        let step = dir * EPS;
+        (self.traction(p + step) - self.traction(p - step)) / (2.0 * EPS)
+    }
+
     /// The heading-dependent gravity term, in m/s. Positive means "subtract
     /// this much speed", i.e. the robot is pointed uphill.
     pub fn gravity_term(&self, heading: Vec2) -> f64 {

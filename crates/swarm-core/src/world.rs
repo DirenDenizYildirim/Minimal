@@ -78,6 +78,17 @@ pub struct RunRecord {
     pub fraction_time_single_cluster: f64,
     pub realised_fn_rate: f64,
     pub realised_fp_rate: f64,
+    /// Heading-rate residual regressed on the gradient term `v * dm/dn` alone.
+    /// Present only when `metrics.terrain_regression` is on; the sums add across
+    /// runs, so a sweep pools by summing them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub steering_fit: Option<crate::metrics::LinearFit>,
+    /// The same residual regressed on the **full** first-order expansion about
+    /// the robot centre, `v * dm/dn + omega * (m(centre) - 1)`. Both terms come
+    /// from the same per-wheel traction; see the step loop for why leaving the
+    /// second out biases the first's slope rather than merely adding scatter.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub steering_fit_full: Option<crate::metrics::LinearFit>,
     /// Radius of the disk the swarm was placed in. Reported because "survival"
     /// means nothing without knowing how spread out the swarm started.
     pub start_radius: f64,
@@ -149,6 +160,9 @@ pub struct World {
     /// Reused each step so the sensor loop allocates nothing.
     scene: Vec<Target>,
     captures: u64,
+    /// Gradient-steering regressions, accumulated when `metrics.terrain_regression`.
+    steering_fit: crate::metrics::LinearFit,
+    steering_fit_full: crate::metrics::LinearFit,
     first_capture: Option<f64>,
     last_capture: Option<f64>,
     rng: Rng,
@@ -188,6 +202,8 @@ impl World {
             tally: OcclusionTally::default(),
             scene: Vec::with_capacity(n + pursuers.len()),
             captures: 0,
+            steering_fit: crate::metrics::LinearFit::default(),
+            steering_fit_full: crate::metrics::LinearFit::default(),
             first_capture: None,
             last_capture: None,
             pursuers,
@@ -275,6 +291,33 @@ impl World {
             if let Some(slip) = slip {
                 realised[0] += slip.sample(&mut self.rng);
                 realised[1] += slip.sample(&mut self.rng);
+            }
+            if self.cfg.metrics.terrain_regression {
+                // Residual = actual turn rate minus commanded turn rate.
+                let omega_cmd = (commands[i][1] - commands[i][0]) / axle;
+                let omega_act = (realised[1] - realised[0]) / axle;
+                // n_hat points from the LEFT wheel contact to the RIGHT one, the
+                // convention under which the first-order prediction is
+                // residual = v * dm/dn with slope +1.
+                let n_hat = -pose.heading().perp();
+                let v = 0.5 * (commands[i][0] + commands[i][1]);
+                let residual = omega_act - omega_cmd;
+
+                // (1) The gradient term on its own, as the experiment specifies.
+                let gradient_term = v * self.terrain.traction_gradient(pose.p, n_hat);
+                self.steering_fit.push(gradient_term, residual);
+
+                // (2) The full first-order expansion about the centre. Exactly,
+                //     residual = v (m_R - m_L)/l + (omega/2)(m_R + m_L - 2), and
+                //     the second term is the *same* per-wheel traction mechanism,
+                //     not another one: it is what a turning robot does when the
+                //     ground under both wheels is uniformly slower than nominal.
+                //     Omitting it does not just cost R^2 — both terms are built
+                //     from the same field, so they are correlated and the
+                //     single-regressor slope is biased.
+                let mean_term = omega_cmd * (self.terrain.traction(pose.p) - 1.0);
+                self.steering_fit_full
+                    .push(gradient_term + mean_term, residual);
             }
             self.targets[i].pose = integrate(pose, realised[0], realised[1], axle, dt);
             self.memory[i] = next_memory[i];
@@ -445,6 +488,16 @@ impl World {
             fraction_time_single_cluster: samples_single as f64 / samples_taken as f64,
             realised_fn_rate: self.tally.realised_fn_rate(),
             realised_fp_rate: self.tally.realised_fp_rate(),
+            steering_fit: self
+                .cfg
+                .metrics
+                .terrain_regression
+                .then_some(self.steering_fit),
+            steering_fit_full: self
+                .cfg
+                .metrics
+                .terrain_regression
+                .then_some(self.steering_fit_full),
             start_radius: self
                 .cfg
                 .swarm
@@ -1076,6 +1129,41 @@ mod tests {
         scene2[0].pose.theta = to_pursuer;
         let hit = cast(&scene2[0], 0, &scene2, &w.cfg.sensor);
         assert_eq!(hit.map(|h| h.kind), Some(AgentKind::Pursuer));
+    }
+
+    #[test]
+    fn the_gradient_steering_regression_recovers_a_unit_slope() {
+        // Guards the instrumentation before it is used to make a claim. With the
+        // axle far smaller than the correlation length the first-order expansion
+        // about the robot centre should be accurate, so the residual regresses
+        // on v*dm/dn with slope ~1. R^2 is well below 1 by construction: the
+        // omitted omega*(m_bar - 1) term is part of the same mechanism.
+        let mut cfg = short(10, 120.0);
+        cfg.metrics.terrain_regression = true;
+        cfg.terrain.friction_amplitude = 0.9;
+        cfg.terrain.correlation_length = 0.5;
+        cfg.robot.axle_length = 0.01; // l/lambda = 0.02
+        let rec = World::new(cfg, 0).unwrap().run();
+        let full = rec.steering_fit_full.expect("regression requested");
+        assert!(full.n > 10_000, "only {} samples", full.n);
+        let slope = full.slope().unwrap();
+        let r2 = full.r_squared().unwrap();
+        assert!((slope - 1.0).abs() < 0.05, "slope {slope} should be near 1");
+        assert!(r2 > 0.98, "R^2 {r2} should be near 1 when the axle is tiny");
+
+        // The gradient term alone is a biased regressor, not merely a noisy one:
+        // both terms are built from the same field and are correlated.
+        let partial = rec.steering_fit.unwrap().slope().unwrap();
+        assert!(
+            (partial - 1.0).abs() > 0.2,
+            "the single-regressor slope {partial} was expected to be biased"
+        );
+    }
+
+    #[test]
+    fn the_regression_is_off_unless_asked_for() {
+        let rec = World::new(short(5, 20.0), 0).unwrap().run();
+        assert!(rec.steering_fit.is_none());
     }
 
     #[test]

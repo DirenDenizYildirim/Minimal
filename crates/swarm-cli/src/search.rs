@@ -205,6 +205,11 @@ pub struct SearchResult {
     pub simulation_runs: usize,
     pub seed: u64,
     pub training_seed_base: u64,
+    /// Where the search started. A warm start changes what a null result means:
+    /// from "the optimiser did not find anything good" to "the optimiser could
+    /// not improve on this specific known-good point".
+    pub initial_mean: Vec<f64>,
+    pub warm_started: bool,
     pub best_constants: Vec<f64>,
     pub best_training_objective: f64,
     /// Objective of the incumbent after each generation, for a convergence plot.
@@ -256,16 +261,26 @@ pub fn run_search(
     runs_per_eval: usize,
     seed: u64,
     training_seed_base: u64,
+    init: Option<Vec<f64>>,
 ) -> Result<SearchResult> {
     let dims = 2 * states;
-    // Start from Gauci's constants tiled across the extra states: the search
-    // begins at the known-good four-constant controller rather than at random,
-    // so a failure to improve is a statement about the search, not the start.
-    let seed_point: Vec<f64> = (0..dims)
-        .map(|i| swarm_core::GAUCI_CONSTANTS[i % 4])
-        .collect();
+    // Default: Gauci's constants tiled across the extra states, so the search
+    // begins at a known-good four-constant controller rather than at random.
+    //
+    // With `init`, the caller supplies the start instead, tiled the same way if
+    // it is shorter than the space. Tiling a four-constant controller into an
+    // eight-constant table gives a table whose two halves are equal — an S = 4
+    // row that starts out *ignoring* its extra bit and behaving exactly like the
+    // S = 2 controller it came from. The search can then only be asked one
+    // question: does using the bit improve on not using it?
+    let warm_started = init.is_some();
+    let source = init.unwrap_or_else(|| swarm_core::GAUCI_CONSTANTS.to_vec());
+    if source.is_empty() {
+        anyhow::bail!("initial constants must not be empty");
+    }
+    let seed_point: Vec<f64> = (0..dims).map(|i| source[i % source.len()]).collect();
 
-    let mut es = SepCmaEs::new(seed_point, 0.3, seed);
+    let mut es = SepCmaEs::new(seed_point.clone(), 0.3, seed);
     let lambda = es.population_size();
     let generations = budget / lambda;
     let mut best = (f64::INFINITY, vec![0.0; dims]);
@@ -297,6 +312,8 @@ pub fn run_search(
         simulation_runs: generations * lambda * runs_per_eval,
         seed,
         training_seed_base,
+        initial_mean: seed_point,
+        warm_started,
         best_constants: best.1,
         best_training_objective: best.0,
         history,
@@ -361,6 +378,17 @@ mod tests {
             candidates.iter().any(|(_, p)| *p > 0.0),
             "a sigma of 2 from 0.9 should have produced repairs"
         );
+    }
+
+    #[test]
+    fn a_short_warm_start_tiles_across_the_space() {
+        // Tiling a 4-constant controller into an 8-constant table gives a table
+        // whose halves are equal: an S = 4 row that starts out ignoring its
+        // extra bit. That is the whole point of the warm start.
+        let source = vec![-0.7, -1.0, 1.0, -1.0];
+        let tiled: Vec<f64> = (0..8).map(|i| source[i % source.len()]).collect();
+        assert_eq!(tiled, vec![-0.7, -1.0, 1.0, -1.0, -0.7, -1.0, 1.0, -1.0]);
+        assert_eq!(tiled[..4], tiled[4..]);
     }
 
     #[test]

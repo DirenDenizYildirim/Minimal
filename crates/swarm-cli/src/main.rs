@@ -79,6 +79,12 @@ enum Command {
         /// noisy sample rather than a controller.
         #[arg(long, default_value_t = 900_000)]
         training_seed: u64,
+        /// Warm start: JSON array of constants for the initial mean, tiled if
+        /// shorter than the search space. Passing an S = 2 controller to an
+        /// S = 4 search starts it at a table that ignores its extra bit, so the
+        /// only question left is whether using the bit improves on not using it.
+        #[arg(long)]
+        init: Option<String>,
         #[arg(short, long)]
         out: PathBuf,
         #[arg(short, long)]
@@ -123,11 +129,20 @@ fn main() -> Result<()> {
             runs_per_eval,
             seed,
             training_seed,
+            init,
             out,
             threads,
         } => {
             set_threads(threads)?;
-            search_cmd(&config, budget, runs_per_eval, seed, training_seed, &out)
+            search_cmd(
+                &config,
+                budget,
+                runs_per_eval,
+                seed,
+                training_seed,
+                init,
+                &out,
+            )
         }
         Command::Sweep {
             config,
@@ -408,12 +423,14 @@ fn sweep_cmd(path: &Path, out: &Path, dry_run: bool, series: bool) -> Result<()>
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn search_cmd(
     path: &Path,
     budget: usize,
     runs_per_eval: usize,
     seed: u64,
     training_seed: u64,
+    init: Option<String>,
     out: &Path,
 ) -> Result<()> {
     let value = read_config_value(path)?;
@@ -430,6 +447,15 @@ fn search_cmd(
     eprintln!(
         "budget {budget} evaluations x {runs_per_eval} runs; training seed base {training_seed}"
     );
+    let init: Option<Vec<f64>> = match init {
+        Some(text) => {
+            let v: Vec<f64> = serde_json::from_str(&text)
+                .with_context(|| format!("parsing --init as a JSON array: {text}"))?;
+            eprintln!("warm start from {v:?} (tiled to {} constants)", 2 * states);
+            Some(v)
+        }
+        None => None,
+    };
     let result = search::run_search(
         &value,
         &encoding,
@@ -438,6 +464,7 @@ fn search_cmd(
         runs_per_eval,
         seed,
         training_seed,
+        init,
     )?;
     search::write_result(out, &result)?;
     eprintln!(
