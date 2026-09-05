@@ -225,11 +225,16 @@ def surface(
         ax.set_ylabel(y)
 
     label = metric if baseline_y is None else f"{metric} / value at {y}={baseline_y}"
-    fig.suptitle(title or f"{label} over ({x}, {y})", fontsize=10, wrap=True)
+    caption = title or f"{label} over ({x}, {y})"
+    # Height for the caption scales with how many lines it has: a figure five
+    # panels wide will not wrap a long title on its own, it will just overrun.
+    caption_lines = caption.count("\n") + 1
+    fig.suptitle(caption, fontsize=9.5, wrap=True, y=0.985, va="top")
     # Reserve room around the axes before the colorbar is attached: under them
     # so the upper-bound stamp cannot land on the tick labels, and at the right
     # so the colorbar and its label are not clipped.
-    fig.subplots_adjust(bottom=0.22, top=0.82 if annotate else 0.86, right=0.88)
+    top = 0.93 - 0.045 * caption_lines - (0.04 if annotate else 0.0)
+    fig.subplots_adjust(bottom=0.22, top=top, right=0.88)
     if annotate:
         annotate_params(fig, records, annotate)
     if mesh is not None:

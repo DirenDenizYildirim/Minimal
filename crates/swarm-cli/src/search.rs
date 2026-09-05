@@ -149,43 +149,39 @@ impl SepCmaEs {
             .map(|i| (new_mean[i] - old_mean[i]) / self.sigma)
             .collect();
 
-        for i in 0..self.n {
-            self.ps[i] = (1.0 - self.cs) * self.ps[i]
-                + (self.cs * (2.0 - self.cs) * self.mueff).sqrt() * step[i] / self.d[i];
+        let ps_gain = (self.cs * (2.0 - self.cs) * self.mueff).sqrt();
+        for ((ps, d), st) in self.ps.iter_mut().zip(&self.d).zip(&step) {
+            *ps = (1.0 - self.cs) * *ps + ps_gain * st / d;
         }
         let ps_norm = self.ps.iter().map(|v| v * v).sum::<f64>().sqrt();
         let denom = (1.0 - (1.0 - self.cs).powi(2 * (self.gen as i32 + 1))).sqrt();
         let hsig = ps_norm / denom < (1.4 + 2.0 / (self.n as f64 + 1.0)) * self.chi_n;
 
-        for i in 0..self.n {
-            self.pc[i] = (1.0 - self.cc) * self.pc[i]
-                + if hsig {
-                    (self.cc * (2.0 - self.cc) * self.mueff).sqrt() * step[i]
-                } else {
-                    0.0
-                };
+        let pc_gain = if hsig {
+            (self.cc * (2.0 - self.cc) * self.mueff).sqrt()
+        } else {
+            0.0
+        };
+        for (pc, st) in self.pc.iter_mut().zip(&step) {
+            *pc = (1.0 - self.cc) * *pc + pc_gain * st;
         }
 
-        for i in 0..self.n {
-            let mut c = self.d[i] * self.d[i];
+        let sigma = self.sigma;
+        let (c1, cmu, cc) = (self.c1, self.cmu, self.cc);
+        for (i, (d, pc)) in self.d.iter_mut().zip(&self.pc).enumerate() {
+            let mut c = *d * *d;
             let rank_mu: f64 = self
                 .weights
                 .iter()
                 .enumerate()
                 .map(|(rank, w)| {
-                    let y = (candidates[order[rank]].0[i] - old_mean[i]) / self.sigma;
+                    let y = (candidates[order[rank]].0[i] - old_mean[i]) / sigma;
                     w * y * y
                 })
                 .sum();
-            let correction = if hsig {
-                0.0
-            } else {
-                self.cc * (2.0 - self.cc) * c
-            };
-            c = (1.0 - self.c1 - self.cmu) * c
-                + self.c1 * (self.pc[i] * self.pc[i] + correction)
-                + self.cmu * rank_mu;
-            self.d[i] = c.max(1e-12).sqrt();
+            let correction = if hsig { 0.0 } else { cc * (2.0 - cc) * c };
+            c = (1.0 - c1 - cmu) * c + c1 * (pc * pc + correction) + cmu * rank_mu;
+            *d = c.max(1e-12).sqrt();
         }
 
         self.sigma *= ((self.cs / self.damps) * (ps_norm / self.chi_n - 1.0)).exp();

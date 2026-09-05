@@ -241,16 +241,21 @@ robot travels while the terrain stays correlated.
 
 ### Where the model stops being about robots
 
-At θ_m = 1.5 every row degrades 6–14×, and the ordering by R₀ collapses. The
-traction multiplier clamps at zero there, so wheels stall outright and the
-dynamics are dominated by stalling rather than by deformation. Report θ_m ≤ 1.0
-as the terrain regime and 1.5 as its boundary.
+The sweep originally ran to θ_m = 1.5, where every row degraded 6–14× and the
+ordering by R₀ collapsed. That band is **not terrain**: the field reaches
+|f| = 1, so above θ_m = 1 the traction multiplier can reach zero, a wheel stalls
+and the robot pivots. It has been cut from the swept range rather than explained
+— see §6 — and the figure now stops at θ_m = 1.0.
 
 One row is not a robot at all: `axle-x2-R0-same` puts the wheel contacts outside
 the 7.4 cm body. It exists to break the R₀/axle confound numerically, and no
 result from it describes a buildable machine. It is what makes the 5% spread
-above meaningful, and it should be described that way in the paper rather than
-quietly included.
+above meaningful, so it stays in, labelled, and the caveat is in the figure
+caption as well as here.
+
+All five rows are hand-picked points rather than searched controllers, so they
+carry ‡ in the figure. That mark is about how the constants were obtained; these
+rows are not minimality claims at all.
 
 Figure: `figures/terrain_h2_powered.png`.
 
@@ -266,75 +271,52 @@ and it is the natural next piece of analysis.
 
 ## 5. Idea B, first pass: the pursuer with imperfect perception
 
-`configs/sweeps/pursuer_idea_b.toml` — n = 20, **τ = 120 s**, 100 runs/cell,
-ρ = 1.5, handling time 5 s, four capability rows against a grid of `r_p` × `κ`.
+`configs/sweeps/pursuer_idea_b.toml` — n = 20, **τ = 120 s**, ρ = 1.5, handling
+time 5 s, start radius 0.74 m, four capability rows on a **5 × 5** grid of
+`r_p` × `κ`, 100 runs/cell, 10 000 trials. 8.8% of runs ended in a wipeout.
 
 **Rows B0–B3 only.** B4 needs a received alarm bit and communication is not
 wired — `rx` is held at 0, so a K = 1 row would silently behave as K = 0.
-B1–B3 are **hand-designed, not searched**: every number below is an upper bound
-on what that capability can do.
+B1–B3 are **hand-designed (‡), not searched**.
 
 ### Median survivors out of 20
 
-| κ | r_p | B0 blind | B1 ternary | B2 ternary+side | B3 ternary+memory |
+| κ | r_p | B0 blind | B1 ternary ‡ | B2 ternary+side ‡ | B3 ternary+memory ‡ |
 |---|---|---|---|---|---|
-| 0 | 0.2 | **0.0** | 15.5 | 10.5 | **17.0** |
-| 0 | 0.5 | 0.0 | 4.0 | 1.0 | 4.5 |
-| 0 | ∞ | 0.0 | 3.0 | 0.0 | 3.0 |
-| 1 | 0.2 | 16.5 | 17.5 | 18.0 | 18.0 |
-| 1 | 0.5 | 1.0 | 4.0 | 3.0 | 5.0 |
-| 5 | 0.5 | 13.5 | 15.0 | 15.0 | 16.0 |
-| 5 | ∞ | 8.0 | 8.0 | 8.0 | 8.0 |
+| 0 | 0.10 | 5.0 [4.0, 14.0] | 18.0 [17.0, 19.0] | 17.5 [15.0, 18.0] | 18.0 [16.0, 19.0] |
+| 0 | 0.35 | 0.0 [0.0, 0.0] | 5.0 [5.0, 7.0] | 1.0 [1.0, 2.0] | 6.0 [5.0, 8.5] |
+| 0 | 1.00 | 0.0 [0.0, 0.0] | 3.0 [3.0, 3.0] | 0.0 [0.0, 0.0] | 3.0 [3.0, 4.0] |
+| 1 | 0.35 | 2.0 [1.0, 5.0] | 12.5 [8.0, 14.0] | 12.0 [10.0, 16.0] | 13.0 [11.0, 15.5] |
+| 2.5 | 0.60 | 5.0 [5.0, 6.0] | 6.5 [6.0, 7.0] | 6.0 [6.0, 6.0] | 7.0 [6.0, 8.0] |
+| 5 | 1.00 | 8.0 [8.0, 8.5] | 8.0 [8.0, 9.0] | 8.0 [8.0, 8.0] | 9.0 [8.0, 9.0] |
+
+Median survival fraction over the whole grid: B0 **0.350** [0.300, 0.375],
+B1 **0.650** [0.600, 0.700], B2 **0.450** [0.450, 0.525],
+B3 **0.700** [0.650, 0.750].
 
 ### One sensor state is worth more than everything else on the capability axis
 
 Going from S = 2 to S = 3 — being able to tell a pursuer from a robot — is the
-whole story. The blind row loses every robot at κ = 0 whatever the pursuer's
-range; any row that can see the pursuer keeps 3–17. Adding the memory bit on top
-(B3) buys a further robot or two consistently but nothing like as much.
+whole story. The blind row is wiped out at κ = 0 for every range beyond 0.10 m;
+any row that can see the pursuer keeps 3–18. Adding the memory bit on top (B3)
+buys a further robot or two consistently, but nothing like as much.
 
-Median survival fraction over the whole grid: B0 0.10, B1 0.35, B2 0.20,
-B3 0.375.
+### S = 5 scoring below S = 3 is a hand-design artefact, not a result
 
-### S = 5 scoring below S = 3 is an upper-bound artefact, not a result
+B2 has more sensor states than B1 and does worse over most of the grid — 0.450
+against 0.650 median survival. **Its table is a hand-written guess (‡), and a bad
+one.** It says no good five-state controller was found by hand; it is not
+evidence about what five states can do, and it is not searched, so it is not even
+an upper bound in the sense §7's rows are. Reporting it as "more sensing hurts"
+would be the single easiest mistake to make with this data — the §7 experiment
+shows exactly how that mistake gets made and what control prevents it.
 
-B2 has more sensor states than B1 and does worse almost everywhere — 10.5
-survivors against 15.5 at the easiest cell. That is exactly what the build doc's
-"minima are upper bounds" rule is for. B2's table is a hand-written guess at what
-to do with side information, and a bad one; **it says no good five-state
-controller was found, not that five states cannot beat three.** Reporting it as
-"more sensing hurts" would be the single easiest mistake to make with this data.
+### The environment dials dominate the capability rows
 
-This is also a concrete argument for Idea C: the rows most in need of a search
-are the ones whose hand-designed controllers look worst.
-
-### The environment dial dominates the capability rows
-
-At κ = 5, r_p = ∞ every row scores 8 survivors — the capability differences
-vanish entirely. At r_p = 0.2, κ = 5 every row keeps 19. Confusion and range
-move the outcome far more than any capability step does, over the ranges swept.
-
-That is the frontier the project is after, stated the other way round: for much
-of this environment grid, `c*(θ)` is flat, and the interesting structure is
-confined to the corner where the pursuer is dangerous and the swarm is not
-already saved by its perception limits.
-
-### Three design problems this pass exposed
-
-1. **The metric saturates.** 13% of runs lost the whole swarm, mostly in B0, and
-   `capture_rate` is pinned at 1/τ once that happens. τ = 120 s was chosen from a
-   calibration probe and is still too long for the blind row. Either use
-   `time_to_wipeout` for the lethal cells, or set τ per row, and say which.
-2. **Range saturates too.** r_p = 1.0 and r_p = ∞ are identical in every cell,
-   because a 20-robot swarm is inside 1 m anyway. The useful range dial is
-   0.1–0.5 m; anything above is the same corner twice.
-3. **This sweep cannot answer the headline question.** "Does aggregation protect
-   the swarm?" needs aggregating and non-aggregating controllers compared under
-   the same pursuer. All four rows here aggregate identically when no pursuer is
-   in view, so the comparison is between *responses* to a pursuer, not between
-   spatial strategies. Add a deliberately dispersive row — the same table with
-   the state-1 rotation replaced by something that spreads — and the dilution
-   question becomes answerable.
+At κ = 5 the rows converge: every row keeps 8–9 robots at r_p = 1.0 and 18–19 at
+r_p = 0.35. At κ = 0, r_p = 0.35 they run 0 to 6. Confusion and range move the
+outcome more than any capability step does over the ranges swept — which §8 then
+shows is *because* of aggregation rather than in spite of it.
 
 Figure: `figures/pursuer_idea_b_surface.png`.
 

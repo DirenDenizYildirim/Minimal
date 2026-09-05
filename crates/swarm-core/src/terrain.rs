@@ -151,7 +151,7 @@ impl Terrain {
         let threshold = self
             .cfg
             .terrain_bit_threshold
-            .unwrap_or_else(|| self.cfg.friction_amplitude * crate::field::ScalarField::MEDIAN_ABS);
+            .unwrap_or(self.cfg.friction_amplitude * crate::field::ScalarField::MEDIAN_ABS);
         (self.traction(p) - 1.0).abs() > threshold
     }
 

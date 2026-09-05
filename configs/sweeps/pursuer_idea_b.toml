@@ -23,12 +23,15 @@
 # search finds something better is Idea C's job; these say whether it is worth
 # looking.
 #
-# TAU AND SATURATION. capture_rate is pinned at 1/tau once a swarm is wiped out,
-# and the v1 corner (r_p = infinity, kappa = 0, rho = 1.5) takes 20 robots in
-# about 120 s even with handling time. tau = 120 s here keeps survivors in most
-# cells; check `survivors > 0` across the grid before reading any surface, and
-# fall back to `time_to_wipeout` where it is not. The calibration probe is
+# TAU AND SATURATION. capture_rate and survival_fraction both pin once a swarm is
+# wiped out, and at rho = 1.5 with a long range that happens inside 120 s even
+# with handling time. tau = 120 s keeps survivors in most cells; check
+# `survivors > 0` across the grid before reading any surface, and fall back to
+# `time_to_wipeout` where it is not. The calibration probe is
 # `world::tests::probe_pursuer_lethality`.
+#
+# Handling time is fixed at 5 s here. `pursuer_dispersive.toml` varies it against
+# the pursuer's own travel time between neighbours, which is the principled scale.
 #
 # NOT SEPARABLE, and worth knowing before reading the surface: handling time
 # turns the search cost into a per-capture cost rather than a one-off, so r_p and
@@ -39,14 +42,17 @@ name = "pursuer-idea-b"
 base = "../gauci_baseline.toml"
 runs_per_cell = 100
 
+# 5 x 5, as required before drawing threshold contours. r_p stops at 1.0 m: the
+# first 4 x 3 pass measured r_p = 1.0 and r_p = infinity as identical, because a
+# 20-robot swarm is inside 1 m anyway, so an unlimited column would be the same
+# corner twice.
 [[axis]]
 path = "pursuer.range"
-# The last is the v1 adversarial corner, kept deliberately.
-values = [0.2, 0.5, 1.0, 1e9]
+values = [0.1, 0.2, 0.35, 0.6, 1.0]
 
 [[axis]]
 path = "pursuer.confusion"
-values = [0.0, 1.0, 5.0]
+values = [0.0, 0.5, 1.0, 2.5, 5.0]
 
 # --- capability rows ---------------------------------------------------------
 
