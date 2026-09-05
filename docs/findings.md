@@ -861,21 +861,105 @@ decomposition above accounts for the discrepancy exactly.
 Figure: `figures/terrain_mechanism_regression.png`
 (regenerate with `harness/figures_mechanism_regression.py`).
 
+---
+
+## 12. Idea B Pareto front: what survival costs
+
+`configs/sweeps/pursuer_pareto.toml` — five rows at h = 1.93 s, ρ = 1.5, n = 20,
+τ = 120 s, start radius 0.74 m, 100 runs/cell.
+
+Every earlier Idea B figure scored survival alone, which cannot see what
+surviving cost. `final_dispersion` is already computed over *surviving* robots in
+the centroid frame, so plotting both coordinates gives the trade-off directly.
+
+**D-dispersive is the task-abandoning end of the front, not a competitor
+controller.** It is included to show where the trade-off terminates; reading it
+as "the best row" would treat the axis it gives up as free.
+
+The base-task axis is dropped below three survivors: with one or zero survivors
+the dispersion of "the survivors" is 0, a perfect aggregation score for a swarm
+that has been wiped out. Runs kept per cell are reported.
+
+### The three cells
+
+| cell | row | survival at τ | dispersion (survivors ≥ 3) | runs kept | wiped out | median t_wipeout |
+|---|---|---|---|---|---|---|
+| **r_p = 0.2, κ = 0** | B0-blind | 0.000 [0.000, 0.000] | 1.426 [1.363, 1.497] | 23 | 72% | 47.1 s |
+| | B1-ternary ‡ | 0.475 [0.200, 0.750] | 1.630 [1.510, 1.787] | 68 | 12% | 81.0 s |
+| | B2-ternary-side ‡ | 0.150 [0.100, 0.275] | 1.443 [1.417, 1.560] | 52 | 21% | 63.8 s |
+| | B3-ternary-memory ‡ | 0.650 [0.400, 0.800] | 1.597 [1.538, 1.749] | 79 | 1% | 109.8 s |
+| | **D-dispersive ‡** | **0.750 [0.675, 0.750]** | **379.9 [344.3, 399.9]** | 100 | 0% | — |
+| **r_p = 0.35, κ = 3** | B0-blind | 0.800 [0.750, 0.850] | 1.451 [1.412, 1.501] | 97 | 2% | 91.4 s |
+| | B1-ternary ‡ | 0.800 [0.800, 0.850] | 1.508 [1.461, 1.573] | 98 | 2% | 106.5 s |
+| | B2-ternary-side ‡ | 0.850 [0.800, 0.850] | 1.502 [1.445, 1.558] | 98 | 2% | 91.5 s |
+| | B3-ternary-memory ‡ | 0.800 [0.800, 0.850] | 1.523 [1.484, 1.575] | 97 | 0% | — |
+| | **D-dispersive ‡** | 0.650 [0.600, 0.700] | 386.3 [357.9, 431.3] | 100 | 0% | — |
+| **r_p = 1.0, κ = 3** | B0-blind | 0.000 [0.000, 0.000] | not estimable (1/100) | 1 | 96% | 97.6 s |
+| | B1-ternary ‡ | 0.000 [0.000, 0.000] | 10.3 [6.8, 15.1] | 12 | 66% | 107.9 s |
+| | B2-ternary-side ‡ | 0.000 [0.000, 0.000] | not estimable (4/100) | 4 | 90% | 103.6 s |
+| | B3-ternary-memory ‡ | 0.000 [0.000, 0.000] | not estimable (9/100) | 9 | 66% | 105.3 s |
+| | **D-dispersive ‡** | **0.350 [0.325, 0.400]** | **504.8 [432.9, 613.9]** | 94 | 0% | — |
+
+### The cost is two orders of magnitude, and it is not always worth paying
+
+D's dispersion is **380–505** against **1.43–1.63** for every aggregating row.
+That is the price of its survival, stated in the units of the task the swarm
+exists to perform. Survival-only figures make D look like the best row; on both
+axes it is a different animal.
+
+**At r_p = 0.35, κ = 3 there is no trade-off at all.** Every aggregating row
+beats D on *both* coordinates — survival 0.80–0.85 against 0.65, dispersion
+~1.5 against 386. D is Pareto-dominated. This is the regime where confusion has
+made clustering safe (§8) and clustering is also what the task wants, so nothing
+is given up.
+
+**At the other two cells the trade-off is real.** At r_p = 0.2, κ = 0 D has the
+highest survival (0.750) and the worst task performance by 250×. At r_p = 1.0,
+κ = 3 D is the only row that survives at all, and the aggregating rows are wiped
+out in 66–96% of runs.
+
+### Where survival saturates, timing still separates the rows
+
+Both cells with median survival 0.000 would be indistinguishable on a survival
+axis alone. Time to wipeout is not: at r_p = 0.2, κ = 0 it runs 47.1 s (B0),
+63.8 s (B2), 81.0 s (B1), 109.8 s (B3) — the same ordering the survival medians
+show at the unsaturated cells, recovered where they are pinned.
+
+### Limitations
+
+* Four of five rows are hand-designed (‡). The front is between *spatial
+  strategies* and specific tables, not between capabilities. B0 is enumerated and
+  is the only row here whose constants are not a guess.
+* At r_p = 1.0, κ = 3 the base-task axis is not estimable for three of the four
+  aggregating rows — too few runs leave three survivors. The panel says so rather
+  than plotting an interval built from one or four runs.
+* One handling time, one ρ, one n, one τ.
+
+Figure: `figures/pursuer_pareto.png`
+(regenerate with `harness/figures_pareto.py`).
+
 ## Next (noted, not run)
 
-Things these three experiments surfaced that are worth a design but were out of
-scope here:
+Carried forward and updated. Items 1, 2 and 3 from the previous list are now
+answered (§§6, 10, 12); what remains, plus what these four experiments surfaced:
 
-1. **The scalar-field row aggregates ~2% better than flat ground** (§6), pooled
-   0.980 [0.976, 0.986], CI excluding 1.0. Small, but it is a real interval.
-2. **Budget scaled with dimension** for the S = 4 row (§7). Equal *total* budget
-   over 8 constants is a thinner search per dimension than over 4, and that
-   confound is the obvious objection to the H3 result.
-3. **Where the D-vs-B crossover sits in r_p** (§8). It is between 0.20 and 0.35 m
-   on this grid; locating it properly needs a denser r_p axis and would say what
-   pursuer range makes clustering worth doing.
-4. **Whether a searched dispersive row beats a searched aggregating one.** Both
-   spatial rows here are hand-designed, so the comparison is between two guesses.
-5. **Row B4** — the received alarm bit — still needs communication wired, and the
+1. **Does S2-searched hold up at a λ matched to its own R₀?** §9 establishes
+   dominance at λ/R₀ = 0.69 for Gauci's R₀ = 14.45 cm. The searched controller has
+   R₀ = 4.7 cm, so H2 predicts *its* worst correlation length is near λ = 3.3 cm,
+   which this sweep never visits. If the terrain effect simply followed the
+   controller down, "re-tuning solves it" would need qualifying.
+2. **ℓ/λ across more than one λ.** §11's trend is three axle values at a single
+   correlation length. Whether slope and R² collapse on ℓ/λ when λ varies too is
+   the obvious completion, and it is one sweep.
+3. **The scalar-field row's ~2% improvement** (§6), pooled 0.980 [0.976, 0.986].
+   Still unexplained, still small, still a real interval.
+4. **A searched dispersive row.** §12's front is between hand-designed spatial
+   strategies. Searching both ends would say whether the front is a property of
+   the strategies or of two guesses.
+5. **Where the D-vs-aggregating crossover sits in r_p.** §12 brackets it between
+   0.2 and 0.35 m at κ = 3; a denser r_p axis would locate it.
+6. **Row B4** — the received alarm bit — still needs communication wired, and the
    delivery model (broadcast radius vs line-of-sight) is itself a capability
    claim to be counted in `K`.
+7. **Budget scaled with dimension**, as opposed to a warm start. §10 removed the
+   direction of the equal-budget confound; scaling the budget would remove it.

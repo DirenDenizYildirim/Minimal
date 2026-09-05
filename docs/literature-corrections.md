@@ -3,7 +3,7 @@
 Points where `docs/build-doc-v2.md` needs amending — some from sources checked
 while building this repository, some from results it produced.
 
-**The three that change the plan rather than a citation:**
+**The four that change the plan rather than a citation:**
 
 1. **Handling time is required** (§7). Idea B's pursuer does not work without it;
    with capture free on contact, a cluster is a buffet and aggregation is
@@ -15,6 +15,8 @@ while building this repository, some from results it produced.
    It belongs in the framing section, not the reading list: `c*(θ)` is a function
    of swarm size as well as environment, and part of the answer to "minimality is
    ill-defined" is now a theorem.
+4. **`c*(θ)` must be reported against a re-searched baseline, and it is flat
+   along the terrain dial** (§11). This is the sharpest change to the programme.
 
 ## 1. The Gauci n = 2 proof has been disproven
 
@@ -200,3 +202,49 @@ Housekeeping, but it changes a published figure. The traction field reaches
 |f| = 1, so at θ_m = 1 the multiplier `1 + θ_m·f` can reach zero, a wheel stalls
 and the robot pivots. Any sweep above that is measuring stall, not terrain.
 Sweeps here are cut at θ_m = 0.9 and figures at 1.0.
+
+## 11. Along the terrain dial the capability minimum does not move — the parameters do
+
+**Build doc §2, the whole programme.** The plan is to measure how the capability
+minimum `c*(θ)` moves under hostility. Along `θ_terr`, over 0 ≤ θ_m ≤ 0.9 at
+λ/R₀ = 0.69, **it does not move**: `c = (2, 0, 0, 0)` suffices at every point
+(`docs/findings.md` §9).
+
+What moves is the *parameter setting inside* that fixed capability. A
+four-constant controller re-searched at the worst terrain cell beats Gauci's at
+every θ_m tested, including flat ground, with disjoint CIs — so there is not even
+a specialist/generalist trade-off for an extra sensor state to arbitrate. The
+hand-built composite that switches between the two is worse than either.
+
+Three consequences for the papers:
+
+1. **Capability and parameters are different axes, and the build doc treats only
+   the first as the dependent variable.** A result that reads "hostility θ
+   requires capability c" is not established until the cheaper capability has
+   been re-searched *at that θ*. Both §7 and §9 show the un-re-searched version
+   of that claim being wrong.
+2. **Every frontier figure needs a re-searched baseline row**, not just the
+   published constants. Otherwise the frontier measures how badly the baseline
+   was tuned for the new environment, which is a different quantity.
+3. **A flat frontier is a result, not a null.** "The minimum does not move along
+   this dial" is a direct answer to the project's question and belongs in the
+   abstract, next to the dials where it does move.
+
+A caveat that has to travel with it: the re-searched controller beating Gauci on
+*flat ground* is a statement about this repository's objective — median final
+dispersion at n = 20, τ = 600 s under its own normalisation and collision model —
+and not a claim that Gauci's exhaustive grid search was wrong. Different
+objectives, different optima.
+
+## 12. Report Idea B on two axes, not one
+
+`docs/findings.md` §12. Survival alone cannot see what surviving cost: a
+dispersive row survives best in two of three cells while scoring 380–505 on the
+base task against 1.43–1.63 for every aggregating row. Idea B's results should be
+a Pareto front — survival against base-task performance among survivors — with
+the dispersive row marked as the end of the front rather than as a competitor.
+
+Notably there is a regime (r_p = 0.35, κ = 3) where the front collapses: the
+aggregating rows dominate on *both* axes. That, not the trade-off cells, is where
+the build doc's "aggregation protects the swarm" claim is true without
+qualification.

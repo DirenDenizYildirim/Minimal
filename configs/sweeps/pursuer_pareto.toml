@@ -1,0 +1,113 @@
+# EXPERIMENT 4 — Idea B Pareto front: survival against the base task.
+#
+# Every previous Idea B figure scored survival alone, which cannot see the cost
+# of surviving. A robot that abandons aggregation to stay alive is not on the
+# same axis as one that keeps aggregating; it is at the other end of a trade-off.
+# This plots both coordinates at once.
+#
+# ROWS. B0-B3 as in section 5, plus D-dispersive from section 8. D is NOT a
+# competitor controller: it is the task-abandoning END OF THE FRONT, included to
+# show where the trade-off terminates. Reading it as "the best row" would be
+# reading the axis it gives up as free.
+#
+# CELLS. The three named cells are (r_p, kappa) = (0.2, 0), (0.35, 3), (1.0, 3).
+# The sweep runs the 3 x 2 product that contains them; the extra cells are
+# context and are not part of the claim.
+#
+# h = 1.93 s throughout -- 5x the pursuer's travel time between touching
+# neighbours, the setting under which section 8 found dilution has room to act.
+#
+# BASE-TASK AXIS. final_dispersion is already computed over surviving robots in
+# the centroid frame, so it is "performance among survivors" as required. It is
+# degenerate below three survivors -- one or zero survivors scores 0, a perfect
+# aggregation score for a wiped-out swarm -- so the analysis drops runs with
+# fewer than three survivors from that axis and reports how many.
+
+name = "pursuer-pareto"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "pursuer.range"
+values = [0.2, 0.35, 1.0]
+
+[[axis]]
+path = "pursuer.confusion"
+values = [0.0, 3.0]
+
+[[axis]]
+path = "pursuer.handling_time"
+values = [1.93]
+
+[[rows]]
+label = "B0-blind"
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "binary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "B1-ternary"
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-1.0, -1.0] },
+] }
+
+[[rows]]
+label = "B2-ternary-side"
+# Pursuer to the left or right backs away with a turn away from that side.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary_with_side"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-1.0, -0.6] },
+  { wheels = [-0.6, -1.0] },
+] }
+
+[[rows]]
+label = "B3-ternary-memory"
+# c = (3, 1, 0, 0). Index is sensor*2 + memory. The bit holds "saw the pursuer"
+# for one extra step, so the robot keeps fleeing through a dropped sighting.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "table", memory_bits = 1, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0], next_memory = 0 },
+  { wheels = [-1.0, -1.0], next_memory = 0 },
+  { wheels = [ 1.0, -1.0], next_memory = 0 },
+  { wheels = [-1.0, -1.0], next_memory = 0 },
+  { wheels = [-1.0, -1.0], next_memory = 1 },
+  { wheels = [-1.0, -1.0], next_memory = 1 },
+] }
+[[rows]]
+label = "D-dispersive"
+# state 0 (nothing): a ~1 m arc, so the robot wanders instead of orbiting a
+#   14.45 cm circle;
+# state 1 (robot seen): identical to state 0 -- neighbours are ignored, which is
+#   what removes aggregation;
+# state 2 (pursuer seen): flee, identical to B1.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.95, -1.0] },
+  { wheels = [-0.95, -1.0] },
+  { wheels = [-1.0, -1.0] },
+] }
