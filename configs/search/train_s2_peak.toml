@@ -1,0 +1,45 @@
+# Training condition for the S = 2 searched row: the worst terrain cell.
+#
+# lambda = 0.10 m is lambda/R0 = 0.69, the peak located by the H2 sweep;
+# theta_m = 0.9 is the top of the valid range (above it the traction multiplier
+# can reach zero and a wheel stalls — see TerrainConfig::traction_floor).
+#
+# This row exists to separate two things the S = 4 result would otherwise
+# conflate: does the extra sensor state help, or does *being searched at all*
+# help? Same optimiser, same budget, same training seeds, four constants instead
+# of eight.
+
+[robot]
+radius = 0.037
+axle_length = 0.051
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[sim]
+dt = 0.1
+duration = 600.0
+seed = 20260904
+
+[sensor]
+fov_half_angle = 0.0
+encoding = "binary"
+
+[controller]
+kind = "table"
+memory_bits = 0
+provenance = "optimiser_found"
+entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+]
+
+[terrain]
+slope_angle = 0.0
+friction_amplitude = 0.9
+correlation_length = 0.1
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 0.0

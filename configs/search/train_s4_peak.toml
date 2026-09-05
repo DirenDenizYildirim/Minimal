@@ -1,0 +1,48 @@
+# Training condition for the S = 4 row: binary LOS x binary terrain bit.
+#
+# lambda = 0.10 m is lambda/R0 = 0.69, the peak located by the H2 sweep;
+# theta_m = 0.9 is the top of the valid range (above it the traction multiplier
+# can reach zero and a wheel stalls — see TerrainConfig::traction_floor).
+#
+# Eight free constants. Searched with the same optimiser, budget and training
+# seeds as the S = 2 row, so the comparison isolates the extra sensor state.
+
+[robot]
+radius = 0.037
+axle_length = 0.051
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[sim]
+dt = 0.1
+duration = 600.0
+seed = 20260904
+
+[sensor]
+fov_half_angle = 0.0
+encoding = "binary_with_terrain"
+
+[controller]
+kind = "table"
+memory_bits = 0
+provenance = "optimiser_found"
+# Four rows: (nothing|seen) x (smooth|rough). The terrain bit is the high bit.
+# Threshold defaults to the field median, theta_m * MEDIAN_ABS, so the bit is
+# roughly 50/50 and therefore carries information.
+entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+]
+
+[terrain]
+slope_angle = 0.0
+friction_amplitude = 0.9
+correlation_length = 0.1
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 0.0

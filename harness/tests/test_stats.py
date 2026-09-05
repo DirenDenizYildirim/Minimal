@@ -2,7 +2,13 @@ import unittest
 
 import numpy as np
 
-from swarm_harness.stats import bootstrap_ci, fraction_meeting, median_ci, summarise
+from swarm_harness.stats import (
+    bootstrap_ci,
+    fraction_meeting,
+    median_ci,
+    proportion_ci,
+    summarise,
+)
 
 
 class TestStats(unittest.TestCase):
@@ -46,6 +52,22 @@ class TestStats(unittest.TestCase):
         s = summarise(v)
         self.assertEqual(s.median, 1.0)
         self.assertAlmostEqual(s.mean, 0.6)
+
+
+    def test_proportion_is_not_the_median_for_a_boolean(self):
+        # 86 successes in 100: the median is exactly 1 and says nothing.
+        v = [1.0] * 86 + [0.0] * 14
+        self.assertEqual(median_ci(v)[0], 1.0)
+        p, lo, hi = proportion_ci(v)
+        self.assertAlmostEqual(p, 0.86)
+        self.assertLess(lo, 0.86)
+        self.assertGreater(hi, 0.86)
+        self.assertLess(hi, 1.0)
+
+    def test_proportion_handles_degenerate_cases(self):
+        self.assertEqual(proportion_ci([1.0] * 10)[0], 1.0)
+        self.assertEqual(proportion_ci([0.0] * 10)[0], 0.0)
+        self.assertTrue(np.isnan(proportion_ci([])[0]))
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from .load import Records  # noqa: E402
-from .stats import median_ci  # noqa: E402
+from .stats import median_ci, proportion_ci  # noqa: E402
 
 UPPER_BOUND_NOTE = (
     "† searched, not exhaustive — an upper bound.    "
@@ -232,6 +232,101 @@ def surface(
     if mesh is not None:
         fig.colorbar(mesh, ax=list(axes), label=label, fraction=0.03, pad=0.02)
     _stamp(fig, records, y=0.02)
+    if out:
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out, dpi=160)
+    return fig
+
+
+def paired_panels(
+    records: Records,
+    x: str,
+    metrics: Sequence[tuple],
+    col_field: str | None = None,
+    group: Sequence[str] = ("row",),
+    out: str | Path | None = None,
+    title: str | None = None,
+    annotate: Sequence[str] = (),
+):
+    """A grid of panels: one panel-row per metric, one panel-column per value of
+    `col_field`, one line per capability row, with bootstrap CI bands.
+
+    Built for questions that two metrics answer differently. Whether a swarm
+    *reaches* a connected cluster and how tightly it *holds* one are not the same
+    measurement, and terrain moves them apart — showing only one of them picks
+    the answer before the reader sees it.
+
+    ``metrics`` entries are ``(field, label, baseline_x)``, optionally with a
+    fourth element ``"proportion"`` for 0/1 outcomes. A non-None ``baseline_x``
+    normalises each line by its own value at that `x`, which is how a
+    ratio-to-flat-ground is drawn without letting rows that differ on clean
+    ground masquerade as differing under terrain.
+
+    Use ``"proportion"`` for anything boolean. Its median is 1 whenever the
+    majority succeed, so a median panel draws a flat line at 1 while the
+    underlying probability falls.
+    """
+    cols = records.unique(col_field) if col_field else [None]
+    n_rows, n_cols = len(metrics), len(cols)
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(4.2 * n_cols, 3.4 * n_rows),
+        squeeze=False,
+        sharex=True,
+    )
+
+    group = [g for g in group if g in records.fields()]
+    handles: dict[str, object] = {}
+    for ri, spec in enumerate(metrics):
+        field, label, baseline_x = spec[0], spec[1], spec[2]
+        summarise = proportion_ci if (len(spec) > 3 and spec[3] == "proportion") else median_ci
+        for ci, cv in enumerate(cols):
+            ax = axes[ri][ci]
+            sub_all = records.filter(**{col_field: cv}) if col_field else records
+            for key, sub in sorted(
+                (sub_all.group_by(group) if group else {(): sub_all}).items(),
+                key=lambda kv: str(kv[0]),
+            ):
+                xs = sub.unique(x)
+                base = 1.0
+                if baseline_x is not None:
+                    cell = sub.filter(**{x: baseline_x})
+                    base = float(np.median(np.asarray(cell.column(field), dtype=float)))
+                med, lo, hi = [], [], []
+                for xv in xs:
+                    vals = np.asarray(sub.filter(**{x: xv}).column(field), dtype=float) / base
+                    m, l, h = summarise(vals)
+                    med.append(m)
+                    lo.append(l)
+                    hi.append(h)
+                name = _label(", ".join(str(v) for v in key) if group else field, sub)
+                line, = ax.plot(xs, med, marker="o", markersize=3.5, label=name)
+                ax.fill_between(xs, lo, hi, alpha=0.18, color=line.get_color(), linewidth=0)
+                handles.setdefault(name, line)
+            if ri == 0 and col_field:
+                ax.set_title(f"{col_field} = {cv:g}" if isinstance(cv, float) else f"{col_field} = {cv}",
+                             fontsize=9)
+            if ci == 0:
+                ax.set_ylabel(label, fontsize=9)
+            if ri == n_rows - 1:
+                ax.set_xlabel(x)
+            ax.grid(alpha=0.25, linewidth=0.6)
+
+    fig.legend(
+        list(handles.values()),
+        list(handles.keys()),
+        loc="lower center",
+        ncol=min(4, len(handles)),
+        fontsize=8,
+        frameon=False,
+        bbox_to_anchor=(0.5, 0.055),
+    )
+    fig.suptitle(title or "", fontsize=10, wrap=True)
+    fig.subplots_adjust(bottom=0.20, top=0.86 if annotate else 0.90)
+    if annotate:
+        annotate_params(fig, records, annotate)
+    _stamp(fig, records, y=0.005)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(out, dpi=160)

@@ -1,0 +1,92 @@
+# IDEA B — is the blind row's survival actually attributable to AGGREGATION?
+#
+# The first Idea B pass found survival rising steeply with confusion kappa, and
+# the natural reading is dilution: a tight cluster raises n_local, lock-on fails
+# more often, everyone lives. But every row in that pass aggregated identically
+# when no pursuer was in view, so nothing in it distinguished "the swarm
+# aggregated" from "the pursuer's perception is poor". This sweep adds the
+# missing control: a row with the SAME S = 3 pursuer sensing that deliberately
+# does not aggregate.
+#
+#   B0-blind        S=2, Gauci. Aggregates. Cannot see the pursuer.       (tight)
+#   B1-ternary      S=3, aggregates, flees the pursuer.                       (‡)
+#   D-dispersive    S=3, flees the pursuer, DOES NOT aggregate.               (‡)
+#
+# D's state 0 is a ~1 m arc rather than Gauci's 14.45 cm circle, and its
+# robot-seen state is identical to it, so the robot never stops for a neighbour
+# and no cluster forms. Its pursuer response is unchanged from B1, so the only
+# difference between B1 and D is the spatial strategy. If confusion still buys
+# survival for D, the mechanism was never aggregation.
+#
+# HANDLING TIME. Set from the pursuer's own travel time between touching
+# neighbours in a formed cluster: 7.4 cm at rho*v_max = 19.2 cm/s is 0.385 s.
+#   h = 0.39 s -- comparable to the travel time, so handling barely limits the
+#                 hunt and a cluster is close to a buffet;
+#   h = 1.93 s -- 5x, so handling dominates and dilution has room to act.
+# If dilution is the mechanism, it should appear at the larger h and fade at the
+# smaller one.
+#
+# GRID. 5 x 5, as required before drawing threshold contours. r_p stops at 1.0 m
+# because r_p = 1.0 and r_p = infinity were measured identical in the first pass
+# (a 20-robot swarm is inside 1 m), so an unlimited column would be the same
+# corner twice.
+#
+# SATURATION. Both survival_fraction and capture_rate pin once a swarm is wiped
+# out. At h = 0.39 that is expected in the lethal cells; read time_to_wipeout
+# there, and check the wiped-out fraction before quoting either.
+
+name = "pursuer-dispersive"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "pursuer.range"
+values = [0.1, 0.2, 0.35, 0.6, 1.0]
+
+[[axis]]
+path = "pursuer.confusion"
+values = [0.0, 0.5, 1.0, 2.5, 5.0]
+
+[[axis]]
+path = "pursuer.handling_time"
+values = [0.39, 1.93]
+
+[[rows]]
+label = "B0-blind"
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "binary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "B1-ternary"
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-1.0, -1.0] },
+] }
+
+[[rows]]
+label = "D-dispersive"
+# state 0 (nothing): a ~1 m arc, so the robot wanders instead of orbiting a
+#   14.45 cm circle;
+# state 1 (robot seen): identical to state 0 -- neighbours are ignored, which is
+#   what removes aggregation;
+# state 2 (pursuer seen): flee, identical to B1.
+[rows.overrides]
+"sim.duration" = 120.0
+"sensor.encoding" = "ternary"
+"pursuer.speed_ratio" = 1.5
+"pursuer.confusion_radius" = 0.5
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.95, -1.0] },
+  { wheels = [-0.95, -1.0] },
+  { wheels = [-1.0, -1.0] },
+] }

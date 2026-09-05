@@ -254,7 +254,8 @@ impl World {
             let hit = self
                 .occlusion
                 .corrupt(hit, observer.pose.p, &mut self.rng, &mut self.tally);
-            let state = self.cfg.sensor.encoding.encode(hit);
+            let terrain_bit = self.terrain.terrain_bit(observer.pose.p);
+            let state = self.cfg.sensor.encoding.encode(hit, terrain_bit);
             let entry = self.controller.act(state, self.memory[i], self.rx[i]);
             commands[i] = [entry.wheels[0] * vmax, entry.wheels[1] * vmax];
             next_memory[i] = entry.next_memory;

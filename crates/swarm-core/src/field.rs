@@ -21,6 +21,15 @@ pub struct ScalarField {
 }
 
 impl ScalarField {
+    /// Median of `|f|` over the field, measured across 40 seeds and 1.6M
+    /// samples: 0.3476 (max 0.9998, p99 0.9332).
+    ///
+    /// Used to set a terrain-sensing threshold that is *informative* — a bit
+    /// that is almost always 0, or almost always 1, carries nothing, and a
+    /// capability row built on one would be measuring the wrong thing. Pinned by
+    /// `tests::median_absolute_value_is_stable`.
+    pub const MEDIAN_ABS: f64 = 0.3476;
+
     pub fn new(seed: u64, correlation_length: f64) -> Self {
         Self {
             seed,
@@ -70,6 +79,27 @@ fn lattice(seed: u64, i: i64, j: i64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn median_absolute_value_is_stable() {
+        // MEDIAN_ABS sets the terrain-bit threshold, so it has to be a property
+        // of the field construction and not of one seed.
+        let mut all = Vec::new();
+        for seed in 0..24u64 {
+            let f = ScalarField::new(seed, 0.1);
+            for i in 0..4000 {
+                let p = Vec2::new(i as f64 * 0.0731 - 100.0, i as f64 * 0.0417 - 60.0);
+                all.push(f.sample(p).abs());
+            }
+        }
+        all.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = all[all.len() / 2];
+        assert!(
+            (median - ScalarField::MEDIAN_ABS).abs() < 0.02,
+            "median |f| is {median}, MEDIAN_ABS says {}",
+            ScalarField::MEDIAN_ABS
+        );
+    }
 
     #[test]
     fn output_is_bounded() {

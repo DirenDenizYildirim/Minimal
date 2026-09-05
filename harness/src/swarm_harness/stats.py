@@ -109,3 +109,22 @@ def friedman_across_rows(per_row: dict[str, Sequence[float]]):
     if len(lengths) != 1:
         raise ValueError(f"rows must be matched on the same cells, got lengths {lengths}")
     return friedmanchisquare(*[np.asarray(per_row[k], dtype=float) for k in labels])
+
+
+def proportion_ci(values, confidence: float = 0.95, resamples: int = 10_000, seed: int = 0):
+    """Proportion of true values, with a bootstrap CI.
+
+    For a 0/1 outcome the median is the wrong summary and quietly so: a metric
+    that succeeds 86% of the time has a median of exactly 1, and a panel plotting
+    medians shows a flat line at 1 while the proportion is falling. Anything
+    boolean — reach probability, wipeout, single-cluster-at-tau — belongs here.
+    """
+    v = np.asarray(values, dtype=float)
+    v = v[np.isfinite(v)]
+    if v.size == 0:
+        nan = float("nan")
+        return (nan, nan, nan)
+    p = float(v.mean())
+    lo, hi = bootstrap_ci(v, statistic=np.mean, confidence=confidence,
+                          resamples=resamples, seed=seed)
+    return (p, lo, hi)

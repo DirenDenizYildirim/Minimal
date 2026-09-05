@@ -417,3 +417,111 @@ the swept range (`terrain::tests::the_traction_floor_does_not_bind_in_the_swept_
 
 The θ_m = 1.25–1.5 band visible in the earlier H2 figure was stall, not terrain,
 and has been removed from the swept range rather than explained away.
+
+---
+
+## 7. Idea A, H3: the first terrain-aware capability row
+
+`configs/sweeps/terrain_h3_capability.toml` — n = 20, τ = 600 s, 100 runs/cell,
+evaluated on seeds **disjoint** from the ones the searches trained on.
+
+Three rows:
+
+| row | c = (S, M, A, K) | constants | provenance |
+|---|---|---|---|
+| S2-gauci | (2, 0, 0, 0) | 4, Gauci's | enumerated — **tight** |
+| S2-searched | (2, 0, 0, 0) | 4, re-searched | † |
+| S4-terrain | (4, 0, 0, 0) | 8, binary LOS × terrain bit | † |
+
+The terrain bit is `|m(x,y) − 1| > θ_bit` at the robot centre, with `θ_bit`
+defaulting to the field median `θ_m · MEDIAN_ABS`. A bit that is almost always
+the same value carries nothing, so the threshold is chosen to split ~50/50;
+`terrain::tests::the_default_terrain_bit_is_informative` holds it between 0.4
+and 0.6 across the amplitude range.
+
+**S2-searched is why this experiment can be interpreted.** Without it, any S=4
+advantage could just as well be "searched" rather than "more sensing". Both
+searched rows got the same optimiser (sep-CMA-ES, diagonal covariance), the same
+budget — **600 candidate evaluations × 12 runs = 7 200 simulation runs each** —
+and the same training seeds, so the difference between them is the extra state
+and nothing else.
+
+### At the peak, the extra state does not buy back degradation. Search does.
+
+Hold ratio at λ = 0.10 (λ/R₀ = 0.69, the H2 peak), median [95% CI]:
+
+| θ_m | S2-gauci | S2-searched † | S4-terrain † |
+|---|---|---|---|
+| 0.0 | 1.00 [0.98, 1.03] | 1.00 [0.99, 1.02] | 1.00 [0.99, 1.01] |
+| 0.4 | 1.13 [1.09, 1.17] | 0.96 [0.95, 0.97] | 1.00 [0.99, 1.01] |
+| 0.6 | 1.36 [1.26, 1.48] | 0.99 [0.97, 1.01] | 1.02 [1.01, 1.04] |
+| **0.9** | **2.21 [1.90, 2.41]** | **1.10 [1.08, 1.15]** | **1.22 [1.16, 1.26]** |
+
+Re-searching the *same four constants* removes almost all of the degradation:
+2.21 → 1.10 at the worst cell. Adding the terrain bit on top does not help — the
+S=4 row sits at 1.22 [1.16, 1.26] against the S=2 searched row's 1.10 [1.08,
+1.15], and those intervals are **disjoint**.
+
+So the answer to "does the extra state buy back the peak?" is **no, at this
+budget**, and the thing that does buy it back is searching four constants rather
+than adding a fifth state's worth of sensing.
+
+**What this does not say.** It does not say S = 4 is worse than S = 2. Both rows
+are upper bounds, and they were given the same *total* budget over different
+dimensionalities: 600 evaluations over 8 constants is a less thorough search per
+dimension than 600 over 4. The honest statement is that **no S = 4 controller
+better than the searched S = 2 one was found at equal budget.** Whether one
+exists is open, and the way to settle it is a budget scaled with dimension, not
+a stronger adjective.
+
+Without the S2-searched control, this data would have read as "the terrain bit
+cuts degradation from 2.21 to 1.22" — a large apparent win for extra sensing,
+and wrong.
+
+### Reach and hold answer different questions
+
+Reach probability — the fraction of runs that ever formed a single cluster — is
+1.00 across almost the whole grid. It only moves in the worst cell, and only for
+the un-searched row: at λ = 0.10, θ_m = 0.9 it is 0.86 [0.79, 0.93] for S2-gauci
+against 1.00 [1.00, 1.00] and 0.99 [0.97, 1.00] for the searched rows.
+
+Terrain at n = 20 does not stop a swarm aggregating; it stops it holding
+together tightly. A threshold `T` set on reach would see nothing over most of
+this grid. Confirms §2's reading with a second design.
+
+*(Reach is a proportion, and its median is 1 whenever the majority succeed, so
+plotting a median draws a flat line at 1 while the probability falls. The panels
+use `stats.proportion_ci`; the first version of this figure did not, and was
+wrong.)*
+
+### The search independently rediscovered H2
+
+The searched controllers have much smaller state-0 circles than Gauci's:
+
+| row | state-0 R₀ |
+|---|---|
+| S2-gauci | 14.45 cm |
+| S2-searched | 4.7 cm |
+| S4-terrain (smooth) | 6.8 cm |
+| S4-terrain (rough) | 3.8 cm |
+
+H2 says the terrain effect peaks at λ/R₀ ≈ 0.7 and vanishes for λ/R₀ ≳ 1.3. At
+the training condition λ = 0.10 m, shrinking R₀ from 14.45 cm to 4.7 cm moves
+λ/R₀ from 0.69 — the worst place to be — to 2.13, well clear of the peak. The
+optimiser was given no information about R₀ or about H2; it found the escape H2
+predicts. That is a consistency check between an independent measurement and a
+search, not a new claim.
+
+It also explains why the terrain bit adds so little here: the cheap defence
+against a correlation length is to change your own length scale, and that is
+available to the S = 2 row already. A terrain bit would have to earn its keep
+doing something a smaller circle cannot.
+
+**Caveat on the searched rows' baselines.** They also aggregate *tighter on flat
+ground* — absolute dispersion at θ_m = 0 is 1.427 [1.399, 1.467] for S2-gauci,
+1.253 [1.234, 1.283] for S2-searched and 1.222 [1.211, 1.235] for S4-terrain.
+Part of what the search bought is a better controller in general, not a
+terrain-specific one. The hold ratio normalises each row by its own flat
+baseline precisely so this cannot be read as terrain robustness.
+
+Figure: `figures/terrain_h3_capability.png`.

@@ -167,5 +167,58 @@ class TestBaselineNormalisation(unittest.TestCase):
         self.assertIn("dial_y", str(ctx.exception))
 
 
+class TestPairedPanels(unittest.TestCase):
+    def _records(self):
+        import json as _json
+
+        out = []
+        for row, prov in (("A", "enumerated"), ("B", "optimiser_found")):
+            for lam in (0.05, 0.1):
+                for tm in (0.0, 0.5):
+                    for i in range(6):
+                        out.append(_json.dumps({
+                            "minimum_is_tight": prov == "enumerated",
+                            "provenance": prov,
+                            "ever_single_cluster": tm == 0.0,
+                            "final_dispersion": 1.4 * (1.0 + tm),
+                            "n": 20, "duration": 600.0,
+                            "cell": {"row": row, "terrain.correlation_length": lam,
+                                     "terrain.friction_amplitude": tm},
+                        }))
+        return load_jsonl(out)
+
+    def test_grid_shape_and_normalisation(self):
+        r = self._records()
+        fig = plot.paired_panels(
+            r,
+            x="terrain.friction_amplitude",
+            metrics=[("ever_single_cluster", "reach", None, "proportion"),
+                     ("final_dispersion", "hold", 0.0)],
+            col_field="terrain.correlation_length",
+        )
+        # Only the outer panels carry axis labels, so count by content.
+        panels = [a for a in fig.axes if a.get_lines()]
+        self.assertEqual(len(panels), 4)  # 2 metrics x 2 lambda columns
+        for ax in panels:
+            self.assertEqual(len(ax.get_lines()), 2)  # one line per capability row
+        # The hold panels are normalised, so every line starts at exactly 1.0.
+        hold = [a for a in fig.axes if a.get_ylabel() == "hold"]
+        for ax in hold:
+            for line in ax.get_lines():
+                self.assertAlmostEqual(line.get_ydata()[0], 1.0, places=9)
+
+    def test_rows_keep_their_provenance_markers(self):
+        r = self._records()
+        fig = plot.paired_panels(
+            r,
+            x="terrain.friction_amplitude",
+            metrics=[("final_dispersion", "hold", 0.0)],
+            col_field="terrain.correlation_length",
+        )
+        labels = [t.get_text() for t in fig.legends[0].get_texts()]
+        self.assertTrue(any(l.endswith("†") for l in labels))
+        self.assertTrue(any(not l.endswith("†") and not l.endswith("‡") for l in labels))
+
+
 if __name__ == "__main__":
     unittest.main()

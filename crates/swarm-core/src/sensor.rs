@@ -72,6 +72,13 @@ pub enum SensorEncoding {
     Binary,
     /// Gauci et al. (2014) AAMAS: nothing / robot / other. S = 3.
     Ternary,
+    /// Binary line-of-sight crossed with a binary terrain sense. S = 4.
+    ///
+    /// State = `los + 2 * terrain_bit`, so 0/1 are the Gauci states on smooth
+    /// ground and 2/3 are the same two on ground the robot can tell is rough.
+    /// This is the cheapest terrain-aware capability: one extra bit, eight free
+    /// constants instead of four.
+    BinaryWithTerrain,
     /// Ternary plus which side of the sensor axis the body sits on: nothing,
     /// robot-left, robot-right, pursuer-left, pursuer-right. S = 5.
     ///
@@ -89,13 +96,22 @@ impl SensorEncoding {
         match self {
             SensorEncoding::Binary => 2,
             SensorEncoding::Ternary => 3,
+            SensorEncoding::BinaryWithTerrain => 4,
             SensorEncoding::TernaryWithSide => 5,
         }
     }
 
-    pub fn encode(&self, hit: Option<Hit>) -> usize {
+    /// Map a raw reading to the discrete state the lookup table is indexed by.
+    ///
+    /// `terrain_bit` is only read by `BinaryWithTerrain`; every other encoding
+    /// ignores it, which is what makes those rows genuinely terrain-blind.
+    pub fn encode(&self, hit: Option<Hit>, terrain_bit: bool) -> usize {
+        if let SensorEncoding::BinaryWithTerrain = self {
+            return usize::from(hit.is_some()) + 2 * usize::from(terrain_bit);
+        }
         match (self, hit) {
             (_, None) => 0,
+            (SensorEncoding::BinaryWithTerrain, _) => unreachable!("handled above"),
             (SensorEncoding::Binary, Some(_)) => 1,
             (SensorEncoding::Ternary, Some(h)) => match h.kind {
                 AgentKind::Robot => 1,
@@ -301,6 +317,7 @@ mod tests {
     fn encodings_report_the_capability_vectors_s_component() {
         assert_eq!(SensorEncoding::Binary.states(), 2);
         assert_eq!(SensorEncoding::Ternary.states(), 3);
+        assert_eq!(SensorEncoding::BinaryWithTerrain.states(), 4);
         assert_eq!(SensorEncoding::TernaryWithSide.states(), 5);
 
         let hit = |kind, bearing| {
@@ -314,25 +331,26 @@ mod tests {
         let pursuer_right = hit(AgentKind::Pursuer, -0.2);
         let robot_left = hit(AgentKind::Robot, 0.2);
         let robot_right = hit(AgentKind::Robot, -0.2);
+        let enc = |e: SensorEncoding, h| e.encode(h, false);
 
         // A coarser encoding must not be able to tell finer cases apart.
-        assert_eq!(SensorEncoding::Binary.encode(pursuer_left), 1);
-        assert_eq!(SensorEncoding::Binary.encode(robot_right), 1);
-        assert_eq!(SensorEncoding::Ternary.encode(pursuer_left), 2);
-        assert_eq!(SensorEncoding::Ternary.encode(pursuer_right), 2);
-        assert_eq!(SensorEncoding::Ternary.encode(robot_left), 1);
+        assert_eq!(enc(SensorEncoding::Binary, pursuer_left), 1);
+        assert_eq!(enc(SensorEncoding::Binary, robot_right), 1);
+        assert_eq!(enc(SensorEncoding::Ternary, pursuer_left), 2);
+        assert_eq!(enc(SensorEncoding::Ternary, pursuer_right), 2);
+        assert_eq!(enc(SensorEncoding::Ternary, robot_left), 1);
 
         // S = 5: nothing, robot L/R, pursuer L/R -- every state reachable and
         // distinct, which is what makes the row worth five states.
         let five: Vec<usize> = [None, robot_left, robot_right, pursuer_left, pursuer_right]
             .into_iter()
-            .map(|h| SensorEncoding::TernaryWithSide.encode(h))
+            .map(|h| SensorEncoding::TernaryWithSide.encode(h, false))
             .collect();
         assert_eq!(five, vec![0, 1, 2, 3, 4]);
         assert!(five
             .iter()
             .all(|&i| i < SensorEncoding::TernaryWithSide.states()));
 
-        assert_eq!(SensorEncoding::Ternary.encode(None), 0);
+        assert_eq!(enc(SensorEncoding::Ternary, None), 0);
     }
 }

@@ -9,6 +9,7 @@
 //!
 //! Output is JSON Lines, one `RunRecord` per trial, consumed by `harness/`.
 
+mod search;
 mod sweep;
 
 use anyhow::{Context, Result};
@@ -56,6 +57,33 @@ enum Command {
         #[arg(short, long)]
         threads: Option<usize>,
     },
+    /// Search a lookup table's wheel constants with sep-CMA-ES.
+    ///
+    /// Produces an UPPER BOUND on what the capability can do, and writes the
+    /// budget that produced it alongside the constants so the bound is quotable.
+    Search {
+        /// Base config giving the training condition (terrain dials, n, tau).
+        #[arg(short, long)]
+        config: PathBuf,
+        /// Candidate evaluations. Rounded down to a whole number of generations.
+        #[arg(long, default_value_t = 600)]
+        budget: usize,
+        /// Trials per candidate; the objective is their median final dispersion.
+        #[arg(long, default_value_t = 12)]
+        runs_per_eval: usize,
+        /// Seed for the optimiser itself.
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Seed base for the TRAINING trials. Keep this disjoint from the seeds
+        /// the row is later evaluated on, or the result is the maximum of a
+        /// noisy sample rather than a controller.
+        #[arg(long, default_value_t = 900_000)]
+        training_seed: u64,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(short, long)]
+        threads: Option<usize>,
+    },
     /// Run a sweep file: capability rows crossed with a grid of hostility dials.
     Sweep {
         #[arg(short, long)]
@@ -88,6 +116,18 @@ fn main() -> Result<()> {
         } => {
             set_threads(threads)?;
             run_cmd(&config, runs, out.as_deref(), seed, no_series)
+        }
+        Command::Search {
+            config,
+            budget,
+            runs_per_eval,
+            seed,
+            training_seed,
+            out,
+            threads,
+        } => {
+            set_threads(threads)?;
+            search_cmd(&config, budget, runs_per_eval, seed, training_seed, &out)
         }
         Command::Sweep {
             config,
@@ -365,6 +405,51 @@ fn sweep_cmd(path: &Path, out: &Path, dry_run: bool, series: bool) -> Result<()>
     }
     w.flush()?;
     eprintln!("wrote {} records to {}", records.len(), out.display());
+    Ok(())
+}
+
+fn search_cmd(
+    path: &Path,
+    budget: usize,
+    runs_per_eval: usize,
+    seed: u64,
+    training_seed: u64,
+    out: &Path,
+) -> Result<()> {
+    let value = read_config_value(path)?;
+    // Validate the base before spending the budget, and read the encoding from
+    // it: the table's row count must match the sensor's state count.
+    let cfg = build_config(value.clone())?;
+    let states = cfg.sensor.encoding.states();
+    let encoding = format!("{:?}", cfg.sensor.encoding);
+
+    eprintln!(
+        "searching {} constants for encoding {encoding} (S = {states})",
+        2 * states
+    );
+    eprintln!(
+        "budget {budget} evaluations x {runs_per_eval} runs; training seed base {training_seed}"
+    );
+    let result = search::run_search(
+        &value,
+        &encoding,
+        states,
+        budget,
+        runs_per_eval,
+        seed,
+        training_seed,
+    )?;
+    search::write_result(out, &result)?;
+    eprintln!(
+        "best training objective {:.4} after {} evaluations ({} simulation runs)",
+        result.best_training_objective, result.budget_evaluations, result.simulation_runs
+    );
+    eprintln!("constants: {:?}", result.best_constants);
+    eprintln!(
+        "note: this row is an UPPER BOUND — sep-CMA-ES is not exhaustive, and a \
+         weaker searcher only loosens the bound"
+    );
+    println!("{}", serde_json::to_string(&result.best_constants)?);
     Ok(())
 }
 

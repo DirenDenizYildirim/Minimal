@@ -65,6 +65,10 @@ pub struct TerrainConfig {
     /// never bind inside the swept range;
     /// `tests::the_traction_floor_does_not_bind_in_the_swept_range` holds that.
     pub traction_floor: f64,
+    /// Threshold on `|m(x,y) - 1|` for the binary terrain sense, in the S = 4
+    /// capability row. `None` uses the field median, `theta_m * MEDIAN_ABS`,
+    /// which makes the bit roughly 50/50 and therefore informative.
+    pub terrain_bit_threshold: Option<f64>,
     /// Whether the wheels sample the field at their own contact points, or both
     /// take one value sampled at the robot's centre.
     ///
@@ -96,6 +100,7 @@ impl Default for TerrainConfig {
             correlation_length: 0.25,
             slip_noise: 0.0,
             traction_floor: 0.05,
+            terrain_bit_threshold: None,
             traction_mode: TractionMode::PerWheel,
         }
     }
@@ -134,6 +139,20 @@ impl Terrain {
         }
         (1.0 + self.cfg.friction_amplitude * self.field.sample(contact))
             .max(self.cfg.traction_floor)
+    }
+
+    /// The binary terrain sense at a point: is the ground here noticeably
+    /// different from nominal?
+    ///
+    /// `|m(x,y) - 1| > theta_bit`. This is the extra sensor state of the S = 4
+    /// row — one bit of "the ground is rough here", which is the cheapest
+    /// terrain-aware capability the build doc's H3 asks about.
+    pub fn terrain_bit(&self, p: Vec2) -> bool {
+        let threshold = self
+            .cfg
+            .terrain_bit_threshold
+            .unwrap_or_else(|| self.cfg.friction_amplitude * crate::field::ScalarField::MEDIAN_ABS);
+        (self.traction(p) - 1.0).abs() > threshold
     }
 
     /// The heading-dependent gravity term, in m/s. Positive means "subtract
@@ -196,6 +215,40 @@ mod tests {
             t.apply(&Pose::new(3.0, -2.0, 0.9), 0.051, cmd, &mut rng),
             cmd
         );
+    }
+
+    #[test]
+    fn the_default_terrain_bit_is_informative() {
+        // A bit that is almost always the same value carries nothing. The
+        // default threshold is the field median, so it should split close to
+        // 50/50 whatever the amplitude.
+        for amp in [0.2, 0.4, 0.7, 0.9] {
+            let cfg = TerrainConfig {
+                friction_amplitude: amp,
+                correlation_length: 0.1,
+                ..Default::default()
+            };
+            let t = Terrain::new(cfg, 11);
+            let set = (0..20_000)
+                .filter(|i| {
+                    let p = Vec2::new(*i as f64 * 0.0073 - 70.0, *i as f64 * 0.0041 - 40.0);
+                    t.terrain_bit(p)
+                })
+                .count();
+            let frac = set as f64 / 20_000.0;
+            assert!(
+                (0.4..0.6).contains(&frac),
+                "terrain bit set {frac:.3} of the time at theta_m = {amp}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_flat_board_never_sets_the_terrain_bit() {
+        let t = Terrain::new(TerrainConfig::default(), 1);
+        for i in 0..1000 {
+            assert!(!t.terrain_bit(Vec2::new(i as f64 * 0.03, i as f64 * -0.02)));
+        }
     }
 
     #[test]

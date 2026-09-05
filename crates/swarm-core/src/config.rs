@@ -394,6 +394,27 @@ mod tests {
     }
 
     #[test]
+    fn the_s4_terrain_row_needs_a_four_row_table() {
+        use crate::controller::{ControllerConfig, Entry, Provenance};
+        use crate::sensor::{SensorConfig, SensorEncoding};
+        let with = |entries: Vec<Entry>| SimConfig {
+            sensor: SensorConfig {
+                encoding: SensorEncoding::BinaryWithTerrain,
+                ..Default::default()
+            },
+            controller: ControllerConfig::Table {
+                memory_bits: 0,
+                comm_bits: 0,
+                entries,
+                provenance: Provenance::OptimiserFound,
+            },
+            ..Default::default()
+        };
+        assert!(with(vec![Entry::wheels(0.0, 0.0); 4]).validate().is_ok());
+        assert!(with(vec![Entry::wheels(0.0, 0.0); 2]).validate().is_err());
+    }
+
+    #[test]
     fn mismatched_sensor_encoding_and_controller_is_refused() {
         let cfg = SimConfig {
             sensor: SensorConfig {
