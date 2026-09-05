@@ -311,10 +311,20 @@ and report the answer as a length, "worst at λ ≈ 7.5 cm in this arena", with
 be presented as the hypothesis that the measurement rejected, which is more
 useful than dropping it.
 
-What sits at 7.5 cm is not established here and is not guessed at: the body
-diameter (7.4 cm) and ℓ/λ = 0.68 for the axle both fall there, and one sweep at
-one θ_m cannot separate them. It is on the next list as a question, not written
-up as a mechanism.
+**What sits at 7.5 cm is the body diameter** (§18). Varying it at 3.7, 7.4 and
+14.8 cm with R₀, the axle, the sensor model and the start radius held, the peak
+lands at 1.01 and 0.97 body diameters for the two body sizes that aggregate at
+all, log-log slope 0.948 [0.474, 1.897]. So the amendment is not only "report a
+length" but "report *this* length": the worst correlation length is the size of
+the robot, not a property of its controller.
+
+Recorded, with no mechanism proposed for it, because three lengths scale with the
+body and this sweep separates none: the body as an obstacle, the cluster link
+distance (1.5 body diameters, a parameter of the *metric*), and the occlusion
+footprint. Separating the first from the second is one sweep and is on the next
+list. The smallest body, 3.7 cm, does not aggregate at this start radius at all
+and is excluded by a pre-registered validity window; including it anyway lowers
+the slope to 0.474, which still rejects "the body is irrelevant".
 
 ## 14. The ℓ/λ statement can now be made without its single-λ caveat
 

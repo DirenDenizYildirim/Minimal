@@ -1685,6 +1685,118 @@ Figure: `figures/terrain_lambda_r0_family.png`
 
 ---
 
+## 18. Question A, experiment 2: the worst λ is the body diameter
+
+**Peak λ tracks body diameter, so the length scale is recorded as the body
+diameter — and no mechanism is proposed for it.** With R₀, the axle, the sensor
+model and the start radius held, a 7.4 cm body degrades worst at λ = 7.46 cm and
+a 14.8 cm body at λ = 14.39 cm: **1.01 and 0.97 body diameters**, log-log slope
+**0.948 [0.474, 1.897]**, an interval that excludes 0 and contains 1.
+
+Run because §17 fired the fixed-length-scale branch. §15 had noticed that the
+shared peak, 7.46 cm, sits within 1% of the 7.4 cm body diameter; body diameter
+is the one length in the model that neither §15 nor §17 varied.
+
+`configs/sweeps/terrain_lambda_body.toml` — body diameter ∈ {3.7, 7.4, 14.8} cm,
+λ log-spaced 2 → 38.6 cm, θ_m ∈ {0, 0.9}, n = 20, τ = 600 s, start radius pinned
+to 0.74 m, 100 runs/cell, 6 000 trials. The validity window is §17's, **fixed
+before this sweep ran**: a peak is read only where reach at θ_m = 0.9 is at
+least 0.8.
+
+The hold ratio is the only statistic this sweep can use. Dispersion is normalised
+by robot radius squared and the cluster link distance is three body radii, so
+absolute dispersion is not comparable across body sizes; a ratio of two
+dispersions at the *same* body size cancels both exactly.
+
+### Peaks
+
+| row | body diameter | λ inside the window | peak λ | 95% CI | peak / diameter |
+|---|---|---|---|---|---|
+| body-half ‡ | 3.7 cm | **0/10** | — | — | — |
+| body-base | 7.4 cm | 10/10 | **7.46 cm** | [5.37, 7.46] | **1.01** |
+| body-x2 ‡ | 14.8 cm | 10/10 | **14.39 cm** | [10.36, 20.00] | **0.97** |
+
+The `body-x2` row is the cleanest measurement in this section of the document:
+reach is 1.00 at every λ but the last, where it is 0.99, so nothing about its
+curve is contaminated by failure. Its hold ratio is small — 1.14 to 1.31 — but
+the peak is where it should be.
+
+### The sensitivity, stated because it decides how much the headline is worth
+
+`body-half` reaches a single cluster in at most 72% of runs at any λ, and its
+flat-ground median dispersion is **3.057 against 1.427** for the base body: a
+3.7 cm robot in a 0.74 m start disc — twenty body diameters across — does not
+aggregate at this start radius, terrain or no terrain. It is excluded by the
+window.
+
+It also **does not support the relation**. Its unrestricted argmax is 7.46 cm,
+which is 2.02 body diameters, not 1.0. Including it, the log-log slope over all
+three rows falls from 0.948 to **0.474**:
+
+| rows used | slope | reading |
+|---|---|---|
+| the two inside the window | **0.948 [0.474, 1.897]** | the peak *is* the body diameter |
+| all three, ignoring the window | 0.474 | the peak moves with the body, sub-proportionally |
+
+Both exclude 0, so "the body is irrelevant" is rejected either way; the
+difference between "is the diameter" and "moves with it" rests entirely on
+excluding a row that is not performing the task. The window was fixed in
+advance, so the headline is the first line — but a reader who distrusts the
+window gets the second, and the second is still not the ratio law.
+
+### What tracks the body, and what this cannot separate
+
+The decision rule says to record the length scale and propose no mechanism, and
+that is what happens here. Three lengths in the model scale with the body and
+this sweep separates none of them:
+
+* the **body diameter** itself, as the size of an obstacle a robot must drive
+  around;
+* the **cluster link distance**, three body radii — 1.5 body diameters — which
+  is the metric's own definition of "together";
+* the **occlusion footprint**: a larger body blocks more line-of-sight, and the
+  sensor's parameters are unchanged only in the sense that its numbers are.
+
+Two further things move with body diameter and cannot be held at the same time
+as the start radius: the **packing fraction** at n = 20 in a 0.74 m disc, which
+is 0.0125, 0.05 and 0.20 across the three rows, and the fact that at 3.7 cm the
+5.1 cm axle puts the wheel contacts **outside** the body, as the wide-axle row in
+§11 does. Both `body-half` and `body-x2` are numerical devices, not buildable
+robots, and carry ‡ for their geometry as well as for their constants.
+
+Distinguishing the link distance from the body is one sweep and is on the next
+list. It is not run here: the metric's own parameter is a different kind of dial
+from a physical one, and this pass was given one new dial.
+
+### What Question A now says
+
+Read together, §§15, 17 and 18 replace H2's ratio law with a length:
+
+1. **There is a worst correlation length.** Every row that performs the task has
+   an interior peak in its hold ratio.
+2. **It is not proportional to R₀.** Doubling R₀ moves it by 1.39× [0.72, 1.93]
+   (§17), and two controllers differing threefold in R₀ share it exactly (§15).
+3. **It is the body diameter, to within 3% over a 2× range** (this section),
+   with the caveats above.
+
+That is a stronger statement than H2 made and a different one. H2 tied the worst
+length to the controller; it is tied to the robot.
+
+### Limitations
+
+* Two usable body sizes. A two-point log-log slope has a wide interval, and the
+  interval quoted comes from resampling runs, not from having more rows.
+* One θ_m, one n, one τ, one start radius, one controller, one arena.
+* Peaks are located to a log grid of ratio 1.39, so "1.01 body diameters" means
+  "the same grid step as the body diameter", not 1.01 ± 0.01.
+* The three body-scaled lengths are not separated, and the packing fraction moves
+  with the body by construction.
+
+Figure: `figures/terrain_lambda_body.png`
+(regenerate with `harness/figures_lambda_body.py`).
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
@@ -1716,10 +1828,12 @@ remains, plus what §§14–16 surfaced:
    n ∈ {20, 50}, same budget, and evaluate on the same grid. If the transferring
    controller is no worse at 0.74 m, §13's whole comparison should be rebuilt on
    it.
-9. **Where the shared worst λ comes from.** §15 finds both rows peaking at
-   λ = 7.46 cm, within 1% of the body diameter and at ℓ/λ = 0.68. Three lengths
-   coincide there and this grid separates none of them; varying the body radius
-   at fixed axle, and the axle at fixed body, would.
+9. **Which body-scaled length the worst λ actually is.** §18 shows the peak
+   tracking body diameter at 1.01 and 0.97 diameters, but the cluster link
+   distance (1.5 body diameters) and the occlusion footprint scale with the body
+   too. `metrics.cluster_link_radii` is a metric parameter rather than a physical
+   one, so varying it at a fixed body separates the metric's definition of
+   "together" from the robot — one sweep, and the obvious next one.
 10. **The gathering-rate / holding-quality trade-off as an axis in its own
     right.** §14 reads it off two searched controllers. Sweeping R₀ directly at
     fixed everything else — time to first cluster against held dispersion — would
