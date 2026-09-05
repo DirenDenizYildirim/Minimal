@@ -612,6 +612,99 @@ Figures: `figures/pursuer_dispersive_kappa.png`,
 
 ---
 
+---
+
+## 9. Does re-tuning move the problem or solve it?
+
+`configs/sweeps/terrain_retune_cost.toml` — λ = 0.10 m (λ/R₀ = 0.69) fixed, θ_m
+swept 0 → 0.9 in eight steps, n = 20, τ = 600 s, 100 runs/cell, base seeds
+20260904 as in the H2 and H3 sweeps.
+
+S2-searched was tuned at exactly one point: the worst cell H2 found. A controller
+tuned at the worst cell can win there by giving up performance everywhere else,
+and §7 only ever evaluated it on terrain. If such a trade-off exists, the terrain
+bit has an obvious job — switch between the two controllers — and the
+**S4-composite** row is that switch, built by hand: `terrain-bit = 0` takes
+Gauci's four constants, `terrain-bit = 1` takes S2-searched's. It is
+hand-designed (‡), so it is evidence about this arrangement, not about S = 4.
+
+### The decision rule fired neither branch
+
+The rule anticipated two outcomes at θ_m = 0: S2-searched *matches* Gauci within
+CI, or S2-searched is *worse* with disjoint CIs. Measured, absolute final
+dispersion at θ_m = 0:
+
+| row | dispersion at θ_m = 0 |
+|---|---|
+| S2-gauci | 1.427 [1.399, 1.467] |
+| S2-searched † | **1.253 [1.234, 1.283]** |
+
+The intervals are disjoint and S2-searched is **strictly better** — 12.2% lower —
+on the flat ground it was never tuned for. There is no trade-off to report.
+
+And it is not a flat-ground artefact. S2-searched beats S2-gauci with **disjoint
+CIs at every one of the eight θ_m values**:
+
+| θ_m | S2-gauci | S2-searched † | S4-composite ‡ | S4-searched † |
+|---|---|---|---|---|
+| 0.00 | 1.427 [1.399, 1.467] | 1.253 [1.234, 1.283] | 1.427 [1.399, 1.467] | 1.222 [1.211, 1.235] |
+| 0.30 | 1.521 [1.470, 1.568] | 1.211 [1.199, 1.226] | 1.476 [1.424, 1.527] | 1.219 [1.210, 1.230] |
+| 0.60 | 1.943 [1.799, 2.112] | 1.235 [1.220, 1.264] | 1.638 [1.562, 1.783] | 1.248 [1.239, 1.268] |
+| 0.90 | **3.150 [2.716, 3.439]** | **1.383 [1.350, 1.441]** | 1.999 [1.861, 2.143] | 1.486 [1.424, 1.535] |
+
+Reach probability (Wilson 95%) says the same at the hard end: S2-gauci drops to
+**0.86 [0.78, 0.91]** at θ_m = 0.9 while S2-searched stays at 1.00 [0.96, 1.00].
+
+**Re-tuning solves the problem. It does not move it.**
+
+### So the frontier is flat in capability along this dial
+
+Since one four-constant controller dominates the other everywhere, there is
+nothing for a terrain bit to switch between, and the composite demonstrates that
+constructively rather than by argument: it is **worse than the S = 2 row it is
+built from at every θ_m** — 1.999 against 1.383 at θ_m = 0.9 — because half the
+time it deliberately selects the worse of its two behaviours.
+
+Its θ_m = 0 value is 1.427 [1.399, 1.467], identical to Gauci's, which is the
+internal consistency check: on flat ground the terrain bit is never set, so the
+composite *is* Gauci, and it reproduces its number exactly.
+
+`c*(θ_terr)` is **flat in capability** over 0 ≤ θ_m ≤ 0.9 at λ/R₀ = 0.69:
+`c = (2, 0, 0, 0)` suffices at every point, and the minimum does not move.
+
+That is a negative result for H3 and a real one for the project's central
+question. The build doc's programme is to measure how the capability minimum
+moves under hostility; along this dial, over this range, **it does not move at
+all — what moves is the parameter setting inside a fixed capability.** Capability
+and parameters are different axes, and only one of them responded.
+
+### The caveat that has to travel with this
+
+S2-searched beating Gauci *on flat ground* is a statement about **this
+simulator's objective**, not a claim that Gauci's exhaustive grid search was
+wrong. Their search was exhaustive at its resolution on their metric and setup;
+this one optimises median final dispersion at n = 20, τ = 600 s under this
+repository's dispersion normalisation, collision model and cluster definition.
+Two different objectives have two different optima, and the derived-values test
+(R₀ = 14.45 cm, ω₀ = 0.75, ω₁ = 5.02 rad/s) confirms the *reproduction* is
+faithful regardless.
+
+What this does mean is that any claim of the form "capability X is needed at
+hostility θ" in this project must be checked against a re-search of the cheaper
+capability first. §7 already showed that; this shows the re-search need not even
+cost anything elsewhere.
+
+### Limitations
+
+* One λ. The dominance is established at λ/R₀ = 0.69 only. A controller with a
+  4.7 cm circle may be worse at a correlation length matched to *its* R₀ — that
+  is what H2 would predict, and it is on the next list rather than run here.
+* Both S = 4 rows remain upper bounds; the composite is not even that, being
+  hand-built.
+* Everything is n = 20.
+
+Figure: `figures/terrain_retune_cost.png`.
+
 ## Next (noted, not run)
 
 Things these three experiments surfaced that are worth a design but were out of

@@ -8,6 +8,7 @@ from swarm_harness.stats import (
     median_ci,
     proportion_ci,
     summarise,
+    wilson_ci,
 )
 
 
@@ -64,10 +65,41 @@ class TestStats(unittest.TestCase):
         self.assertGreater(hi, 0.86)
         self.assertLess(hi, 1.0)
 
+    def test_wilson_stays_finite_at_the_boundaries(self):
+        # The reason not to bootstrap a proportion: resampling 100 successes out
+        # of 100 gives 100 successes every time, so the bootstrap claims a
+        # zero-width interval exactly where the data is weakest.
+        ones = [1.0] * 100
+        self.assertEqual(bootstrap_ci(ones, statistic=np.mean), (1.0, 1.0))
+        p, lo, hi = wilson_ci(ones)
+        self.assertEqual(p, 1.0)
+        self.assertEqual(hi, 1.0)
+        self.assertLess(lo, 1.0)
+        self.assertGreater(lo, 0.9)
+
+        p, lo, hi = wilson_ci([0.0] * 100)
+        self.assertEqual((p, lo), (0.0, 0.0))
+        self.assertGreater(hi, 0.0)
+        self.assertLess(hi, 0.1)
+
+    def test_wilson_matches_the_textbook_interval(self):
+        # 60 of 100 at 95%: the standard Wilson answer is [0.5020, 0.6906].
+        p, lo, hi = wilson_ci([1.0] * 60 + [0.0] * 40)
+        self.assertAlmostEqual(p, 0.60)
+        self.assertAlmostEqual(lo, 0.5020, places=3)
+        self.assertAlmostEqual(hi, 0.6906, places=3)
+
+    def test_wilson_narrows_with_more_samples(self):
+        narrow = wilson_ci([1.0] * 600 + [0.0] * 400)
+        wide = wilson_ci([1.0] * 6 + [0.0] * 4)
+        self.assertLess(narrow[2] - narrow[1], wide[2] - wide[1])
+
     def test_proportion_handles_degenerate_cases(self):
         self.assertEqual(proportion_ci([1.0] * 10)[0], 1.0)
         self.assertEqual(proportion_ci([0.0] * 10)[0], 0.0)
         self.assertTrue(np.isnan(proportion_ci([])[0]))
+        with self.assertRaises(ValueError):
+            wilson_ci([1.0, 0.0], confidence=0.42)
 
 
 if __name__ == "__main__":

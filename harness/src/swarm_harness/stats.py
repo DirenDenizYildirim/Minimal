@@ -111,20 +111,38 @@ def friedman_across_rows(per_row: dict[str, Sequence[float]]):
     return friedmanchisquare(*[np.asarray(per_row[k], dtype=float) for k in labels])
 
 
-def proportion_ci(values, confidence: float = 0.95, resamples: int = 10_000, seed: int = 0):
-    """Proportion of true values, with a bootstrap CI.
+def wilson_ci(values, confidence: float = 0.95):
+    """Observed proportion with a **Wilson score interval**.
 
-    For a 0/1 outcome the median is the wrong summary and quietly so: a metric
-    that succeeds 86% of the time has a median of exactly 1, and a panel plotting
-    medians shows a flat line at 1 while the proportion is falling. Anything
-    boolean — reach probability, wipeout, single-cluster-at-tau — belongs here.
+    Wilson rather than bootstrap, because a proportion is not a mean of a
+    continuous quantity and the bootstrap fails exactly where these experiments
+    live. Resampling 100 successes out of 100 gives 100 successes every time, so
+    the bootstrap reports a zero-width interval at p = 1 — the most confident
+    possible claim from the data least able to support it. Wilson stays
+    asymmetric and finite at both boundaries.
+
+    Returns ``(p, lo, hi)``. Also the reason not to take a *median* of a 0/1
+    outcome: the median is 1 whenever the majority succeed, which draws a flat
+    line while the probability falls.
     """
     v = np.asarray(values, dtype=float)
     v = v[np.isfinite(v)]
-    if v.size == 0:
+    n = v.size
+    if n == 0:
         nan = float("nan")
         return (nan, nan, nan)
     p = float(v.mean())
-    lo, hi = bootstrap_ci(v, statistic=np.mean, confidence=confidence,
-                          resamples=resamples, seed=seed)
-    return (p, lo, hi)
+    # Two-sided normal quantile; 1.959964 at 95%, and the common alternatives are
+    # spelled out rather than pulling in SciPy for one number.
+    z = {0.90: 1.644854, 0.95: 1.959964, 0.99: 2.575829}.get(confidence)
+    if z is None:
+        raise ValueError(f"confidence {confidence} not tabulated; use 0.90, 0.95 or 0.99")
+    denom = 1.0 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    half = (z / denom) * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+    return (p, float(max(0.0, centre - half)), float(min(1.0, centre + half)))
+
+
+def proportion_ci(values, confidence: float = 0.95, **_ignored):
+    """Alias for :func:`wilson_ci`, kept so callers read as intent."""
+    return wilson_ci(values, confidence=confidence)

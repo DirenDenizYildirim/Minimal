@@ -1,0 +1,76 @@
+# EXPERIMENT 1 — does re-tuning MOVE the problem or SOLVE it?
+#
+# S2-searched was tuned at exactly one point: lambda/R0 = 0.69, theta_m = 0.9 --
+# the worst cell H2 found. A controller tuned at the worst cell can win there by
+# giving up performance everywhere else, and section 7 evaluated it only on
+# terrain. This sweeps the full theta_m range at that lambda, theta_m = 0
+# included, so the flat-ground cost (if any) is visible.
+#
+# If re-tuning trades flat-ground performance for terrain performance, then the
+# terrain bit has something to do: switch between the two. That is what the
+# COMPOSITE row is -- built by hand, not searched:
+#
+#   terrain-bit = 0  ->  Gauci's four constants
+#   terrain-bit = 1  ->  S2-searched's four constants
+#
+# It is the minimal controller that could exploit such a trade-off, and it is
+# hand-designed (‡), so it is evidence about this specific arrangement and not
+# about what S = 4 can do.
+#
+# S4-terrain (†, searched) is carried along as the reference from section 7.
+#
+# Same base seeds as the H2 and H3 sweeps (20260904), lambda fixed at the peak,
+# theta_m denser than the earlier grids and cut at 0.9.
+#
+# Reach probability is reported with WILSON intervals. A bootstrap CI on a
+# proportion is zero-width at p = 1, which is where most of these cells sit.
+
+name = "terrain-retune-cost"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.1, 0.2, 0.3, 0.45, 0.6, 0.75, 0.9]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-searched"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
+
+[[rows]]
+label = "S4-composite"
+# bit = 0 rows are Gauci's; bit = 1 rows are S2-searched's. Hand-built (‡).
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "hand_designed", entries = [
+  { wheels = [-0.700000, -1.000000] },
+  { wheels = [1.000000, -1.000000] },
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
+
+[[rows]]
+label = "S4-searched"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.236416, -0.519837] },
+  { wheels = [0.797842, -0.406434] },
+  { wheels = [-0.186302, -0.965739] },
+  { wheels = [0.930956, -0.450512] },
+] }

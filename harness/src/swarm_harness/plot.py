@@ -279,12 +279,17 @@ def paired_panels(
     # Reserve fixed *inches* for the title, the parameter line, the legend and
     # the provenance stamp, then convert to fractions. Fractional margins alone
     # collapse onto the axis labels when there is only one panel-row.
-    top_in, bottom_in = (1.0 if annotate else 0.75), 1.15
-    fig_h = 3.4 * n_rows + top_in + bottom_in
+    caption_lines = (title or "").count("\n") + 1
+    top_in = 0.30 + 0.20 * caption_lines + (0.25 if annotate else 0.0)
+    bottom_in = 1.15
+    fig_h = 3.0 * n_rows + top_in + bottom_in
+    # Width has a floor: a one-column figure at 4.2 inches wraps its caption into
+    # the axes and clips the legend.
+    fig_w = max(8.5, 4.2 * n_cols)
     fig, axes = plt.subplots(
         n_rows,
         n_cols,
-        figsize=(4.2 * n_cols, fig_h),
+        figsize=(fig_w, fig_h),
         squeeze=False,
         sharex=True,
     )
@@ -336,9 +341,9 @@ def paired_panels(
         frameon=False,
         bbox_to_anchor=(0.5, 0.36 / fig_h),
     )
-    fig.suptitle(title or "", fontsize=10, wrap=True, y=1.0 - 0.22 / fig_h)
+    fig.suptitle(title or "", fontsize=9.5, y=1.0 - 0.12 / fig_h, va="top")
     if annotate:
-        annotate_params(fig, records, annotate, y=1.0 - 0.62 / fig_h)
+        annotate_params(fig, records, annotate, y=1.0 - (0.22 + 0.20 * caption_lines) / fig_h)
     _stamp(fig, records, y=0.05 / fig_h)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
