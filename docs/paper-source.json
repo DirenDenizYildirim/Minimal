@@ -1,0 +1,1907 @@
+{
+ "document": "docs/paper-source.md",
+ "paper": "Minimal Swarms in Hostile Environments (Paper 1)",
+ "freeze": {
+  "experimental_record_commit": "ce427a8",
+  "freeze_declaration_commit": "2b736de",
+  "evidence_base": "docs/findings.md §1–§21; docs/literature-corrections.md #1–#15; docs/validation.md",
+  "no_further_runs": true
+ },
+ "marks": {
+  "dagger": "searched, not exhaustive — an upper bound",
+  "double_dagger": "hand-designed, not searched — no evidence about the capability itself",
+  "unmarked": "enumerated at the source's resolution — tight"
+ },
+ "baseline_rule": "best of the three class-searched rows per cell (S2-class-flat-s1/s2/s3, all †), with the 16.9% R₀ spread and the four disjoint cells reported as the baseline's uncertainty; S2-gauci retained as the enumerated reference",
+ "ledger": [
+  {
+   "section": 1,
+   "title": "Week-3 shakedown: occlusion",
+   "commits": [
+    "e175acb",
+    "24ca1ac",
+    "2441bfc"
+   ],
+   "question": "At what false-negative rate does the zero-memory Gauci controller fall below threshold, and does one bit of hysteresis restore it? Also: does the sweep harness work?",
+   "design": "`configs/sweeps/occlusion_shakedown.toml`, two rows (M0 = Gauci tight; M1 = one hysteresis bit, 8 constants, hand-written ‡) on a (false-negative rate × spatial correlation) grid, 100 runs/cell.",
+   "pre_registered_rule": "None pre-registered; this was a harness shakedown.",
+   "branch_fired": null,
+   "headline": "Median final dispersion (clean baseline 1.43):",
+   "changed": "A standing rule: any dial whose intensity varies in space has a realised value that depends on where the swarm ends up, and correlated and i.i.d. versions must be compared at matched **realised** rate. `realised_fn_rate` is on every run record for this reason.",
+   "limitations": "M1 is a hand-written point in an 8-constant space (20⁸ ≈ 2.6 × 10¹⁰ at Gauci's resolution), so any minimum read off it is an upper bound and it is not even searched. Occlusion was never revisited. ---",
+   "figures": [
+    "occlusion_shakedown_curve.png",
+    "occlusion_shakedown_surface.png"
+   ],
+   "configs": [
+    "occlusion_shakedown.toml"
+   ]
+  },
+  {
+   "section": 2,
+   "title": "Idea A: terrain, first grid",
+   "commits": [
+    "2441bfc",
+    "c137593"
+   ],
+   "question": "What does terrain do to aggregation, on both dials?",
+   "design": "`configs/sweeps/terrain_idea_a.toml`, `g_eff` = 0.4, λ = 0.15 m ≈ R₀, slope α ∈ {0, 2.5, 5, 7.5, 10, 15}° × θ_m ∈ {0, 0.1, 0.2, 0.3, 0.5}, 100 runs/cell.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "Median final dispersion (flat clean = 1.43):",
+   "changed": "Set the threshold on dispersion, not on a cluster count (correction #6). Queued the fine H1 sweep.",
+   "limitations": "One λ; θ_m only to 0.5; the runaway corner excluded from trends. ---",
+   "figures": [
+    "terrain_idea_a_curve.png",
+    "terrain_idea_a_surface.png"
+   ],
+   "configs": [
+    "terrain_idea_a.toml"
+   ]
+  },
+  {
+   "section": 3,
+   "title": "Idea A, H1: does a *small* amount of terrain help?",
+   "commits": [
+    "c137593"
+   ],
+   "question": "H1 predicts small α and θ_m help, as motion noise did in Daymude et al. Tested on its own terms rather than read off the corner of a grid built for something else.",
+   "design": "`configs/sweeps/terrain_h1_fine.toml`, **200 runs/cell**, α ∈ {0, 0.5, 1, 1.5, 2, 3}° × θ_m ∈ {0, 0.02, 0.05, 0.1}, `g_eff` = 0.4, λ = R₀.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "Answer: no. Median final dispersion with 95% bootstrap CIs, whole grid between **1.385 and 1.430**; **0 of 23 non-baseline cells** has an interval disjoint from the clean baseline's; every interval overlaps every other. Representative row (α = 0°): 1.406 [1.389, 1.429], 1.388 [1.360, 1.406], 1.385 [1.371, 1.414], 1.414 [1.399, 1.436].",
+   "changed": "With the actuation-noise probe and §2, this is the third independent null. **Correction #5**: H1 should be withdrawn, or narrowed to a mechanism this model does not have. Daymude et al.'s mechanism is specific — noise \"perturbs the precise balancing of forces to allow robots to push past one another\", breaking a *contact deadlock* in a discrete model — and was never an argument that perturbation aids exploration.",
+   "limitations": "n = 20 only; the deadlock's existence in this continuous model was never tested directly. ---",
+   "figures": [],
+   "configs": [
+    "terrain_h1_fine.toml"
+   ]
+  },
+  {
+   "section": 4,
+   "title": "Idea A, H2: does the terrain transition scale with R₀?",
+   "commits": [
+    "c137593",
+    "9b0b994"
+   ],
+   "question": "H2 predicts aggregation fails when trajectory deformation over one state-0 circle exceeds a fraction of R₀ — so the transition should scale with R₀ and not with the wheel geometry or the swarm.",
+   "design": "Two sweeps. `terrain_h2_r0_scaling.toml` established that terrain does nothing once λ > R₀ but had no transition to locate at θ_m ≤ 0.4 and could not separate λ/R₀ from λ/axle. `configs/sweeps/terrain_h2_powered.toml` fixes both: θ_m to 1.5, and five rows that hold one length scale fixed while varying the other. Every row is scored against **its own** θ_m = 0 cell at the same λ.",
+   "pre_registered_rule": null,
+   "branch_fired": "H2 supported *as a statement about R₀ versus the axle*.",
+   "headline": "Peak degradation and where it occurs, at θ_m = 0.7:",
+   "changed": "Narrowed the target for the anisotropy lemma to `f(R₀, λ)` with the worst case near λ/R₀ ≈ 0.7. Also forced the θ_m ceiling: the sweep originally ran to θ_m = 1.5, where every row degraded 6–14× and the ordering by R₀ collapsed — that band is **stall, not terrain**, and was cut rather than explained (correction #10).",
+   "limitations": "All five rows are hand-picked ‡. `axle-x2-R0-same` puts the wheel contacts outside the 7.4 cm body and is a numerical device; it is also the row that makes the 5% spread meaningful, so it stays in, labelled. ---",
+   "figures": [
+    "terrain_h2_powered.png",
+    "terrain_h2_r0_scaling.png"
+   ],
+   "configs": [
+    "terrain_h2_powered.toml",
+    "terrain_h2_r0_scaling.toml"
+   ]
+  },
+  {
+   "section": 5,
+   "title": "Idea B, first pass: the pursuer with imperfect perception",
+   "commits": [
+    "9b0b994",
+    "c65abe2"
+   ],
+   "question": "How does survival move with the pursuer's perception limits, and what does a sensor state buy?",
+   "design": "`configs/sweeps/pursuer_idea_b.toml`, n = 20, **τ = 120 s**, ρ = 1.5, h = 5 s, R = 0.74 m, four rows on a **5 × 5** grid of r_p × κ, 100 runs/cell, 10 000 trials. 8.8% of runs ended in a wipeout.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "Median survivors out of 20 (selected cells):",
+   "changed": "Motivated §8's dispersive control (correction #8) and §12's two-axis reporting (correction #12).",
+   "limitations": "B1–B3 hand-designed ‡. **B4 (K = 1) was never run**: communication is not wired, `rx` is held at 0, so a K = 1 row would silently behave as K = 0, and adding a row that quietly does nothing is worse than leaving it out. One ρ, one h, one n, one τ, one start radius. ---",
+   "figures": [
+    "pursuer_idea_b_surface.png"
+   ],
+   "configs": [
+    "pursuer_idea_b.toml"
+   ]
+  },
+  {
+   "section": 6,
+   "title": "Idea A mechanism test: deformation, or speed heterogeneity?",
+   "commits": [
+    "e83675e"
+   ],
+   "question": "A scalar speed field still makes robots in different places move at different rates, which alone changes who meets whom. Is *that* the mechanism, with curvature incidental?",
+   "design": "`configs/sweeps/terrain_mechanism.toml`, **paired seeds**: both rows use the same placements and the same traction field and differ only in how the field is sampled — per-wheel (the corrected model) versus scalar-centre (v1's). 100 runs/cell.",
+   "pre_registered_rule": "If the scalar row reproduces the per-wheel row's peak location **and** magnitude within CI, the mechanism is relative speed heterogeneity and the curvature explanation is retired.",
+   "branch_fired": "It does not reproduce; the curvature explanation **stands**.",
+   "headline": "Degradation relative to each row's own θ_m = 0 cell:",
+   "changed": "Correction #9: the build doc's model correction is confirmed with a paired control rather than an argument. Also fixed the θ_m ceiling at 0.9.",
+   "limitations": "One n, one τ. ---",
+   "figures": [
+    "terrain_mechanism.png"
+   ],
+   "configs": [
+    "terrain_mechanism.toml"
+   ]
+  },
+  {
+   "section": 7,
+   "title": "Idea A, H3: the first terrain-aware capability row",
+   "commits": [
+    "9af4707"
+   ],
+   "question": "Past the transition, does a fifth sensor state (a binary terrain bit) recover the threshold where re-tuning the original four constants does not?",
+   "design": "`configs/sweeps/terrain_h3_capability.toml`, three rows — S2-gauci (tight), S2-searched †, S4-terrain † — evaluated on seeds **disjoint** from training. Both searched rows got the same optimiser, the same budget (600 × 12 = 7 200 runs) and the same training seeds, so the difference between them is the extra state and nothing else.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "Hold ratio at λ = 0.10 m (λ/R₀ = 0.69):",
+   "changed": null,
+   "limitations": "Equal budget across unequal dimensions; both S = 4 rows are upper bounds; one λ, one training cell, n = 20. ---",
+   "figures": [
+    "terrain_h3_capability.png"
+   ],
+   "configs": [
+    "terrain_h3_capability.toml"
+   ]
+  },
+  {
+   "section": 8,
+   "title": "Idea B: is the blind row's survival attributable to aggregation?",
+   "commits": [
+    "c5203f4",
+    "c65abe2"
+   ],
+   "question": "§5 read survival rising with confusion as dilution, but every row there aggregated identically when no pursuer was in view, so nothing separated \"the swarm aggregated\" from \"the pursuer's perception is poor\".",
+   "design": "`configs/sweeps/pursuer_dispersive.toml`, 5 × 5 grid of (r_p, κ) at two handling times, 100 runs/cell, 15 000 trials. Three rows: B0-blind (tight, aggregates, cannot see the pursuer), B1-ternary ‡ (sees and flees, aggregates),",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "Mean survival fraction, κ = 0 → κ = 5:",
+   "changed": "Corrections #7 (handling time is required) and #8 (a dispersive control row belongs in the design).",
+   "limitations": "B1 and D are hand-designed ‡ and support a claim about *spatial strategy*, not about what S = 3 sensing can achieve. ---",
+   "figures": [
+    "pursuer_dispersive_kappa.png",
+    "pursuer_dispersive_surface.png"
+   ],
+   "configs": [
+    "pursuer_dispersive.toml"
+   ]
+  },
+  {
+   "section": 9,
+   "title": "Does re-tuning move the problem or solve it?",
+   "commits": [
+    "f7376de"
+   ],
+   "question": "S2-searched was tuned at exactly one point — the worst cell H2 found — and §7 only ever evaluated it on terrain. A controller tuned at the worst cell can win there by giving up performance elsewhere; if such a trade-off exists, the terrain bit has an obvious job.",
+   "design": "`configs/sweeps/terrain_retune_cost.toml`, λ = 0.10 m fixed, θ_m swept 0 → 0.9 in eight steps, four rows including **S4-composite ‡**, a hand-built switch (bit 0 → Gauci, bit 1 → S2-searched).",
+   "pre_registered_rule": "Two branches anticipated at θ_m = 0: S2-searched matches Gauci within CI, or is worse with disjoint CIs.",
+   "branch_fired": "neither. S2-searched is **strictly better** on flat ground — 1.253 [1.234, 1.283] against 1.427 [1.399, 1.467], disjoint, 12.2% lower — on ground it was never tuned for.",
+   "headline": "Absolute final dispersion:",
+   "changed": null,
+   "limitations": "recorded at the time. One λ; both S = 4 rows are upper bounds and the composite is not even that; everything at n = 20. ---",
+   "figures": [
+    "terrain_retune_cost.png"
+   ],
+   "configs": [
+    "terrain_retune_cost.toml"
+   ]
+  },
+  {
+   "section": 10,
+   "title": "Warm-started S = 4 search",
+   "commits": [
+    "6989a91",
+    "1da65d8"
+   ],
+   "question": "§7's equal-budget-over-unequal-dimensions objection: did the S = 4 row lose on search effort rather than on capability?",
+   "design": "`configs/sweeps/terrain_warm_s4.toml` from `results/search_s4_warm.json`. The search starts at `[S2-searched | S2-searched]` — an eight-constant table whose halves are equal, i.e. an S = 4 controller that ignores its own terrain bit. The optimiser therefore begins holding the S = 2 optimum and can only be asked whether *using* the bit beats *not* using it. Same optimiser, same budget (600 × 12), training seeds 950 000, disjoint from the cold search's 900 000 and from the evaluation seeds.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "Absolute final dispersion on held-out seeds:",
+   "changed": null,
+   "limitations": "Equal budget across unequal dimensions still applies; what the warm start rules out is the specific objection that the S = 4 row never had access to the S = 2 optimum. sep-CMA-ES is diagonal-only; the row stays †. ---",
+   "figures": [
+    "terrain_warm_s4.png"
+   ],
+   "configs": [
+    "terrain_warm_s4.toml"
+   ]
+  },
+  {
+   "section": 11,
+   "title": "Validating the gradient-steering mechanism",
+   "commits": [
+    "f73cc8a"
+   ],
+   "question": "§§4 and 6 established *where* the terrain effect is and that a scalar field does not produce it. Neither measured the proposed mechanism.",
+   "design": "`configs/sweeps/terrain_mechanism_regression.toml`, θ_m = 0.9, λ = 0.10 m, 100 runs/cell, **12 million robot-timesteps pooled per row**, accumulated as OLS sufficient statistics that add across runs.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "| row | axle | **ℓ/λ** | R₀ | full slope | full R² | gradient-only slope | gradient-only R² |",
+   "changed": null,
+   "limitations": "One θ_m. The single-λ caveat is **discharged by §16**. ---",
+   "figures": [
+    "terrain_mechanism_regression.png"
+   ],
+   "configs": [
+    "terrain_mechanism_regression.toml"
+   ]
+  },
+  {
+   "section": 12,
+   "title": "Idea B Pareto front: what survival costs",
+   "commits": [
+    "91b8d57",
+    "c65abe2"
+   ],
+   "question": "Every earlier Idea B figure scored survival alone, which cannot see what surviving cost.",
+   "design": "`configs/sweeps/pursuer_pareto.toml`, five rows at h = 1.93 s, ρ = 1.5, n = 20, τ = 120 s, R = 0.74 m, 100 runs/cell, three cells: r_p = 0.2 m (0.27 R), 0.35 m (0.47 R), 1.0 m (**1.35 R — perfect perception**). `final_dispersion` is already computed over *surviving* robots in the centroid frame. The base-task axis is dropped below three survivors, because with one or zero survivors the dispersion of \"the survivors\" is 0 — a perfect aggregation score for a wiped-out swarm.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "| cell | row | survival at τ | dispersion (survivors ≥ 3) | runs kept | wiped out | median t_wipeout |",
+   "changed": "Correction #12: report Idea B on two axes, not one.",
+   "limitations": "Four of five rows hand-designed ‡; the front is between *spatial strategies*, not capabilities. At the perfect-perception cell the base-task axis is not estimable for three of four aggregating rows. One h, one ρ, one n, one τ, one start radius — and because r_p only means anything against R, all three cells move together if the swarm starts in a different disc. ---",
+   "figures": [
+    "pursuer_pareto.png"
+   ],
+   "configs": [
+    "pursuer_pareto.toml"
+   ]
+  },
+  {
+   "section": 13,
+   "title": "The 2 × 2 tuning control: how much of §9 was terrain?",
+   "commits": [
+    "9fa30a5"
+   ],
+   "question": "§9 concluded \"re-tuning solves it\", and that conflated two things. S2-rough was tuned against **this objective** — median final dispersion at n = 20, τ = 600 s, R = 0.74 m, under this repository's normalisation and collision model — while Gauci's constants were found for a different one. \"Tuned for this objective\" and \"tuned for terrain\" were not separated.",
+   "design": "`configs/sweeps/terrain_tuning_control.toml`, λ = 0.10 m (λ/R₀(gauci) = 0.69), θ_m swept 0 → 0.9 in eight steps. **S2-flat** is the missing cell: same optimiser, same budget (600 × 12), **same training seed base (900 000)**, differing from S2-rough only in the θ_m of its training condition.",
+   "pre_registered_rule": "(a) S2-flat degrades like Gauci while S2-rough holds → terrain moves the optimal parameters. (b) They overlap in CI at every θ_m → terrain is a performance tax on a fixed controller. (c) They cross → a trade-off exists; report the crossing and reopen the terrain bit.",
+   "branch_fired": "(c). They cross. Paired by run index (both rows share a seed base, so run *i* is the same placement and field in both):",
+   "headline": null,
+   "changed": "§9's headline was right about the direction and wrong about the cause. Two consequences: the H2 degradation curve is largely a property of Gauci's specific constants — the published ~2.2× overstates what terrain does to a well-matched controller by about a factor of six — and the terrain bit was briefly reopened at the S2-flat ↔ S2-rough pair, then **closed again by §14**.",
+   "limitations": "One λ, one n, one start radius, one τ — **§14 answers this and the answer is no**. Both searched rows are †. The crossing is located by a sign flip on an eight-step grid with both bracketing CIs including zero. ---",
+   "figures": [
+    "terrain_decision_rule_regimes.png",
+    "terrain_tuning_control.png"
+   ],
+   "configs": [
+    "terrain_tuning_control.toml"
+   ]
+  },
+  {
+   "section": 14,
+   "title": "The searched rows' advantage is regime-specific",
+   "commits": [
+    "d0d95c3"
+   ],
+   "question": "Does §9/§13's comparison survive outside the initial condition the rows were searched in?",
+   "design": "`configs/sweeps/terrain_regime_robustness.toml` — S2-gauci, S2-flat †, S2-rough † at θ_m ∈ {0, 0.9} × start radius ∈ {0.74, 1.5, 3.0} m × n ∈ {20, 50}, λ = 0.10 m, 100 runs/cell, 3 600 trials. Rows paired by run index within a cell. Plus two companions: `terrain_tuning_control_r15.toml` (§13's grid re-run at 1.5 m, 2 400 trials) and `terrain_regime_tau.toml` / `..._tau_flat.toml` (the 3.0 m cell at τ = 600, 1800, 3600 s, all rows, both n).",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "— the advantage inverts with start radius. Paired ratio of Gauci's dispersion to the row's at θ_m = 0.9 (**> 1 means the row beats Gauci**):",
+   "changed": "Correction #11 rewritten in full: re-tuning does not solve terrain, it hides terrain behind a much larger objective mismatch, in one initial condition. The terrain bit stays closed. A re-searched baseline is necessary but not sufficient — it must also be shown to transfer.",
+   "limitations": "Two θ_m on the main grid; τ extended only in the 3.0 m cell; start radius and n crossed but density confounded with both (n = 50 at 0.74 m is 2.5× the density of n = 20); dispersion compared within a cell only; both rows †. ---",
+   "figures": [
+    "terrain_decision_rule_regimes.png",
+    "terrain_regime_robustness.png"
+   ],
+   "configs": [
+    "terrain_regime_robustness.toml",
+    "terrain_regime_tau.toml",
+    "terrain_tuning_control_r15.toml"
+   ]
+  },
+  {
+   "section": 15,
+   "title": "The worst correlation length does not follow the controller",
+   "commits": [
+    "628570b"
+   ],
+   "question": "Every terrain sweep had run at λ = 10 cm, which is 0.69 R₀ for Gauci and 2.11 R₀ for S2-rough. If H2's \"worst at λ/R₀ ≈ 0.7\" is a controller-relative law, S2-rough's own worst λ is near 3.3 cm and §13's comparison was on-peak for one row and off-peak for the other.",
+   "design": "`configs/sweeps/terrain_lambda_sweep.toml`, λ log-spaced 2 → 20 cm in eight steps, θ_m ∈ {0, 0.9}, n = 20, τ = 600 s, R = 0.74 m, 100 runs/cell, 3 200 trials. Hold ratios paired by run index against the same run on flat ground.",
+   "pre_registered_rule": "If S2-rough peaks near λ/R₀ ≈ 0.7, H2 is controller-relative; if the peak is elsewhere or absent, report where it is and",
+   "branch_fired": "the peak is elsewhere.",
+   "headline": null,
+   "changed": "§4's H2 survives as measured and loses its generalisation (correction #13). §13's comparison was **not** off-peak: λ = 10 cm is one grid step from the shared peak.",
+   "limitations": "One θ_m, one n, one start radius, one τ, two controllers. Eight λ over one decade, so the peak is located to a grid step. λ = 2 cm is below the 3.7 cm body radius. ---",
+   "figures": [
+    "terrain_lambda_sweep.png"
+   ],
+   "configs": [
+    "terrain_lambda_sweep.toml"
+   ]
+  },
+  {
+   "section": 16,
+   "title": "The ℓ/λ collapse holds across λ",
+   "commits": [
+    "20d79b4"
+   ],
+   "question": "§11 varied the axle at one λ, so \"a function of ℓ/λ\" and \"a function of ℓ\" were the same claim.",
+   "design": "`configs/sweeps/terrain_lambda_collapse.toml`, θ_m = 0.9, λ ∈ {5, 10, 20} cm × axle ∈ {2.55, 5.10, 10.20} cm with constants adjusted to hold R₀ = 14.45 cm, 100 runs/cell, **12 million robot-timesteps pooled per point**. The grid is built so the same ℓ/λ is reached by different (ℓ, λ) pairs: 0.51 three ways, 0.255 and 1.02 two ways each.",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "| ℓ/λ | axle | λ | full slope | full R² | gradient-only slope | gradient-only R² |",
+   "changed": "§11's single-λ limitation discharged; correction #14 records the established range (4× in λ, 4× in axle, one decade of ℓ/λ, at θ_m = 0.9).",
+   "limitations": "One θ_m, one n, one τ, one start radius. Four of nine points come from ‡ rows. `axle-x2` puts wheel contacts outside the body and carries the ℓ/λ = 2.04 point and one of the two at 1.02, so the *shape* past ℓ/λ = 1 rests on it. Three λ over a 4× range; nothing licenses λ = 1 cm or λ = 1 m. ---",
+   "figures": [
+    "terrain_lambda_collapse.png"
+   ],
+   "configs": [
+    "terrain_lambda_collapse.toml"
+   ]
+  },
+  {
+   "section": 17,
+   "title": "Doubling R₀ does not double the worst λ",
+   "commits": [
+    "9335c56"
+   ],
+   "question": "§15 compared two controllers differing in every constant, so \"the peak is at a fixed λ\" could still be a fact about one searched row. Test it inside one family where R₀ is the only thing that moves.",
+   "design": "Three rows of Gauci's table differing **only in the state-0 forward constant**: R0-half-axle-same ‡ (R₀ 7.23 cm), base (14.45 cm), R0-x2-axle-same ‡ (28.89 cm). λ log-spaced 2 → 38.6 cm in ten steps (§15's eight-point grid continued at the same ratio so the largest row's predicted peak is interior), θ_m ∈ {0, 0.9}, n = 20, τ = 600 s, 100 runs/cell, 6 000 trials **per start radius**. Two start radii: 1.5 m as specified (`terrain_lambda_r0_family.toml`) and 0.74 m as a companion (`..._r074.toml`). Ratio-law predictions use 0.52 R₀, the base row's *measured* peak ratio from §15: 3.76, 7.51, 15.02 cm.",
+   "pre_registered_rule": "(a) Peaks near 3.7, 7.5, 15 cm → the ratio law survives. (b) All three peaks within CI of ~7.5 cm → the λ/R₀ law is dead. (c) Mixed → report which rows fall where and stop.",
+   "branch_fired": "(b), on the two rows that can be measured.",
+   "headline": null,
+   "changed": "§15's H2 statement rewritten; correction #13 gains the within-family evidence. Experiment §18 follows because the fixed-scale branch fired.",
+   "limitations": "One θ_m, one n, one τ, two start radii, one controller family. Two ‡ rows. One of three rows produced no measurement, so \"all three peaks coincide\" was never testable. **\"Fixed\" is consistent; \"sub-proportional\" is not excluded** — the point estimate 1.39 lies between 1.00 and 2.00. Peaks are located to a log grid of ratio 1.39, which is also the size of the effect. ---",
+   "figures": [
+    "terrain_lambda_r0_family.png"
+   ],
+   "configs": [
+    "terrain_lambda_r0_family.toml"
+   ]
+  },
+  {
+   "section": 18,
+   "title": "The worst λ is the body diameter",
+   "commits": [
+    "5b72abc"
+   ],
+   "question": "§15 noticed the shared peak sits within 1% of the 7.4 cm body diameter; body diameter is the one length neither §15 nor §17 varied.",
+   "design": "`configs/sweeps/terrain_lambda_body.toml`, body diameter ∈ {3.7, 7.4, 14.8} cm with **R₀ (14.45 cm), the axle (5.1 cm), the sensor model and the start radius (0.74 m) held**, λ 2 → 38.6 cm, θ_m ∈ {0, 0.9}, n = 20, τ = 600 s, 100 runs/cell, 6 000 trials. The validity window is §17's, **fixed before this sweep ran**.",
+   "pre_registered_rule": "If peak λ tracks body diameter (log-log slope near 1, CI excluding 0), record the length scale **as** the body diameter and propose no mechanism. If not, record 7.46 cm as a fixed scale of unknown origin.",
+   "branch_fired": "it tracks.",
+   "headline": null,
+   "changed": "Correction #13 gains its answer: the worst correlation length is the size of the robot, not a property of its controller. No mechanism proposed.",
+   "limitations": "Two usable body sizes; a two-point log-log slope has a wide interval. One θ_m, one n, one τ, one start radius, one controller, one arena. Peaks located to a log grid of ratio 1.39, so \"1.01 body diameters\" means \"the same grid step as the body diameter\". ---",
+   "figures": [
+    "terrain_lambda_body.png"
+   ],
+   "configs": [
+    "terrain_lambda_body.toml"
+   ]
+  },
+  {
+   "section": 19,
+   "title": "A transferring four-constant controller exists, and it is the baseline",
+   "commits": [
+    "e6c4145"
+   ],
+   "question": "§14 showed two single-condition searched rows failing to transfer. That is a statement about two controllers, not about the capability: nothing had asked the optimiser to work anywhere but the arena it was given.",
+   "design": "Two class searches (`configs/search/train_s2_class_flat.toml` and `..._rough.toml`): sep-CMA-ES, **1200 × 12 — double §9's budget**, six-condition class `radius ∈ {0.74, 1.5, 3.0} m × n ∈ {20, 50}`, objective the geometric mean of per-condition medians, training seed bases 910 000 and 920 000. Evaluated by `configs/sweeps/terrain_class_eval.toml` on §14's full grid (12 cells × 5 rows, 6 000 trials) plus `..._eval_tau.toml` (the 3.0 m cells at τ = 600, 1800, 3600 s).",
+   "pre_registered_rule": "(1) A class row matches or beats Gauci at every cell → a transferring controller exists. (2) Wins in some cells and loses in others → report the cells and the R₀ trade, and say whether §14's gather/hold reading predicts the pattern. (3) Loses everywhere → Gauci is dominant; make it a correction.",
+   "branch_fired": "(2). Cell counts on §14's grid at τ = 600 s (paired ratio Gauci ÷ row; W = interval entirely above 1, L = entirely below):",
+   "headline": null,
+   "changed": "The c*(θ) baseline moved from Gauci to **S2-class-flat †**, with Gauci kept as the enumerated reference and as the row that owns the 3.0 m terrain corner. **Correction #15**: search the mission class, not one arena.",
+   "limitations": "recorded at the time. Two class searches, **one optimiser seed each** — §21 addresses this. The class is six points on two axes; λ, θ_m, τ and the arena are fixed, so \"transfers\" means \"transfers across start radius and swarm size\". S2-class-rough's training objective was truncated at the conditions it most needed to improve (**this diagnosis was wrong — see §20**). Both class rows are †. The doubled budget removes the direction of the confound with §9 but not its magnitude: 1200 evaluations over six conditions is 200 per condition against §9's 600. ---",
+   "figures": [
+    "terrain_class_search.png"
+   ],
+   "configs": [
+    "terrain_class_eval.toml",
+    "train_s2_class_flat.toml"
+   ]
+  },
+  {
+   "section": 20,
+   "title": "The τ-corrected class search: §19's diagnosis was wrong",
+   "commits": [
+    "3229c59",
+    "549ee04"
+   ],
+   "question": "§19 attributed its rough-trained class row's unmoved R₀ to a truncated training objective. Test it directly.",
+   "design": "`configs/search/train_s2_class_rough_tau.toml` — the same search with",
+   "pre_registered_rule": null,
+   "branch_fired": null,
+   "headline": "it changed nothing. R₀ moved **4.47 → 4.44 cm**. Cell counts: 6 W / 5 L / 1 tied against S2-class-rough's 7 / 5 / 0. What moved was the",
+   "changed": "Correction #15's third reporting requirement rewritten from \"was the training objective truncated\" to \"**is any one condition's per-evaluation estimate noisier than the differences the search must resolve**\", with the remedy being runs per condition or a variance-stabilising statistic, not a longer trial.",
+   "limitations": "One optimiser seed. The probe shows a better point exists; it does not locate the objective's optimum, so \"the objective prefers a large R₀\" is not established either. The noise figure is for one condition at one θ_m. Both class rows †. ---",
+   "figures": [
+    "terrain_class_tau.png"
+   ],
+   "configs": [
+    "terrain_class_tau_eval.toml",
+    "train_s2_class_rough_tau.toml"
+   ]
+  },
+  {
+   "section": 21,
+   "title": "Phase 0: the baseline scatters across optimiser seeds",
+   "commits": [
+    "ce427a8",
+    "2b736de"
+   ],
+   "question": "S2-class-flat is the c*(θ) baseline and was found by **one** optimiser seed. `docs/statistics.md` asks for two independent optimisers, or failing that independent runs of one, with their agreement reported.",
+   "design": "The seed-1 search repeated with optimiser seeds 2 and 3 under the identical protocol: sep-CMA-ES, 1200 × 12, the six-condition class `radius ∈ {0.74, 1.5, 3.0} m × n ∈ {20, 50}`, θ_m = 0, geometric mean of per-condition medians, and **the same training seed base, 910 000**. Only the optimiser seed differs. Evaluated by `configs/sweeps/phase0_seeds.toml` (§14's full held-out grid, 48 cells, 4 800 trials), `phase0_seeds_tau.toml` (the 3.0 m θ_m = 0.9 column at τ = 600, 1800, 3600 s, 2 400 trials) and `phase0_seeds_objective_probe.toml` (the honest re-score at 100 runs/condition on the training seeds, 2 400 trials).",
+   "pre_registered_rule": "(a) All three within CI of each other on every held-out cell **and** R₀ within 10% → a reproduced optimum; item 12 closes; seed 1 stays the baseline unless another seed dominates it. (b) They scatter → the baseline becomes **best-of-three † per cell**, the scatter is the baseline's uncertainty, and every downstream `c*(θ)` number is stated against best-of-three.",
+   "branch_fired": "(b). They scatter.",
+   "headline": null,
+   "changed": "The baseline is now **best-of-three † per cell** rather than a named row. §19's substance is strengthened — three independent searches, every one beating the enumerated reference in at least 9 of 12 cells, all three fixing the n = 50 flat-ground failure that defeated every single-condition row — and its naming of a single baseline row does not survive. Next-list item 12 closes with \"no: a reproduced *region*, not a reproduced optimum\".",
+   "limitations": "Three seeds reject \"reproduced optimum\" and do not characterise the distribution: the spread is a range over three draws, not an interval on the optimiser's variability. Two of the four disjoint cells differ by 0.02–0.03 — statistically disjoint at 100 runs, practically small, and both facts are reported. The scatter in the truncated cell is a τ artefact and is given at both trial lengths. **Still one optimiser**: three seeds of sep-CMA-ES share its diagonal covariance, so a bias common to that family would not show up. All three rows remain †. ---",
+   "figures": [
+    "phase0_seed_reproducibility.png"
+   ],
+   "configs": [
+    "phase0_seeds.toml",
+    "phase0_seeds_objective_probe.toml",
+    "phase0_seeds_tau.toml"
+   ]
+  }
+ ],
+ "claims": [
+  {
+   "id": "S1",
+   "grade": "SUPPORTED",
+   "claim": "Along the terrain dial, over 0 ≤ θ_m ≤ 0.9 at λ/R₀(gauci) = 0.69, the capability minimum does not move: c = (2,0,0,0) suffices at every point, at start radius 0.74 m and at 1.5 m.",
+   "sections": "§9, §13, §14"
+  },
+  {
+   "id": "S2",
+   "grade": "SUPPORTED",
+   "claim": "No S = 4 controller better than the searched S = 2 one was found at equal budget, including when warm-started at the S = 2 optimum.",
+   "sections": "§7, §10"
+  },
+  {
+   "id": "S3",
+   "grade": "SUPPORTED",
+   "claim": "A hand-built S = 4 composite that switches between the two S = 2 rows is worse than either at every θ_m, and reproduces Gauci exactly on flat ground.",
+   "sections": "§9"
+  },
+  {
+   "id": "S4",
+   "grade": "SUPPORTED",
+   "claim": "Terrain is a performance tax whose size depends mainly on how well matched the controller is: hold ratios 2.208 [1.904, 2.410] (Gauci), 1.195 [1.146, 1.265] (S2-flat), 1.104 [1.078, 1.150] (S2-rough) at θ_m = 0.9.",
+   "sections": "§13"
+  },
+  {
+   "id": "S5",
+   "grade": "SUPPORTED",
+   "claim": "Of the Gauci → S2-rough gap at θ_m = 0.9, 96.9% is objective-tuning and 3.1% terrain-tuning at R = 0.74 m, against 99.7% / 0.3% at 1.5 m.",
+   "sections": "§13, §14"
+  },
+  {
+   "id": "S6",
+   "grade": "SUPPORTED",
+   "claim": "A scalar speed field produces no degradation at all (pooled 0.980 [0.976, 0.986], no peak, flat within [0.96, 1.01]) where the per-wheel field peaks at 2.21 [1.90, 2.41].",
+   "sections": "§6"
+  },
+  {
+   "id": "S7",
+   "grade": "SUPPORTED",
+   "claim": "The heading-rate residual is the first-order per-wheel traction effect: slope 0.9943, R² 0.9999 at ℓ/λ = 0.128.",
+   "sections": "§11, §16"
+  },
+  {
+   "id": "S8",
+   "grade": "SUPPORTED",
+   "claim": "The quality of that linearisation collapses on ℓ/λ: max slope spread 0.0201 at matched ℓ/λ across a 4× range of λ, against a 0.86 range along the trend.",
+   "sections": "§16"
+  },
+  {
+   "id": "S9",
+   "grade": "SUPPORTED",
+   "claim": "The worst correlation length is not proportional to R₀: peak ratio 1.39 [0.72, 1.93] for a doubling of R₀, excluding 2.00.",
+   "sections": "§15, §17"
+  },
+  {
+   "id": "S10",
+   "grade": "SUPPORTED",
+   "claim": "Confusion acts through aggregation: κ 0 → 5 multiplies aggregating rows' survival ×3.05 and ×4.10 while a dispersive control with identical sensing gains ×1.20 and ×1.13.",
+   "sections": "§8"
+  },
+  {
+   "id": "S11",
+   "grade": "SUPPORTED",
+   "claim": "Beyond r_p ≈ 0.47 R the dispersive row survives far better, and confusion narrows but does not close the gap.",
+   "sections": "§8"
+  },
+  {
+   "id": "S12",
+   "grade": "SUPPORTED",
+   "claim": "At r_p = 0.47 R, κ = 3 the dispersive row is Pareto-dominated: every aggregating row beats it on both survival and the base task.",
+   "sections": "§12"
+  },
+  {
+   "id": "S13",
+   "grade": "SUPPORTED",
+   "claim": "Survival and base task differ by two orders of magnitude between strategies (380–505 against 1.43–1.63), so Idea B must be reported on two axes.",
+   "sections": "§12"
+  },
+  {
+   "id": "S14",
+   "grade": "SUPPORTED",
+   "claim": "A controller searched at one operating point can be worse than the published constants at another, and a longer trial does not fix it.",
+   "sections": "§14"
+  },
+  {
+   "id": "S15",
+   "grade": "SUPPORTED",
+   "claim": "Class-searched S2-class-flat † matches or beats the published constants on dispersion in every cell at matched trial length (10 W, 2 tied, 0 L) and loses reach only at the largest start radius under terrain.",
+   "sections": "§19"
+  },
+  {
+   "id": "S16",
+   "grade": "SUPPORTED",
+   "claim": "A training objective is the minimum of a noisy sample: reported 1.2595 with no held-out advantage (§10), and reported 1.6009 against an honest re-score of 2.6553 (§20).",
+   "sections": "§10, §20"
+  },
+  {
+   "id": "S17",
+   "grade": "SUPPORTED",
+   "claim": "At the worst training condition, the 2-run estimate the search saw spans 2.79 log units against a 0.48 log unit signal — noise 5.8× the signal.",
+   "sections": "§20"
+  },
+  {
+   "id": "S18",
+   "grade": "SUPPORTED",
+   "claim": "Reach and hold are different measurements: reach is 1.00 in every terrain cell except one runaway corner, and dispersion is invariant to the link distance while cluster metrics are not.",
+   "sections": "§2, §7, validation"
+  },
+  {
+   "id": "S19",
+   "grade": "SUPPORTED",
+   "claim": "The published derived quantities reproduce: R₀ = 14.45 cm to 5e-5 m, ω₀ = −0.75 and ω₁ = −5.02 rad/s to 5e-3 rad/s.",
+   "sections": "validation"
+  },
+  {
+   "id": "S20",
+   "grade": "SUPPORTED",
+   "claim": "Correlated and i.i.d. dropout must be compared at matched realised rate: at a nominal 0.6 the realised rate is 0.89, and most of the apparent difference disappears when binned by realised rate.",
+   "sections": "§1"
+  },
+  {
+   "id": "S21",
+   "grade": "SUPPORTED",
+   "claim": "H1 is null across three independent tests: actuation noise, the coarse terrain grid, and a dense 200-runs/cell neighbourhood of zero in which 0 of 23 cells has an interval disjoint from baseline.",
+   "sections": "§2, §3, ADR 0004"
+  },
+  {
+   "id": "S22",
+   "grade": "SUPPORTED",
+   "claim": "A class search reliably produces a controller that beats the enumerated reference across the grid — three independent optimiser seeds score 9/2/1, 10/0/2 and 10/1/1 W/L/tied — but the returned controllers scatter: R₀ spans 16.9% and 4 of 12 held-out cells contain a disjoint pair, so no single row is *the* baseline.",
+   "sections": "§21"
+  },
+  {
+   "id": "G1",
+   "grade": "SUGGESTED",
+   "claim": "The worst correlation length is the body diameter.",
+   "required_hedge": "\"Peak λ tracks body diameter over a 2× range (1.01 and 0.97 diameters, log-log slope 0.948 [0.474, 1.897]), on the two body sizes that aggregate at this start radius. Three lengths scale with the body and are not separated here: the body as an obstacle, the cluster link distance at 1.5 body diameters, and the occlusion footprint. Including the smallest body — which reaches a cluster in at most 72% of runs — lowers the slope to 0.474. No mechanism is proposed.\"",
+   "sections": "§18"
+  },
+  {
+   "id": "G2",
+   "grade": "SUGGESTED",
+   "claim": "The length scale is *fixed* rather than sub-proportional in R₀.",
+   "required_hedge": "\"Proportionality is rejected; a weak sub-proportional dependence is not excluded — the point estimate is 1.39 with an interval spanning 0.72 to 1.93, and peaks are located only to a log grid of ratio 1.39.\"",
+   "sections": "§17"
+  },
+  {
+   "id": "G3",
+   "grade": "SUGGESTED",
+   "claim": "S2-class-flat is a better point on the rough class's objective than the rough-trained row.",
+   "required_hedge": "\"S2-class-flat is a better point on the rough objective than the rough-trained row — 1.6456 against 2.6553 at 100 runs per condition on the rough search's own training seeds — which shows the search did not find its own optimum. It does not locate that optimum, so 'the objective prefers a large R₀' is not established.\"",
+   "sections": "§20"
+  },
+  {
+   "id": "G4",
+   "grade": "SUGGESTED",
+   "claim": "One sensor state (pursuer-vs-robot) is worth more than anything else on the capability axis.",
+   "required_hedge": "\"…among the hand-designed rows tried. B1–B3 are ‡, so this is a lower bound on what S = 3 offers, not a measurement of it, and B2's poor showing at S = 5 is a hand-design artefact and not evidence that more sensing hurts.\"",
+   "sections": "§5"
+  },
+  {
+   "id": "G5",
+   "grade": "SUGGESTED",
+   "claim": "Smaller R₀ causes slower gathering.",
+   "required_hedge": "\"Time to first cluster is monotone in R₀ across the five rows measured (140, 245, 280, 330, 340 s at 3.0 m on flat ground for R₀ = 14.45, 7.47, 5.53, 4.74, 4.47 cm); R₀ was never swept as a dial in its own right, so this is an association across five controllers rather than a controlled measurement.\"",
+   "sections": "§14, §19"
+  },
+  {
+   "id": "G6",
+   "grade": "SUGGESTED",
+   "claim": "The class-search ingredients (geometric-mean objective, doubled budget) are what made it work.",
+   "required_hedge": "\"Neither was ablated; the row that transfers used both.\"",
+   "sections": "§19"
+  },
+  {
+   "id": "G7",
+   "grade": "SUGGESTED",
+   "claim": "More runs per condition would fix the class search's noise floor.",
+   "required_hedge": "\"The remedy follows from the measurement but was not run.\"",
+   "sections": "§20"
+  },
+  {
+   "id": "G8",
+   "grade": "SUGGESTED",
+   "claim": "A scalar speed field aggregates ~2% better than flat ground.",
+   "required_hedge": "\"Pooled 0.980 [0.976, 0.986], an interval excluding 1.0. Reported and not chased; it is not in H1's direction and 2% is at the edge of what the design resolves.\"",
+   "sections": "§6"
+  },
+  {
+   "id": "G9",
+   "grade": "SUGGESTED",
+   "claim": "The n = 3 / n = 4 reach dip is Daymude-style deadlock.",
+   "required_hedge": "\"Recorded, not claimed. n = 3 and n = 4 reach a single cluster far less often than n = 2 or n = 5 and the dip does not close with time; the simpler explanation is combinatorial, and distinguishing the two needs the deadlock configurations checked directly.\"",
+   "sections": "validation §2"
+  },
+  {
+   "id": "G10",
+   "grade": "SUGGESTED",
+   "claim": "The axle acts as a spatial gradient sensor, connecting to Berg & Purcell.",
+   "required_hedge": "\"The exact decomposition shows the residual is v·∂m/∂n + ω·(m(centre) − 1), so the axle does read a spatial difference — but the mean-traction term is roughly ten times the gradient term at these constants, and no temporal-versus-spatial comparison was run. Use as an observation, not a result.\"",
+   "sections": "§11"
+  },
+  {
+   "id": "N1",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"Small amounts of terrain or noise help aggregation\" (H1).",
+   "why_dead": "Three independent nulls; 0 of 23 cells in a 200-runs/cell neighbourhood of zero has an interval disjoint from baseline. Daymude et al.'s mechanism is contact-deadlock breaking in a discrete model, and this continuous model shows no sign of such a deadlock at n = 20. (§2, §3, correction #5)"
+  },
+  {
+   "id": "N2",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"The terrain bit cuts degradation from 2.21 to 1.22.\"",
+   "why_dead": "True only without the S2-searched control. With it, the searched S = 2 row reaches 1.10 [1.08, 1.15] and the S = 4 row is *worse* with disjoint intervals. (§7)"
+  },
+  {
+   "id": "N3",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"More sensor states hurt\" (from B2 at S = 5 scoring below B1 at S = 3).",
+   "why_dead": "B2's table is a hand-written guess ‡. It says no good five-state controller was found by hand. (§5)"
+  },
+  {
+   "id": "N4",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"Re-tuning solves the terrain problem.\"",
+   "why_dead": "It recovers the loss, but 96.9% of the recovery is objective-tuning and 3.1% terrain-tuning at R = 0.74 m — 99.7% / 0.3% at 1.5 m — and the terrain share reverses sign on flat ground. (§13, §14, correction #11)"
+  },
+  {
+   "id": "N5",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"The re-searched controller is the better controller.\"",
+   "why_dead": "It is better only near the initial condition it was searched in; at 4× the training start radius it fails outright, and at n = 50 it is worse than the published constants on flat ground at every radius. (§14)"
+  },
+  {
+   "id": "N6",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"The terrain effect peaks at λ/R₀ ≈ 0.7 for any controller.\"",
+   "why_dead": "Two controllers differing threefold in R₀ peak at the same λ in metres, and inside one family doubling R₀ moves the peak by 1.39× [0.72, 1.93], excluding 2.00. §4's result stands as measured for Gauci's R₀ and loses its generalisation. (§15, §17, correction #13)"
+  },
+  {
+   "id": "N7",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"There is a trade-off between flat-trained and rough-trained controllers that a terrain bit could arbitrate.\"",
+   "why_dead": "The crossing exists at the tuned start radius and is gone at twice it — branch (b), not (c). (§13, §14)"
+  },
+  {
+   "id": "N8",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"The rough class row failed because its training objective was truncated.\"",
+   "why_dead": "Removing the truncation moved R₀ from 4.47 to 4.44 cm and made the row slightly worse. The cause is the noise floor. (§19's diagnosis, refuted in §20)"
+  },
+  {
+   "id": "N9",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"Correlated dropout is much worse than i.i.d. dropout.\"",
+   "why_dead": "At matched *realised* rate most of the difference disappears; the apparent gap is the nominal rate not being the realised one (0.89 at a nominal 0.6). A genuine extra penalty appears only above a realised ~0.8. (§1)"
+  },
+  {
+   "id": "N10",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"Two robots always aggregate\" (Gauci et al. Theorem 3), and any check built on it.",
+   "why_dead": "The proof is unsound (Steinberg & Solovey 2024); the same controller fails on 4.24% of two-robot trials. This repository's small-n gate row failed for two weeks because of it. (validation, correction #1)"
+  },
+  {
+   "id": "N11",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"The θ_m = 1.25–1.5 band shows terrain destroying aggregation.\"",
+   "why_dead": "That band is wheel stall, not terrain: the field reaches \\"
+  },
+  {
+   "id": "N12",
+   "grade": "NOT_SUPPORTED",
+   "claim": "\"A wider sensor cone fixes the small-n failure.\"",
+   "why_dead": "It is not what Gauci did, and under the corrected criterion widening the cone makes n = 2 worse (reach 0.90 → 0.17). (validation §2)"
+  }
+ ],
+ "numbers": [
+  {
+   "id": 1,
+   "quantity": "e-puck body diameter",
+   "value": "7.4",
+   "ci": null,
+   "unit": "cm",
+   "source_section": "model",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 2,
+   "quantity": "inter-wheel distance (axle)",
+   "value": "5.1",
+   "ci": null,
+   "unit": "cm",
+   "source_section": "model, corrected from 5.3",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 3,
+   "quantity": "wheel speed limit",
+   "value": "±12.8",
+   "ci": null,
+   "unit": "cm/s",
+   "source_section": "model",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 4,
+   "quantity": "control cycle",
+   "value": "0.1",
+   "ci": null,
+   "unit": "s",
+   "source_section": "model",
+   "commit": "e175acb"
+  },
+  {
+   "id": 5,
+   "quantity": "state-0 turn radius R₀ (Gauci)",
+   "value": "14.45",
+   "ci": "reproduced to 5e-5 m",
+   "unit": "cm",
+   "source_section": "validation",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 6,
+   "quantity": "ω₀",
+   "value": "−0.75",
+   "ci": "to 5e-3 rad/s",
+   "unit": "rad/s",
+   "source_section": "validation",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 7,
+   "quantity": "ω₁",
+   "value": "−5.02",
+   "ci": "to 5e-3 rad/s",
+   "unit": "rad/s",
+   "source_section": "validation",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 8,
+   "quantity": "Gauci two-robot failure rate (Steinberg & Solovey)",
+   "value": "4.24",
+   "ci": null,
+   "unit": "%",
+   "source_section": "correction #1",
+   "commit": "82c8d06"
+  },
+  {
+   "id": 9,
+   "quantity": "pairs reaching contact here",
+   "value": "93",
+   "ci": null,
+   "unit": "%",
+   "source_section": "validation",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 10,
+   "quantity": "pairs still touching at τ here",
+   "value": "~10",
+   "ci": null,
+   "unit": "%",
+   "source_section": "validation",
+   "commit": "47a5dd5"
+  },
+  {
+   "id": 11,
+   "quantity": "reach at n = 2 / 5 / 10+",
+   "value": "0.88 / 0.98 / 1.00",
+   "ci": null,
+   "unit": null,
+   "source_section": "validation §1",
+   "commit": "2441bfc"
+  },
+  {
+   "id": 12,
+   "quantity": "clean-arena dispersion at n = 20",
+   "value": "1.43",
+   "ci": null,
+   "unit": null,
+   "source_section": "validation §1",
+   "commit": "2441bfc"
+  },
+  {
+   "id": 13,
+   "quantity": "dispersion invariance to link distance (2.2 R → 6.0 R)",
+   "value": "1.401 at every value",
+   "ci": null,
+   "unit": null,
+   "source_section": "validation §3",
+   "commit": "2441bfc"
+  },
+  {
+   "id": 14,
+   "quantity": "single-cluster share over the same range",
+   "value": "0.43 → 0.98",
+   "ci": null,
+   "unit": null,
+   "source_section": "validation §3",
+   "commit": "2441bfc"
+  },
+  {
+   "id": 15,
+   "quantity": "field median \\|f\\|",
+   "value": "0.3476",
+   "ci": "max 0.9998, p99 0.9332",
+   "unit": null,
+   "source_section": "model",
+   "commit": "c137593"
+  },
+  {
+   "id": 16,
+   "quantity": "θ_m ceiling",
+   "value": "0.9 (sweeps), 1.0 (figures)",
+   "ci": null,
+   "unit": null,
+   "source_section": "correction #10",
+   "commit": "42a746a"
+  },
+  {
+   "id": 17,
+   "quantity": "traction floor",
+   "value": "0.05",
+   "ci": "never binds in range",
+   "unit": null,
+   "source_section": "model",
+   "commit": "e83675e"
+  },
+  {
+   "id": 18,
+   "quantity": "H1 fine sweep: cells with an interval disjoint from baseline",
+   "value": "0 of 23",
+   "ci": null,
+   "unit": null,
+   "source_section": "§3",
+   "commit": "c137593"
+  },
+  {
+   "id": 19,
+   "quantity": "H1 fine sweep: whole-grid range",
+   "value": "1.385–1.430",
+   "ci": null,
+   "unit": null,
+   "source_section": "§3",
+   "commit": "c137593"
+  },
+  {
+   "id": 20,
+   "quantity": "occlusion: realised FN rate at nominal 0.6 (correlated)",
+   "value": "0.89",
+   "ci": null,
+   "unit": null,
+   "source_section": "§1",
+   "commit": "24ca1ac"
+  },
+  {
+   "id": 21,
+   "quantity": "occlusion: correlated vs i.i.d. at matched realised 0.85–0.95",
+   "value": "4.68 vs 3.32",
+   "ci": null,
+   "unit": null,
+   "source_section": "§1",
+   "commit": "24ca1ac"
+  },
+  {
+   "id": 22,
+   "quantity": "H2: peak λ/R₀, four of five rows",
+   "value": "0.69",
+   "ci": null,
+   "unit": null,
+   "source_section": "§4",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 23,
+   "quantity": "H2: peak-degradation spread, axle 4× at fixed R₀",
+   "value": "5",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§4",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 24,
+   "quantity": "H2: peak-degradation spread, R₀ 4× at fixed axle",
+   "value": "560",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§4",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 25,
+   "quantity": "mechanism: per-wheel pooled degradation",
+   "value": "1.175",
+   "ci": "[1.154, 1.190]",
+   "unit": null,
+   "source_section": "§6",
+   "commit": "e83675e"
+  },
+  {
+   "id": 26,
+   "quantity": "mechanism: scalar-centre pooled",
+   "value": "0.980",
+   "ci": "[0.976, 0.986]",
+   "unit": null,
+   "source_section": "§6",
+   "commit": "e83675e"
+  },
+  {
+   "id": 27,
+   "quantity": "mechanism: per-wheel peak at λ/R₀ = 0.69, θ_m = 0.9",
+   "value": "2.21",
+   "ci": "[1.90, 2.41]",
+   "unit": null,
+   "source_section": "§6",
+   "commit": "e83675e"
+  },
+  {
+   "id": 28,
+   "quantity": "H3: hold ratio at θ_m = 0.9, S2-gauci",
+   "value": "2.21",
+   "ci": "[1.90, 2.41]",
+   "unit": null,
+   "source_section": "§7",
+   "commit": "9af4707"
+  },
+  {
+   "id": 29,
+   "quantity": "H3: S2-searched †",
+   "value": "1.10",
+   "ci": "[1.08, 1.15]",
+   "unit": null,
+   "source_section": "§7",
+   "commit": "9af4707"
+  },
+  {
+   "id": 30,
+   "quantity": "H3: S4-terrain †",
+   "value": "1.22",
+   "ci": "[1.16, 1.26]",
+   "unit": null,
+   "source_section": "§7",
+   "commit": "9af4707"
+  },
+  {
+   "id": 31,
+   "quantity": "H3: reach at the worst cell, S2-gauci",
+   "value": "0.86",
+   "ci": "[0.79, 0.93]",
+   "unit": null,
+   "source_section": "§7",
+   "commit": "9af4707"
+  },
+  {
+   "id": 32,
+   "quantity": "search budget, single-condition rows",
+   "value": "600 × 12 = 7 200",
+   "ci": null,
+   "unit": "runs",
+   "source_section": "§7",
+   "commit": "9af4707"
+  },
+  {
+   "id": 33,
+   "quantity": "R₀ after searching at θ_m = 0.9",
+   "value": "4.74",
+   "ci": null,
+   "unit": "cm",
+   "source_section": "§7, §13",
+   "commit": "9af4707"
+  },
+  {
+   "id": 34,
+   "quantity": "Idea B: median survival fraction over the grid, B0",
+   "value": "0.350",
+   "ci": "[0.300, 0.375]",
+   "unit": null,
+   "source_section": "§5",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 35,
+   "quantity": "…B1 ‡",
+   "value": "0.650",
+   "ci": "[0.600, 0.700]",
+   "unit": null,
+   "source_section": "§5",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 36,
+   "quantity": "…B2 ‡",
+   "value": "0.450",
+   "ci": "[0.450, 0.525]",
+   "unit": null,
+   "source_section": "§5",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 37,
+   "quantity": "…B3 ‡",
+   "value": "0.700",
+   "ci": "[0.650, 0.750]",
+   "unit": null,
+   "source_section": "§5",
+   "commit": "9b0b994"
+  },
+  {
+   "id": 38,
+   "quantity": "Idea B wipeout share (§5 / §8)",
+   "value": "8.8 / 29",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§5, §8",
+   "commit": "9b0b994, c5203f4"
+  },
+  {
+   "id": 39,
+   "quantity": "start radius at n = 20",
+   "value": "0.74",
+   "ci": null,
+   "unit": "m",
+   "source_section": "model",
+   "commit": "e175acb"
+  },
+  {
+   "id": 40,
+   "quantity": "r_p / R at r_p = 1.0 m",
+   "value": "1.35",
+   "ci": null,
+   "unit": null,
+   "source_section": "§5",
+   "commit": "c65abe2"
+  },
+  {
+   "id": 41,
+   "quantity": "pursuer inter-neighbour travel time",
+   "value": "0.385",
+   "ci": null,
+   "unit": "s",
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 42,
+   "quantity": "κ-response, B0 at h = 0.39 s",
+   "value": "×3.05",
+   "ci": "0.180 → 0.548",
+   "unit": null,
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 43,
+   "quantity": "κ-response, B0 at h = 1.93 s",
+   "value": "×4.10",
+   "ci": "0.144 → 0.592",
+   "unit": null,
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 44,
+   "quantity": "κ-response, B1 ‡",
+   "value": "×2.23 / ×1.91",
+   "ci": "0.258 → 0.575 / 0.328 → 0.628",
+   "unit": null,
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 45,
+   "quantity": "κ-response, D ‡",
+   "value": "×1.20 / ×1.13",
+   "ci": "0.530 → 0.638 / 0.591 → 0.666",
+   "unit": null,
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 46,
+   "quantity": "survival at r_p = 0.35 m (0.47 R), h = 1.93, B0 / B1 ‡ / D ‡",
+   "value": "0.00 / 0.55 / 0.65",
+   "ci": "[0.00, 0.23] / [0.45, 0.65] / [0.60, 0.65]",
+   "unit": null,
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 47,
+   "quantity": "D's state-0 arc",
+   "value": "99.45 (≈99)",
+   "ci": null,
+   "unit": "cm",
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 48,
+   "quantity": "time to wipeout at r_p = 0.35 m, κ = 0, B0",
+   "value": "46.6",
+   "ci": "n = 94",
+   "unit": "s",
+   "source_section": "§8",
+   "commit": "c5203f4"
+  },
+  {
+   "id": 49,
+   "quantity": "§9: dispersion at θ_m = 0, S2-gauci",
+   "value": "1.427",
+   "ci": "[1.399, 1.467]",
+   "unit": null,
+   "source_section": "§9",
+   "commit": "f7376de"
+  },
+  {
+   "id": 50,
+   "quantity": "§9: …S2-searched †",
+   "value": "1.253",
+   "ci": "[1.234, 1.283]",
+   "unit": null,
+   "source_section": "§9",
+   "commit": "f7376de"
+  },
+  {
+   "id": 51,
+   "quantity": "§9: dispersion at θ_m = 0.9, S2-gauci",
+   "value": "3.150",
+   "ci": "[2.716, 3.439]",
+   "unit": null,
+   "source_section": "§9",
+   "commit": "f7376de"
+  },
+  {
+   "id": 52,
+   "quantity": "§9: …S2-searched †",
+   "value": "1.383",
+   "ci": "[1.350, 1.441]",
+   "unit": null,
+   "source_section": "§9",
+   "commit": "f7376de"
+  },
+  {
+   "id": 53,
+   "quantity": "§9: …S4-composite ‡",
+   "value": "1.999",
+   "ci": "[1.861, 2.143]",
+   "unit": null,
+   "source_section": "§9",
+   "commit": "f7376de"
+  },
+  {
+   "id": 54,
+   "quantity": "§9: S2-searched improvement on flat ground",
+   "value": "12.2",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§9",
+   "commit": "f7376de"
+  },
+  {
+   "id": 55,
+   "quantity": "§10: S4-warm at the peak",
+   "value": "1.412",
+   "ci": "[1.349, 1.503]",
+   "unit": null,
+   "source_section": "§10",
+   "commit": "6989a91"
+  },
+  {
+   "id": 56,
+   "quantity": "§10: warm-start training objective",
+   "value": "1.2595",
+   "ci": null,
+   "unit": null,
+   "source_section": "§10",
+   "commit": "6989a91"
+  },
+  {
+   "id": 57,
+   "quantity": "§10: cold S4 / S2 training objectives",
+   "value": "1.3012 / 1.3009",
+   "ci": null,
+   "unit": null,
+   "source_section": "§10",
+   "commit": "6989a91"
+  },
+  {
+   "id": 58,
+   "quantity": "§10: warm-start L2 from its start",
+   "value": "0.464",
+   "ci": "halves diverged ≤ 0.254",
+   "unit": null,
+   "source_section": "§10",
+   "commit": "6989a91"
+  },
+  {
+   "id": 59,
+   "quantity": "§11: full-expansion slope at ℓ/λ = 0.25",
+   "value": "0.976",
+   "ci": "R² 0.9983",
+   "unit": null,
+   "source_section": "§11",
+   "commit": "f73cc8a"
+  },
+  {
+   "id": 60,
+   "quantity": "§11: at ℓ/λ = 0.51 (three rows, R₀ 4× apart)",
+   "value": "0.900 / 0.894 / 0.901",
+   "ci": "agree to 0.007",
+   "unit": null,
+   "source_section": "§11",
+   "commit": "f73cc8a"
+  },
+  {
+   "id": 61,
+   "quantity": "§11: at ℓ/λ = 1.02",
+   "value": "0.623",
+   "ci": "R² 0.7373",
+   "unit": null,
+   "source_section": "§11",
+   "commit": "f73cc8a"
+  },
+  {
+   "id": 62,
+   "quantity": "§11: gradient-only slopes / R²",
+   "value": "0.52–0.81 / 0.02–0.28",
+   "ci": null,
+   "unit": null,
+   "source_section": "§11",
+   "commit": "f73cc8a"
+  },
+  {
+   "id": 63,
+   "quantity": "§11: mean-traction term relative to gradient term",
+   "value": "~10×",
+   "ci": null,
+   "unit": null,
+   "source_section": "§11",
+   "commit": "f73cc8a"
+  },
+  {
+   "id": 64,
+   "quantity": "§11/§16: robot-timesteps pooled per point",
+   "value": "12 000 000",
+   "ci": null,
+   "unit": null,
+   "source_section": "§11, §16",
+   "commit": "f73cc8a"
+  },
+  {
+   "id": 65,
+   "quantity": "§12: D's dispersion across cells",
+   "value": "379.9 / 386.3 / 504.8",
+   "ci": "[344.3, 399.9] / [357.9, 431.3] / [432.9, 613.9]",
+   "unit": null,
+   "source_section": "§12",
+   "commit": "91b8d57"
+  },
+  {
+   "id": 66,
+   "quantity": "§12: aggregating rows' dispersion",
+   "value": "1.43–1.63",
+   "ci": null,
+   "unit": null,
+   "source_section": "§12",
+   "commit": "91b8d57"
+  },
+  {
+   "id": 67,
+   "quantity": "§12: survival at r_p = 0.47 R, κ = 3, aggregating vs D ‡",
+   "value": "0.80–0.85 vs 0.65",
+   "ci": null,
+   "unit": null,
+   "source_section": "§12",
+   "commit": "91b8d57"
+  },
+  {
+   "id": 68,
+   "quantity": "§13: decomposition, objective-tuning share",
+   "value": "96.9 (99.7 at 1.5 m)",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§13, §14",
+   "commit": "9fa30a5, d0d95c3"
+  },
+  {
+   "id": 69,
+   "quantity": "§13: decomposition, terrain-tuning share",
+   "value": "3.1 (0.3 at 1.5 m)",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§13, §14",
+   "commit": "9fa30a5, d0d95c3"
+  },
+  {
+   "id": 70,
+   "quantity": "§13: terrain-tuning cost on flat ground",
+   "value": "4.1",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§13",
+   "commit": "9fa30a5"
+  },
+  {
+   "id": 71,
+   "quantity": "§13: hold ratio at θ_m = 0.9 (ratio of medians)",
+   "value": "2.208 / 1.195 / 1.104",
+   "ci": "[1.904, 2.410] / [1.146, 1.265] / [1.078, 1.150]",
+   "unit": null,
+   "source_section": "§13",
+   "commit": "9fa30a5"
+  },
+  {
+   "id": 72,
+   "quantity": "§13/§14: the same, as median of paired ratios",
+   "value": "2.149 / 1.200 / 1.099",
+   "ci": "[1.853, 2.455] / [1.124, 1.272] / [1.044, 1.145]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 73,
+   "quantity": "§13: crossing, S2-rough better at θ_m = 0.6",
+   "value": "+0.0421",
+   "ci": "[+0.0107, +0.0659]",
+   "unit": "dispersion",
+   "source_section": "§13",
+   "commit": "9fa30a5"
+  },
+  {
+   "id": 74,
+   "quantity": "§14: same cell re-run at 1.5 m",
+   "value": "−0.0008",
+   "ci": "[−0.0134, +0.0433]",
+   "unit": "dispersion",
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 75,
+   "quantity": "§14: paired ratio vs Gauci, θ_m = 0.9, n = 20, R = 0.74 m",
+   "value": "1.942 / 2.129",
+   "ci": "[1.645, 2.267] / [1.807, 2.446]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 76,
+   "quantity": "§14: …at 3.0 m, τ = 600 s",
+   "value": "0.296 / 0.137",
+   "ci": "[0.170, 0.638] / [0.098, 0.210]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 77,
+   "quantity": "§14: reach at 3.0 m, θ_m = 0.9, τ = 600 s",
+   "value": "0.46 / 0.23 / 0.11",
+   "ci": "[0.37, 0.56] / [0.16, 0.32] / [0.06, 0.19]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 78,
+   "quantity": "§14: the same at τ = 3600 s",
+   "value": "1.00 / 0.60 / 0.34",
+   "ci": "[0.96, 1.00] / [0.50, 0.69] / [0.25, 0.44]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 79,
+   "quantity": "§14: S2-rough paired ratio at τ = 600/1800/3600 s",
+   "value": "0.137 / 0.141 / 0.148",
+   "ci": null,
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 80,
+   "quantity": "§14: n = 50 flat-ground paired ratios (0.74 / 1.5 / 3.0 m), S2-flat",
+   "value": "0.973 / 0.870 / 0.775",
+   "ci": "[0.956, 0.979] / [0.834, 0.883] / [0.738, 0.834]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 81,
+   "quantity": "§14: the same after τ = 3600 s",
+   "value": "0.839",
+   "ci": "[0.795, 0.880]",
+   "unit": null,
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 82,
+   "quantity": "§14: gather time on flat ground at 3.0 m, n = 20",
+   "value": "140 / 280 / 330",
+   "ci": "[130,150] / [260,295] / [310,345]",
+   "unit": "s",
+   "source_section": "§14",
+   "commit": "d0d95c3"
+  },
+  {
+   "id": 83,
+   "quantity": "§15: shared peak λ",
+   "value": "7.46",
+   "ci": null,
+   "unit": "cm",
+   "source_section": "§15",
+   "commit": "628570b"
+  },
+  {
+   "id": 84,
+   "quantity": "§15: that peak as λ/R₀",
+   "value": "0.52 (Gauci) / 1.57 (S2-rough †)",
+   "ci": null,
+   "unit": null,
+   "source_section": "§15",
+   "commit": "628570b"
+  },
+  {
+   "id": 85,
+   "quantity": "§15: hold ratio at the peak",
+   "value": "2.505 / 1.121",
+   "ci": "[2.263, 2.822] / [1.090, 1.222]",
+   "unit": null,
+   "source_section": "§15",
+   "commit": "628570b"
+  },
+  {
+   "id": 86,
+   "quantity": "§15: flat-ground invariance across eight λ",
+   "value": "1.4267 / 1.2530, spread 0",
+   "ci": null,
+   "unit": null,
+   "source_section": "§15",
+   "commit": "628570b"
+  },
+  {
+   "id": 87,
+   "quantity": "§16: slope at ℓ/λ = 0.128",
+   "value": "0.9943",
+   "ci": "R² 0.9999",
+   "unit": null,
+   "source_section": "§16",
+   "commit": "20d79b4"
+  },
+  {
+   "id": 88,
+   "quantity": "§16: slope at ℓ/λ = 2.04",
+   "value": "0.1351",
+   "ci": "R² 0.0870",
+   "unit": null,
+   "source_section": "§16",
+   "commit": "20d79b4"
+  },
+  {
+   "id": 89,
+   "quantity": "§16: max slope spread at matched ℓ/λ",
+   "value": "0.0201",
+   "ci": "0.0001 at ℓ/λ = 0.255",
+   "unit": null,
+   "source_section": "§16",
+   "commit": "20d79b4"
+  },
+  {
+   "id": 90,
+   "quantity": "§16: that spread as a share of the trend's range",
+   "value": "2.3",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§16",
+   "commit": "20d79b4"
+  },
+  {
+   "id": 91,
+   "quantity": "§17: peak ratio for a doubling of R₀",
+   "value": "1.39",
+   "ci": "[0.72, 1.93]",
+   "unit": null,
+   "source_section": "§17",
+   "commit": "9335c56"
+  },
+  {
+   "id": 92,
+   "quantity": "§17: peaks, R₀ 7.23 / 14.45 cm",
+   "value": "5.37 / 7.46",
+   "ci": "[3.86, 10.36] / [5.37, 7.46]",
+   "unit": "cm",
+   "source_section": "§17",
+   "commit": "9335c56"
+  },
+  {
+   "id": 93,
+   "quantity": "§17: R₀-x2 row's reach ceiling, and its flat-ground dispersion",
+   "value": "0.73; 2.902",
+   "ci": null,
+   "unit": null,
+   "source_section": "§17",
+   "commit": "9335c56"
+  },
+  {
+   "id": 94,
+   "quantity": "§17: validity window",
+   "value": "reach ≥ 0.8 at θ_m = 0.9",
+   "ci": null,
+   "unit": null,
+   "source_section": "§17",
+   "commit": "9335c56"
+  },
+  {
+   "id": 95,
+   "quantity": "§18: peak λ / body diameter, 7.4 and 14.8 cm bodies",
+   "value": "1.01 / 0.97",
+   "ci": "peaks 7.46 [5.37, 7.46] and 14.39 [10.36, 20.00] cm",
+   "unit": null,
+   "source_section": "§18",
+   "commit": "5b72abc"
+  },
+  {
+   "id": 96,
+   "quantity": "§18: log-log slope of peak λ on body diameter",
+   "value": "0.948",
+   "ci": "[0.474, 1.897]",
+   "unit": null,
+   "source_section": "§18",
+   "commit": "5b72abc"
+  },
+  {
+   "id": 97,
+   "quantity": "§18: the same including the non-aggregating body",
+   "value": "0.474",
+   "ci": null,
+   "unit": null,
+   "source_section": "§18",
+   "commit": "5b72abc"
+  },
+  {
+   "id": 98,
+   "quantity": "§18: smallest body's reach ceiling; flat-ground dispersion",
+   "value": "0.72; 3.057",
+   "ci": "against 1.427 for the base body",
+   "unit": null,
+   "source_section": "§18",
+   "commit": "5b72abc"
+  },
+  {
+   "id": 99,
+   "quantity": "§18: packing fraction across the three bodies",
+   "value": "0.0125 / 0.05 / 0.20",
+   "ci": null,
+   "unit": null,
+   "source_section": "§18",
+   "commit": "5b72abc"
+  },
+  {
+   "id": 100,
+   "quantity": "§19: class budget",
+   "value": "1200 × 12 = 14 400",
+   "ci": "double §9's",
+   "unit": "runs",
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 101,
+   "quantity": "§19: S2-class-flat R₀",
+   "value": "7.47",
+   "ci": "from S2-flat's 5.53",
+   "unit": "cm",
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 102,
+   "quantity": "§19: S2-class-rough R₀",
+   "value": "4.47",
+   "ci": "from S2-rough's 4.74",
+   "unit": "cm",
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 103,
+   "quantity": "§19: cell counts at τ = 600 s (W / L / tied)",
+   "value": "9 / 2 / 1",
+   "ci": "S2-flat 7/4/1, S2-rough 7/5/0, S2-class-rough 7/5/0",
+   "unit": "of 12",
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 104,
+   "quantity": "§19: n = 50 flat-ground ratios, S2-class-flat",
+   "value": "1.026 / 1.016 / 0.999",
+   "ci": "[1.020, 1.033] / [1.009, 1.023] / [0.991, 1.008]",
+   "unit": null,
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 105,
+   "quantity": "§19: 3.0 m, n = 20, τ = 3600 s, S2-class-flat ratio",
+   "value": "1.436",
+   "ci": "[1.249, 1.673]",
+   "unit": null,
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 106,
+   "quantity": "§19: the same at n = 50",
+   "value": "1.063",
+   "ci": "[0.934, 1.172]",
+   "unit": null,
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 107,
+   "quantity": "§19: reach there, Gauci vs S2-class-flat",
+   "value": "1.00 vs 0.86; 1.00 vs 0.95",
+   "ci": "[0.96,1.00] vs [0.78,0.91]; [0.96,1.00] vs [0.89,0.98]",
+   "unit": null,
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 108,
+   "quantity": "§19: gather time vs R₀, five rows",
+   "value": "140 / 245 / 280 / 330 / 340",
+   "ci": "R₀ 14.45 / 7.47 / 5.53 / 4.74 / 4.47 cm",
+   "unit": "s",
+   "source_section": "§19",
+   "commit": "e6c4145"
+  },
+  {
+   "id": 109,
+   "quantity": "§20: R₀ before and after removing the truncation",
+   "value": "4.47 → 4.44",
+   "ci": null,
+   "unit": "cm",
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 110,
+   "quantity": "§20: cell counts",
+   "value": "6 / 5 / 1",
+   "ci": "against 7 / 5 / 0",
+   "unit": "of 12",
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 111,
+   "quantity": "§20: reach at the targeted cell, τ = 3600 s",
+   "value": "0.26",
+   "ci": "[0.18, 0.35]",
+   "unit": null,
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 112,
+   "quantity": "§20: objective re-score, S2-class-flat vs the returned row",
+   "value": "1.6456 vs 2.6553",
+   "ci": "100 runs/condition",
+   "unit": null,
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 113,
+   "quantity": "§20: the returned row's reported training objective",
+   "value": "1.6009",
+   "ci": "against 2.6553 honest",
+   "unit": null,
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 114,
+   "quantity": "§20: 2-run estimate spread at the worst condition",
+   "value": "2.79",
+   "ci": "6.98 → 114.07",
+   "unit": "log units",
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 115,
+   "quantity": "§20: the signal it had to resolve",
+   "value": "0.48",
+   "ci": null,
+   "unit": "log units",
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 116,
+   "quantity": "§20: noise-to-signal ratio",
+   "value": "5.8×",
+   "ci": null,
+   "unit": null,
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 117,
+   "quantity": "§20: dispersion range at that condition, 100 runs",
+   "value": "1.14 – 242.50",
+   "ci": "quartiles 13.69 / 73.59",
+   "unit": null,
+   "source_section": "§20",
+   "commit": "3229c59"
+  },
+  {
+   "id": 118,
+   "quantity": "§21: R₀ returned by seeds 1 / 2 / 3",
+   "value": "7.47 / 8.88 / 8.64",
+   "ci": "spread 1.41 cm = 16.9% of the mean",
+   "unit": "cm",
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 119,
+   "quantity": "§21: pre-registered agreement rule on R₀",
+   "value": "10",
+   "ci": null,
+   "unit": "%",
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 120,
+   "quantity": "§21: held-out cells containing a disjoint pair of seeds",
+   "value": "4 of 12",
+   "ci": null,
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 121,
+   "quantity": "§21: cell counts against the reference, seeds 1 / 2 / 3 (W/L/tied)",
+   "value": "9/2/1, 10/0/2, 10/1/1",
+   "ci": "of 12, τ = 600 s",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 122,
+   "quantity": "§21: L2 between seeds",
+   "value": "0.226 / 0.315 / 0.397",
+   "ci": "s1↔s2, s1↔s3, s2↔s3",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 123,
+   "quantity": "§21: L2 seed 2 ↔ the reference",
+   "value": "0.252",
+   "ci": "smaller than s2↔s3",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 124,
+   "quantity": "§21: reported training objectives, seeds 1 / 2 / 3",
+   "value": "1.2143 / 1.1927 / 1.2120",
+   "ci": null,
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 125,
+   "quantity": "§21: honest re-scores of the same constants",
+   "value": "1.2338 / 1.2246 / 1.2301",
+   "ci": "100 runs/condition",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 126,
+   "quantity": "§21: winner's-curse gaps",
+   "value": "+0.019 / +0.032 / +0.018",
+   "ci": "against §20's +1.05",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 127,
+   "quantity": "§21: dispersion at 3.0 m, θ_m = 0.9, n = 20, τ = 600 s",
+   "value": "12.517 / 3.701 / 13.701",
+   "ci": "reach 0.17 / 0.45 / 0.28",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 128,
+   "quantity": "§21: the same cell's paired ratio at τ = 3600 s",
+   "value": "1.436 / 1.430 / 1.441",
+   "ci": "[1.249,1.673] / [1.311,1.746] / [1.224,1.753]",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 129,
+   "quantity": "§21: reach there at τ = 3600 s, reference vs seeds",
+   "value": "1.00 vs 0.86 / 0.93 / 0.88",
+   "ci": null,
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  },
+  {
+   "id": 130,
+   "quantity": "§21: n = 50 flat-ground dispersion, three seeds at 3.0 m",
+   "value": "1.200 / 1.166 / 1.191",
+   "ci": "disjoint pair present",
+   "unit": null,
+   "source_section": "§21",
+   "commit": "ce427a8"
+  }
+ ]
+}
