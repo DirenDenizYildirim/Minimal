@@ -1,0 +1,85 @@
+# Training condition for S2-class-rough-tau: theta_m = 0.9, searched against the
+# same six-condition class as section 19 but with tau = 3600 s AT THE 3.0 m
+# CONDITIONS, matching the trial length those conditions are evaluated at.
+#
+# WHY. Section 19's rough-trained class row did not move R0 at all -- 4.74 cm
+# before, 4.47 cm after -- while the flat-trained one moved from 5.53 to 7.47 cm
+# and became the c*(theta) baseline. The section attributed that to a truncated
+# training objective rather than to anything about rough training: the search ran
+# every condition at tau = 600 s, and at 3.0 m under terrain almost no candidate
+# aggregates within 600 s. An optimiser cannot climb a gradient it cannot see, so
+# the two hardest conditions contributed a near-constant penalty and the search
+# was effectively over the four easy ones.
+#
+# That was section 19's stated limitation, not a result. This is the direct test.
+#
+# THE CLASS, as six explicit conditions rather than crossed axes, because tau
+# varies BETWEEN conditions and a product would also produce 0.74 m at 3600 s and
+# 3.0 m at 600 s:
+#
+#   0.74 m x n=20, tau =  600 s      3.0 m x n=20, tau = 3600 s
+#   0.74 m x n=50, tau =  600 s      3.0 m x n=50, tau = 3600 s
+#   1.5  m x n=20, tau =  600 s
+#   1.5  m x n=50, tau =  600 s
+#
+# tau is raised only where it binds. At 0.74 m and 1.5 m every row already
+# reaches a cluster in essentially every run within 600 s (section 19), so 3600 s
+# there would buy nothing and cost six times as much.
+#
+# ONLY THE theta_m = 0.9 SEARCH IS RE-RUN. On flat ground the 3.0 m conditions
+# are not truncated at all -- section 19 reports reach 1.00 for every row at
+# theta_m = 0, with first clusters at 140-340 s inside a 600 s budget -- so the
+# flat class search would be scored on the same runs at either tau and
+# S2-class-flat is carried forward unchanged.
+#
+# Budget 1200 x 12, identical to section 19's, so the only difference between
+# S2-class-rough and S2-class-rough-tau is the trial length inside the training
+# loop. Training seed base 930000: disjoint from the evaluation seeds (20260904),
+# from section 13's searches (900000) and from section 19's (910000, 920000).
+#
+# COST. Sim-seconds per evaluation rise 2.67x over section 19's rough search
+# (four conditions at 600 s, two at 3600 s, against six at 600 s). Stated because
+# a reviewer comparing the two rows should know the second cost more wall-clock
+# at the same nominal budget -- the BUDGET is matched, the compute is not.
+
+[robot]
+radius = 0.037
+axle_length = 0.051
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[swarm.init]
+# Overridden per condition by --class-point; the shape has to be named here or
+# the override creates a partial init block.
+shape = "disk"
+coverage = 0.05
+
+[sim]
+dt = 0.1
+# Overridden per condition. This value applies to no condition on its own.
+duration = 600.0
+seed = 20260904
+
+[sensor]
+fov_half_angle = 0.0
+encoding = "binary"
+
+[controller]
+kind = "table"
+memory_bits = 0
+provenance = "optimiser_found"
+entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+]
+
+[terrain]
+slope_angle = 0.0
+friction_amplitude = 0.9
+correlation_length = 0.1
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 0.0

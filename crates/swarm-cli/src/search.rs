@@ -214,10 +214,15 @@ pub struct SearchResult {
     pub best_training_objective: f64,
     /// Objective of the incumbent after each generation, for a convergence plot.
     pub history: Vec<f64>,
-    /// The environment class the objective was averaged over. Empty for a
-    /// single-condition search; a row searched over a class and a row searched
-    /// at one point are different claims and the file has to say which it is.
+    /// The environment class the objective was averaged over, as crossed axes.
+    /// Empty for a single-condition search, and also empty when the class was
+    /// given as explicit points; `training_condition_points` is always filled.
     pub training_class: Vec<(String, Vec<Value>)>,
+    /// Every training condition, resolved. A class whose conditions differ in
+    /// more than one dial cannot be recovered from crossed axes — a τ that is
+    /// 3600 s at one start radius and 600 s at another is not a product — so the
+    /// file records the conditions themselves and not only how they were spelt.
+    pub training_condition_points: Vec<Condition>,
     pub training_conditions: usize,
     pub objective: String,
     pub optimiser: String,
@@ -354,9 +359,21 @@ pub fn run_search(
     training_seed_base: u64,
     init: Option<Vec<f64>>,
     class_axes: &[(String, Vec<Value>)],
+    class_points: &[Condition],
 ) -> Result<SearchResult> {
     let dims = 2 * states;
-    let class = class_conditions(class_axes);
+    if !class_axes.is_empty() && !class_points.is_empty() {
+        anyhow::bail!(
+            "give the class as crossed axes OR as explicit points, not both — \
+             which conditions were trained on would otherwise depend on how the \
+             two were meant to combine"
+        );
+    }
+    let class = if class_points.is_empty() {
+        class_conditions(class_axes)
+    } else {
+        class_points.to_vec()
+    };
     if runs_per_eval % class.len() != 0 {
         anyhow::bail!(
             "runs_per_eval ({runs_per_eval}) must divide by the class size ({}), \
@@ -421,6 +438,7 @@ pub fn run_search(
             .iter()
             .map(|(p, v)| (p.clone(), v.clone()))
             .collect(),
+        training_condition_points: class.clone(),
         training_conditions: class.len(),
         objective: if class.len() == 1 {
             "median final_dispersion over runs_per_evaluation trials, \
@@ -480,6 +498,36 @@ mod tests {
             .map(|c| c[0].1.as_f64().unwrap())
             .collect();
         assert_eq!(radii, vec![0.74, 0.74, 1.5, 1.5, 3.0, 3.0]);
+    }
+
+    #[test]
+    fn explicit_points_are_taken_as_given() {
+        // The case the axis form cannot express: tau differs BETWEEN conditions
+        // rather than across a dial of its own, so the class is not a product.
+        let points: Vec<Condition> = vec![
+            vec![
+                ("swarm.init.radius".into(), Value::from(0.74)),
+                ("sim.duration".into(), Value::from(600.0)),
+            ],
+            vec![
+                ("swarm.init.radius".into(), Value::from(3.0)),
+                ("sim.duration".into(), Value::from(3600.0)),
+            ],
+        ];
+        // Crossing the same dials would give four conditions, two of which
+        // (0.74 m at 3600 s, 3.0 m at 600 s) are not wanted.
+        let crossed = class_conditions(&[
+            (
+                "swarm.init.radius".into(),
+                vec![Value::from(0.74), Value::from(3.0)],
+            ),
+            (
+                "sim.duration".into(),
+                vec![Value::from(600.0), Value::from(3600.0)],
+            ),
+        ]);
+        assert_eq!(crossed.len(), 4);
+        assert_eq!(points.len(), 2);
     }
 
     #[test]

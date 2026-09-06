@@ -93,6 +93,13 @@ enum Command {
         /// `runs_per_eval` must divide by the number of conditions.
         #[arg(long = "class", value_name = "PATH=V1,V2,...")]
         class: Vec<String>,
+        /// Give the class as explicit CONDITIONS instead of crossed axes.
+        /// Repeatable, `--class-point path=v,path=v,...`; each flag is one
+        /// training condition. Use it when the conditions are not a product —
+        /// a τ of 3600 s at the largest start radius and 600 s at the others is
+        /// not expressible as crossed axes. Mutually exclusive with `--class`.
+        #[arg(long = "class-point", value_name = "PATH=V,PATH=V,...")]
+        class_point: Vec<String>,
         #[arg(short, long)]
         out: PathBuf,
         #[arg(short, long)]
@@ -139,6 +146,7 @@ fn main() -> Result<()> {
             training_seed,
             init,
             class,
+            class_point,
             out,
             threads,
         } => {
@@ -151,6 +159,7 @@ fn main() -> Result<()> {
                 training_seed,
                 init,
                 &class,
+                &class_point,
                 &out,
             )
         }
@@ -439,6 +448,31 @@ fn sweep_cmd(path: &Path, out: &Path, dry_run: bool, series: bool) -> Result<()>
 /// Values are parsed as JSON so a config path taking an integer (`swarm.n`) gets
 /// an integer and one taking a float (`swarm.init.radius`) gets a float —
 /// passing 20 as 20.0 would fail the config's own typing.
+/// Parse repeated `--class-point path=v,path=v,...` into explicit conditions.
+fn parse_class_points(specs: &[String]) -> Result<Vec<search::Condition>> {
+    specs
+        .iter()
+        .map(|spec| {
+            let condition: Result<search::Condition> = spec
+                .split(',')
+                .map(|pair| {
+                    let (path, raw) = pair.split_once('=').with_context(|| {
+                        format!("--class-point expects PATH=V,PATH=V,...; got {pair:?}")
+                    })?;
+                    let value: Value = serde_json::from_str(raw.trim())
+                        .with_context(|| format!("parsing {raw:?} in --class-point {path}"))?;
+                    Ok((path.trim().to_string(), value))
+                })
+                .collect();
+            let condition = condition?;
+            if condition.is_empty() {
+                anyhow::bail!("--class-point {spec:?} sets nothing");
+            }
+            Ok(condition)
+        })
+        .collect()
+}
+
 fn parse_class(specs: &[String]) -> Result<Vec<(String, Vec<Value>)>> {
     specs
         .iter()
@@ -471,6 +505,7 @@ fn search_cmd(
     training_seed: u64,
     init: Option<String>,
     class: &[String],
+    class_point: &[String],
     out: &Path,
 ) -> Result<()> {
     let value = read_config_value(path)?;
@@ -497,6 +532,7 @@ fn search_cmd(
         None => None,
     };
     let class_axes = parse_class(class)?;
+    let class_points = parse_class_points(class_point)?;
     if !class_axes.is_empty() {
         let n = search::class_conditions(&class_axes).len();
         eprintln!(
@@ -506,6 +542,17 @@ fn search_cmd(
                 .map(|(p, v)| format!("{p}={v:?}"))
                 .collect::<Vec<_>>()
                 .join(", ")
+        );
+    }
+    for (i, c) in class_points.iter().enumerate() {
+        eprintln!(
+            "training condition {}/{}: {}",
+            i + 1,
+            class_points.len(),
+            c.iter()
+                .map(|(p, v)| format!("{p}={v}"))
+                .collect::<Vec<_>>()
+                .join(" ")
         );
     }
     let result = search::run_search(
@@ -518,6 +565,7 @@ fn search_cmd(
         training_seed,
         init,
         &class_axes,
+        &class_points,
     )?;
     search::write_result(out, &result)?;
     eprintln!(
