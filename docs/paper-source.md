@@ -27,6 +27,25 @@ Conventions used throughout this file:
 
 ## 1. Vocabulary and framework
 
+**The hold ratio has one definition.** A row's hold ratio is the **median of the
+per-run ratio** of its dispersion under a hostile setting to its own dispersion
+on flat ground, paired by run index against the same seed base, with a percentile
+bootstrap on that same quantity. The ratio-of-medians form used by §§6, 7, 9 and
+13 as first written is **retired**; its values are kept in §12.1 for traceability
+and appear nowhere else. Two reasons: the interval is then computed on the
+quantity reported rather than on a different one, and the paired form is what
+§§14–21 and every committed figure script already use. The largest disagreement
+between the two forms was 2.7% (2.208 against 2.149) and no claim changes sign.
+
+**A decomposition is not a hold ratio.** The objective-versus-terrain split in
+§13 is a statement about *levels* of dispersion, and it decomposes only because
+medians of levels are additive. It is therefore reported from medians and is
+unaffected by the change above; the paired data contributes a significance test
+on the terrain term instead. Per-run *shares* are not available: the per-run gap
+is negative in 11 of 100 runs at 0.74 m and 31 of 100 at 1.5 m, so a median of
+per-run shares is an artefact of sign changes in its own denominator.
+
+
 ### 1.1 The capability vector
 
 `c = (S, M, A, K)`, from the build doc §2.1:
@@ -263,8 +282,8 @@ Clean-arena scaling, `configs/sweeps/gauci_scaling.toml`, 100 runs/cell, τ = 60
 |---|---|---|---|---|---|---|
 | 2 | 8.09 | 8.84 | 1.09 | **0.88** | 0.15 | 0.10 |
 | 5 | 16.93 | 5.30 | 0.31 | **0.98** | 0.09 | 0.05 |
-| 10 | 18.57 | 1.68 | 0.090 | **1.00** | 0.72 | 0.67 |
-| 20 | 19.22 | 1.43 | 0.074 | **1.00** | 0.78 | 0.80 |
+| 10 | pairs still one cluster at τ, n = 2 | **0.15** | share of *time* as one cluster is 0.10 | — | validation §1 | `2441bfc` |
+| 20 | occlusion: realised FN rate at nominal 0.6 (correlated), **median** | 0.89 | mean 0.856 | — | §1 | `24ca1ac` |
 | 50 | 19.20 | 1.20 | 0.063 | **1.00** | 0.93 | 0.87 |
 | 100 | 19.84 | 1.15 | 0.058 | **1.00** | 0.97 | 0.90 |
 
@@ -2003,6 +2022,13 @@ correction #6.*
 
 Never upgrade a grade. Where a settled phrasing is given, use it verbatim.
 
+**G4 in particular.** The pursuer sensor-state claim is SUGGESTED and stays
+SUGGESTED. **No abstract, contribution list, discussion or conclusion may state
+it without its hedge** — that every row above the blind one is hand-designed ‡,
+so it is a lower bound on what S = 3 offers rather than a measurement of it. A
+place where the sentence is too short for the hedge is a place where the claim
+does not belong.
+
 ### SUPPORTED
 
 | # | claim | sections |
@@ -2010,15 +2036,16 @@ Never upgrade a grade. Where a settled phrasing is given, use it verbatim.
 | S1 | Along the terrain dial, over 0 ≤ θ_m ≤ 0.9 at λ/R₀(gauci) = 0.69, the capability minimum does not move: `c = (2,0,0,0)` suffices at every point, at start radius 0.74 m and at 1.5 m. | §9, §13, §14 |
 | S2 | No S = 4 controller better than the searched S = 2 one was found at equal budget, including when warm-started at the S = 2 optimum. | §7, §10 |
 | S3 | A hand-built S = 4 composite that switches between the two S = 2 rows is worse than either at every θ_m, and reproduces Gauci exactly on flat ground. | §9 |
-| S4 | Terrain is a performance tax whose size depends mainly on how well matched the controller is: hold ratios 2.208 [1.904, 2.410] (Gauci), 1.195 [1.146, 1.265] (S2-flat), 1.104 [1.078, 1.150] (S2-rough) at θ_m = 0.9. | §13 |
-| S5 | Of the Gauci → S2-rough gap at θ_m = 0.9, 96.9% is objective-tuning and 3.1% terrain-tuning at R = 0.74 m, against 99.7% / 0.3% at 1.5 m. | §13, §14 |
+| S4 | Terrain is a performance tax whose size depends mainly on how well matched the controller is: hold ratios **2.149 [1.853, 2.455]** (Gauci), **1.200 [1.124, 1.272]** (S2-flat), **1.099 [1.044, 1.145]** (S2-rough) at θ_m = 0.9, paired per run index. The matched-controller cost is therefore **10–20%**: 1.099 for the rough-trained row and 1.200 for the flat-trained one. | §13 |
+| S5 | Of the Gauci → S2-rough gap at θ_m = 0.9, 96.9% is objective-tuning and 3.1% terrain-tuning at R = 0.74 m, against 99.7% / 0.3% at 1.5 m. The decomposition is a **level** statistic (medians of dispersion, which are additive) and is unaffected by the hold-ratio definition; the paired test on the terrain term is what carries its uncertainty, and **the term is not distinguishable from zero at either radius**: 0.0818 [−0.0008, 0.1331] at 0.74 m and −0.0124 [−0.1116, 0.0775] at 1.5 m. | §13, §14 |
 | S6 | A scalar speed field produces no degradation at all (pooled 0.980 [0.976, 0.986], no peak, flat within [0.96, 1.01]) where the per-wheel field peaks at 2.21 [1.90, 2.41]. | §6 |
 | S7 | The heading-rate residual is the first-order per-wheel traction effect: slope 0.9943, R² 0.9999 at ℓ/λ = 0.128. | §11, §16 |
 | S8 | The quality of that linearisation collapses on ℓ/λ: max slope spread 0.0201 at matched ℓ/λ across a 4× range of λ, against a 0.86 range along the trend. | §16 |
-| S9 | The worst correlation length is **not proportional to R₀**: peak ratio 1.39 [0.72, 1.93] for a doubling of R₀, excluding 2.00. | §15, §17 |
-| S10 | Confusion acts through aggregation: κ 0 → 5 multiplies aggregating rows' survival ×3.05 and ×4.10 while a dispersive control with identical sensing gains ×1.20 and ×1.13. | §8 |
-| S11 | Beyond r_p ≈ 0.47 R the dispersive row survives far better, and confusion narrows but does not close the gap. | §8 |
-| S12 | At r_p = 0.47 R, κ = 3 the dispersive row is Pareto-dominated: every aggregating row beats it on both survival and the base task. | §12 |
+| S9 | **Peak LOCATION does not scale with R₀.** Two controllers differing threefold in R₀ peak at the same λ in metres (7.46 cm), and inside one controller family a doubling of R₀ moves the peak by 1.39 [0.72, 1.93] — an interval excluding the ratio law's 2.00 and containing a fixed scale's 1.00. | §15, §17 |
+| S9b | **Peak MAGNITUDE does scale with R₀, and not with the axle.** At θ_m = 1.0, varying the axle fourfold at fixed R₀ moves peak degradation by 5% (2.97 / 2.83 / 2.93); varying R₀ fourfold at fixed axle moves it by 560% (2.97 / 1.59 / 10.46). **S9 and S9b are separate results about separate quantities and must never be run together into one sentence**: R₀ sets *how bad* the worst case is and does not set *where* it is. | §4 |
+| S10 | Confusion acts through aggregation: κ 0 → 5 multiplies aggregating rows' survival ×3.05 and ×4.10 while a dispersive control with identical sensing gains ×1.20 and ×1.13. Under mean per-robot survival with Wilson intervals on 10 000 robots per cell the multipliers are unchanged and **every κ = 0 interval is disjoint from its κ = 5 interval** (B0 0.1796 → 0.5481 and 0.1444 → 0.5923; D 0.5300 → 0.6383 and 0.5912 → 0.6662). | §8 |
+| S11 | With survival pooled over κ at h = 1.93 s and measured as mean per-robot survival with Wilson intervals, the matched pair crosses **between 0.27 R and 0.47 R**: the ternary row ‡ wins at 0.14 R (0.8788 [0.8723, 0.8851] against 0.8621 [0.8552, 0.8687], disjoint), the two overlap at 0.27 R (0.7369 [0.7282, 0.7454] against 0.7442 [0.7356, 0.7527]), and the dispersive row ‡ wins from 0.47 R outward (0.4875 [0.4777, 0.4973] against 0.6238 [0.6143, 0.6332], disjoint). Confusion narrows the gap but does not close it. The κ is part of the claim: at a fixed κ = 3 the ordering at 0.47 R reverses (S12). | §8 |
+| S12 | At r_p = 0.47 R **and** κ = 3 the dispersive row ‡ is Pareto-dominated: every aggregating row beats it on both survival and the base task. Under mean per-robot survival with Wilson intervals all four aggregating rows are **disjointly above** it (0.7575, 0.7565, 0.7765, 0.7620 against 0.6510), so the claim strengthens rather than weakens. | §12 |
 | S13 | Survival and base task differ by two orders of magnitude between strategies (380–505 against 1.43–1.63), so Idea B must be reported on two axes. | §12 |
 | S14 | A controller searched at one operating point can be worse than the published constants at another, and a longer trial does not fix it. | §14 |
 | S15 | Class-searched S2-class-flat † matches or beats the published constants on dispersion in every cell at matched trial length (10 W, 2 tied, 0 L) and loses reach only at the largest start radius under terrain. | §19 |
@@ -2231,6 +2258,11 @@ the occlusion footprint. The smallest body does not aggregate at this start radi
 and is excluded by a pre-registered validity window; including it lowers the slope
 to 0.474, which still rejects "the body is irrelevant".
 
+**Wording now in force (Phase A).** The magnitude result and the location
+result are stated separately, as S9b and S9. "R₀ and not the axle sets the
+peak" is not a sentence this paper may use, because it reads as a claim about
+location while its evidence is about magnitude.
+
 **#14 — The ℓ/λ statement can now be made without its single-λ caveat.**
 *Believed:* §11's ℓ/λ trend, measured by varying the axle at one λ, where "a
 function of ℓ/λ" and "a function of ℓ" are indistinguishable.
@@ -2302,7 +2334,7 @@ must appear in the paper's limitations section).
 | L17 | **Dispersion is compared within a cell only**; every cross-cell claim is a paired ratio at fixed (radius, n, θ_m, τ). Absolute dispersion is not comparable across n or across body size. | §14, §18, §19 | **accepted, method** |
 | L18 | **The class is six points on two axes.** λ, θ_m, τ and the arena are fixed inside it, so "transfers" means "transfers across start radius and swarm size". | §19, §20, §21 | **open** |
 | L19 | **The class-search ingredients were not ablated.** The row that transfers used both a geometric-mean objective and a doubled budget; neither was tested alone. | §19 | **open** |
-| L20 | **One optimiser seed per class row in §19 and §20.** | §19, §20 | ****closed for the flat class by §21**, which ran seeds 2 and 3 and found the baseline scatters; **open** for the rough class, and open for a second *structurally different* optimiser, which `docs/statistics.md` asks for and which three seeds of sep-CMA-ES do not provide** |
+| L20 | **One optimiser seed per class row in §19 and §20.** | §19, §20 | **closed for the flat class** by §21, which ran seeds 2 and 3 and found the baseline scatters; **open** for the rough class, and open for a second *structurally different* optimiser, which `docs/statistics.md` asks for and which three seeds of sep-CMA-ES do not provide |
 | L21 | **The pursuer sweeps use one ρ, one targeting rule, one search strategy, one pursuer, and τ = 120 s.** Two of three targeting rules and one of two search strategies are implemented but were never swept. | §5, §8, §12 | **accepted** |
 | L22 | **Saturation in the pursuer results.** 8.8% of runs in §5 and 29% in §8 ended in a wipeout, concentrated exactly where the claims are strongest; `survival_fraction` is pinned at 0 there and `time_to_wipeout` is reported instead. At the perfect-perception cell the base-task axis is not estimable for three of four aggregating rows. | §5, §8, §12 | **accepted, stated** |
 | L23 | **Occlusion was run once and never revisited.** No capability row was searched under it. | §1 | **accepted** |
@@ -2364,6 +2396,11 @@ in the text.
 
 ## 11. Literature
 
+Venues and years as recorded in the repository. Eight titles and three
+bibliographic entries were **supplied externally in the Phase A revision and are
+marked 'title supplied externally — verify before submission'**; the repository
+never checked them against the source text.
+
 Venues and years as recorded in the repository. **"Verified"** means the
 repository checked the claim or the parameter against the source text; **"not
 verified"** means it is carried from the build doc's reading list and was never
@@ -2372,26 +2409,26 @@ independently checked here.
 | reference | venue / year | role | verified? |
 |---|---|---|---|
 | Gauci, Chen, Li, Dodd & Groß, *Self-organized aggregation without computation* | **IJRR**, 2014 | The anchor: one binary LOS sensor, no memory, no arithmetic, four wheel-speed constants found by exhaustive grid search; state-0 motion is a circle whose radius is the controller's only intrinsic length scale. Every parameter in §2 of this file comes from it. | **verified** — parameters, sensor model, control cycle and the three derived quantities all checked against the text and pinned by a test |
-| Steinberg & Solovey, *Impossibility of Self-Organized Aggregation without Computation* | arXiv:2501.00390, 2024; IEEE 2025 | Two roles. (i) Disproves Gauci et al.'s n = 2 proof and reports 4.24% two-robot failure — this is what resolved the week-1 gate. (ii) Proves that for **any** bimodal controller in this class there exists an `n` and an initial state for which it does not aggregate: the framing anchor making `c*` a function of swarm size. | **verified** (the specific unsound assumption and the 4.24% figure are quoted) |
+| Steinberg & Solovey, *Impossibility of Self-Organized Aggregation without Computation* | **arXiv:2501.00390, submitted 31 December 2024** — cite the preprint, which is the verified source; the IEEE 2025 venue is **unverified** | Two roles. (i) Disproves Gauci et al.'s n = 2 proof and reports 4.24% two-robot failure — this is what resolved the week-1 gate. (ii) Proves that for **any** bimodal controller in this class there exists an `n` and an initial state for which it does not aggregate: the framing anchor making `c*` a function of swarm size. | **verified** (the specific unsound assumption and the 4.24% figure are quoted) |
 | Daymude, Harasha, Richa & Yiu, *Deadlock and noise in self-organized aggregation without computation* | **SSS**, 2021 | Deadlock exists for **n > 3** under uniform deterministic motion; noise "perturbs the precise balancing of forces to allow robots to push past one another". Source of H1, and of the reason H1 does not transfer. | **verified** — the exact `n` and the practical caveat were checked and quoted |
 | Gauci et al., *Clustering objects with robots that do not compute* | **AAMAS**, 2014 | The **ternary** LOS sensor (nothing / robot / object) — precedent for Idea B's "distinguish robot from pursuer" rung, so S = 3 is not a new capability. | not verified here |
 | Özdemir, Gauci & Groß, *Shepherding with robots that do not compute* | **ECAL**, 2017 | The only minimal result with a non-cooperating agent in the arena; sheep are passive, ours pursue. | not verified here |
 | Özdemir, Gauci, Bonnet & Groß, *Finding consensus without computation* | **RA-L**, 2018 | The programme generalises beyond aggregation. | not verified here |
-| Johnson & Brown | **EAI BICT**, 2015 | Perimeter, rendezvous, foraging in a computation-free swarm: more behaviours, same budget. | not verified here |
+| Johnson & Brown, *Evolving and controlling perimeter, rendezvous, and foraging behaviors in a computation-free robot swarm* | **EAI BICT**, 2015 | Perimeter, rendezvous, foraging in a computation-free swarm: more behaviours, same budget. | not verified here — **title supplied externally in the Phase A revision; verify before submission** |
 | Brown, Turgut & Goodrich, *Discovery and exploration of novel swarm behaviors given limited robot capabilities* | **DARS 2016** (Springer volume 2018) | Capability-vector framing precedent. | not verified here |
 | Hamann, *Swarm Robotics: A Formal Approach* | 2018 | Mean-field models; **assume homogeneous space** — which is what this paper perturbs. | not verified here |
-| Schmickl, Kernbach et al., **BEECLUST** | 2008–2009 | Must be cited **and distinguished**: minimal robots aggregating in an explicitly non-uniform environment, but there the heterogeneity is the *target* the swarm is meant to find; here it is a *perturbation* the swarm is meant to survive. Same mechanism class, opposite role. | not verified here |
+| Schmickl et al., *Get in touch: cooperative decision making based on robot-to-robot collisions* (**Auton. Agents Multi-Agent Syst.** 18(1), 2009); Kernbach et al., *Re-embodiment of honeybee aggregation behavior in an artificial micro-robotic system* (**Adaptive Behavior**, 2009) — **BEECLUST** | 2009 | Must be cited **and distinguished**: minimal robots aggregating in an explicitly non-uniform environment, but there the heterogeneity is the *target* the swarm is meant to find; here it is a *perturbation* the swarm is meant to survive. Same mechanism class, opposite role. | not verified here — **title supplied externally in the Phase A revision; verify before submission** |
 | Chung, Hollinger & Isler, *Search and pursuit-evasion in mobile robotics: a survey* | **Autonomous Robots**, 2011 | Idea B sits at the minimal-sensing corner of this literature and should say so. | not verified here |
-| Olson, Hintze, Dyer, Knoester & Adami | **J. R. Soc. Interface**, 2013 | **The source of the confusion mechanism**: attack success falls with the number of prey in the predator's sensing field. `p_lock = 1/(1 + κ·n_local)` follows it. | not verified here (the functional form is the repository's own instantiation) |
+| Olson, Hintze, Dyer, Knoester & Adami, *Predator confusion is sufficient to evolve swarming behaviour* | **J. R. Soc. Interface** 10(85), 2013 | **The source of the confusion mechanism**: attack success falls with the number of prey in the predator's sensing field. `p_lock = 1/(1 + κ·n_local)` follows it. | not verified here (the functional form is the repository's own instantiation) — **title supplied externally in the Phase A revision; verify before submission** |
 | Olson, Knoester & Adami | **Artificial Life**, 2016 | Predator confusion, follow-up. | not verified here |
 | Wood & Ackland | **Proc. R. Soc. B**, 2007 | Selfish herd / confusion. | not verified here |
-| Holling | — | Handling time and the disc equation: the quantity that makes dilution exist. Cited by concept in correction #7; **no bibliographic entry exists in the repository**. | **[CITATION NEEDED: Holling's disc equation, original reference]** |
+| Holling, *Some characteristics of simple types of predation and parasitism* | **Canadian Entomologist** 91, 1959 | Handling time and the disc equation: the quantity that makes dilution exist. Cited by concept in correction #7; **no bibliographic entry exists in the repository**. | resolved — Holling 1959. **Title supplied externally — verify before submission.** — **title supplied externally in the Phase A revision; verify before submission** |
 | Berg & Purcell, *Physics of chemoreception* | **Biophys. J.**, 1977 | At small scales temporal comparison beats spatial comparison. Relevant here only through the observation that the axle reads a spatial difference (§11); claim G10 is graded SUGGESTED and no temporal-versus-spatial experiment was run. | not verified here |
-| Hunt | **Frontiers in Robotics and AI**, 2020 | Phenotypic-plasticity position paper for minimal field swarms; motivation citation, no experiments. | not verified here |
-| Francesca et al. (AutoMoDe); Birattari et al. 2019 manifesto; Ligot & Birattari | ANTS 2018 and related | Automatic design and the reality gap: design bias by restricting control software to predefined modules; the ARGoS / ≥30 runs / Friedman + post-hoc / sim-vs-real protocol this repository's statistics plan adopts. | not verified here |
-| Jakobi, Husbands & Harvey | 1995 | Reality gap / minimal simulations. | not verified here |
+| Hunt, *Phenotypic plasticity provides a bioinspiration framework for minimal field swarm robotics* | **Frontiers in Robotics and AI**, 2020 | Phenotypic-plasticity position paper for minimal field swarms; motivation citation, no experiments. | not verified here — **title supplied externally in the Phase A revision; verify before submission** |
+| Francesca et al., *AutoMoDe: a novel approach to the automatic design of control software for robot swarms* (**Swarm Intelligence** 8(2), 2014); Birattari et al., *Automatic off-line design of robot swarms: a manifesto* (**Frontiers in Robotics and AI**, 2019); Ligot & Birattari, *On mimicking the effects of the reality gap with simulation-only experiments* (**ANTS**, 2018) | 2014–2019 | Automatic design and the reality gap: design bias by restricting control software to predefined modules; the ARGoS / ≥30 runs / Friedman + post-hoc / sim-vs-real protocol this repository's statistics plan adopts. | not verified here — **title supplied externally in the Phase A revision; verify before submission** |
+| Jakobi, Husbands & Harvey, *Noise and the reality gap: the use of simulation in evolutionary robotics* | **ECAL**, 1995 | Reality gap / minimal simulations. | not verified here — **title supplied externally in the Phase A revision; verify before submission** |
 | Ros & Hansen, *A simple modification in CMA-ES achieving linear time and space complexity* | 2008 | **sep-CMA-ES**, the optimiser used for every searched row. Named precisely because the separable variant is weaker than full CMA-ES and therefore only loosens an upper bound. | not verified here |
-| Graham & Sloane | — | The normalised-second-moment convention the dispersion metric follows. **No bibliographic entry exists in the repository.** | **[CITATION NEEDED: Graham & Sloane, normalised second moment]** |
+| Graham & Sloane, *Penny-packing and two-dimensional codes* | **Discrete & Computational Geometry** 5, 1990 | The normalised-second-moment convention the dispersion metric follows. **No bibliographic entry exists in the repository.** | resolved — Graham & Sloane 1990. **Title supplied externally — verify before submission.** — **title supplied externally in the Phase A revision; verify before submission** |
 | Insider adversaries (Byzantine robots in collective decision-making; FL poisoning in ROS2 swarms) | 2026 | Cited **to distinguish**: a different problem — corrupting information rather than removing robots. | not verified here; **[CITATION NEEDED: specific insider-adversary references]** |
 
 ---
@@ -2399,6 +2436,47 @@ independently checked here.
 ## 12. Discrepancies and open items
 
 ### 12.1 Where the documents and the results files disagree
+
+**Resolved in the Phase A revision.** What follows records the state before it,
+so a reader can trace any number that was quoted from an earlier draft.
+
+**D0 — what Phase A changed, and what it did not.**
+
+| what | before | after |
+|---|---|---|
+| hold ratio, §13 rows | 2.208 / 1.195 / 1.104 (ratio of medians) | **2.149 / 1.200 / 1.099** (paired) |
+| hold ratio, §7 rows | 2.21 / 1.10 / 1.22 | **2.149 / 1.099 / 1.212** |
+| §6 per-wheel peak | 2.21 [1.90, 2.41] | **2.149 [1.853, 2.455]** |
+| survival, §5 grid rows | median run-level 0.350 / 0.650 / 0.450 / 0.700 | **mean per-robot 0.4324 / 0.5851 / 0.5188 / 0.6079**, Wilson on 50 000 robots |
+| survival at 0.47 R, h = 1.93 | 0.00 / 0.55 / 0.65 (medians) | **0.3636 / 0.4875 / 0.6238**, Wilson on 10 000 robots |
+| n = 2 reach | 93% | **0.88** (the canonical cell; 93% was a noise-sweep probe) |
+| n = 2 hold | "~10% still touching at τ" | **0.15** still touching; 0.10 is the *share of time* |
+| realised FN rate at nominal 0.6 | "the mean is 0.89" | **the median is 0.89**; the mean is 0.856 |
+| §4 peak counts | "four of five rows" | **four of five at θ_m = 0.7**; two of five at θ_m = 1.0 |
+| §20's 1.6009 / 2.6553 | "the returned row" | **S2-class-rough-tau**; the untau-corrected row is 1.9302 / 2.3456 |
+| decomposition | 96.9 / 3.1 and 99.7 / 0.3 | **unchanged** (a level statistic), plus a paired test showing the terrain term includes zero at both radii |
+| κ multipliers | ×3.05, ×4.10, ×2.23, ×1.91, ×1.20, ×1.13 | **unchanged**, and now every κ = 0 interval is disjoint from its κ = 5 interval |
+
+**Grades that moved.** None down. **S10 and S12 strengthen** under the per-robot
+Wilson statistic: S10's six κ-responses all have disjoint endpoint intervals, and
+S12's four aggregating rows are all disjointly above the dispersive row rather
+than merely above it. **S11 changes content, not grade**: the matched-pair
+crossover moves from "beyond 0.47 R" to **between 0.27 R and 0.47 R**, because
+the median run-level statistic overlapped at 0.47 R (0.55 [0.45, 0.65] against
+0.65 [0.60, 0.65]) where the per-robot statistic is disjoint (0.4875 against
+0.6238). **S9 splits into S9 and S9b**, location and magnitude, which were
+previously stated as one result.
+
+**Why the survival statistic changed.** A survival fraction is a proportion of
+robots. The median of a per-run proportion at n = 20 can only land on a
+twentieth, so its bootstrap interval reports the grid rather than the
+uncertainty — which is how the blind row at 0.47 R came to be published as
+"0.00 [0.00, 0.23]" when 36% of its robots survive. Pooling robots and taking a
+Wilson interval is the statistic `docs/statistics.md` already prescribes for
+proportions, and it is what §14–21 use for reach.
+
+#### The original 12.1, as written
+
 
 **D1 — Two different statistics are both called "hold ratio".** This is the only
 substantive doc/results disagreement found, and it is a definitional one rather
@@ -2527,7 +2605,10 @@ remains, plus what §§14–16 surfaced:
 
 ### 12.5 Freeze
 
-The experimental record for Paper 1 is frozen at commit **`ce427a8` (experimental record) / `2b736de` (freeze declaration)**.
+The experimental record for Paper 1 is frozen at commit **`ce427a8`** — the last
+commit that produced experimental data, and the freeze hash. `2b736de` *declared*
+the freeze in this document and produced no data; it is recorded so the
+declaration can be found and is not the freeze hash.
 §1–§21 of `docs/findings.md` are the evidence base. No simulation was run in this
 branch for Paper 1 after that commit.
 
@@ -2549,7 +2630,7 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 6 | ω₀ | −0.75 | to 5e-3 rad/s | rad/s | validation | `47a5dd5` |
 | 7 | ω₁ | −5.02 | to 5e-3 rad/s | rad/s | validation | `47a5dd5` |
 | 8 | Gauci two-robot failure rate (Steinberg & Solovey) | 4.24 | — | % | correction #1 | `82c8d06` |
-| 9 | pairs reaching contact here | 93 | — | % | validation | `47a5dd5` |
+| 9 | pairs reaching connectivity at n = 2 | **0.88** | Wilson [0.80, 0.93] | — | validation §1 (`gauci_scaling`, the canonical cell) | `2441bfc` |
 | 10 | pairs still touching at τ here | ~10 | — | % | validation | `47a5dd5` |
 | 11 | reach at n = 2 / 5 / 10+ | 0.88 / 0.98 / 1.00 | — | — | validation §1 | `2441bfc` |
 | 12 | clean-arena dispersion at n = 20 | 1.43 | — | — | validation §1 | `2441bfc` |
@@ -2562,22 +2643,22 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 19 | H1 fine sweep: whole-grid range | 1.385–1.430 | — | — | §3 | `c137593` |
 | 20 | occlusion: realised FN rate at nominal 0.6 (correlated) | 0.89 | — | — | §1 | `24ca1ac` |
 | 21 | occlusion: correlated vs i.i.d. at matched realised 0.85–0.95 | 4.68 vs 3.32 | — | — | §1 | `24ca1ac` |
-| 22 | H2: peak λ/R₀, four of five rows | 0.69 | — | — | §4 | `9b0b994` |
-| 23 | H2: peak-degradation spread, axle 4× at fixed R₀ | 5 | — | % | §4 | `9b0b994` |
-| 24 | H2: peak-degradation spread, R₀ 4× at fixed axle | 560 | — | % | §4 | `9b0b994` |
+| 22 | H2: peak λ/R₀, four of five rows, **at θ_m = 0.7** | 0.69 | at θ_m = 1.0 only two of five | — | §4 | `9b0b994` |
+| 23 | H2: peak-degradation spread, axle 4× at fixed R₀, **at θ_m = 1.0** | 5 | 2.97 / 2.83 / 2.93 | % | §4 | `9b0b994` |
+| 24 | H2: peak-degradation spread, R₀ 4× at fixed axle, **at θ_m = 1.0** | 560 | 2.97 / 1.59 / 10.46 | % | §4 | `9b0b994` |
 | 25 | mechanism: per-wheel pooled degradation | 1.175 | [1.154, 1.190] | — | §6 | `e83675e` |
 | 26 | mechanism: scalar-centre pooled | 0.980 | [0.976, 0.986] | — | §6 | `e83675e` |
-| 27 | mechanism: per-wheel peak at λ/R₀ = 0.69, θ_m = 0.9 | 2.21 | [1.90, 2.41] | — | §6 | `e83675e` |
-| 28 | H3: hold ratio at θ_m = 0.9, S2-gauci | 2.21 | [1.90, 2.41] | — | §7 | `9af4707` |
-| 29 | H3: S2-searched † | 1.10 | [1.08, 1.15] | — | §7 | `9af4707` |
-| 30 | H3: S4-terrain † | 1.22 | [1.16, 1.26] | — | §7 | `9af4707` |
+| 27 | mechanism: per-wheel hold ratio at λ = 0.10 m, θ_m = 0.9 (paired) | **2.149** | [1.853, 2.455] | — | §6 | `e83675e` |
+| 28 | H3: hold ratio at θ_m = 0.9, S2-gauci (paired) | **2.149** | [1.853, 2.455] | — | §7 | `9af4707` |
+| 29 | H3: S2-searched † (paired) | **1.099** | [1.044, 1.145] | — | §7 | `9af4707` |
+| 30 | H3: S4-terrain † (paired) | **1.212** | [1.158, 1.251] | — | §7 | `9af4707` |
 | 31 | H3: reach at the worst cell, S2-gauci | 0.86 | [0.79, 0.93] | — | §7 | `9af4707` |
 | 32 | search budget, single-condition rows | 600 × 12 = 7 200 | — | runs | §7 | `9af4707` |
 | 33 | R₀ after searching at θ_m = 0.9 | 4.74 | — | cm | §7, §13 | `9af4707` |
-| 34 | Idea B: median survival fraction over the grid, B0 | 0.350 | [0.300, 0.375] | — | §5 | `9b0b994` |
-| 35 | …B1 ‡ | 0.650 | [0.600, 0.700] | — | §5 | `9b0b994` |
-| 36 | …B2 ‡ | 0.450 | [0.450, 0.525] | — | §5 | `9b0b994` |
-| 37 | …B3 ‡ | 0.700 | [0.650, 0.750] | — | §5 | `9b0b994` |
+| 34 | Idea B: mean per-robot survival over the grid, B0 | **0.4324** | Wilson [0.4281, 0.4367], 50 000 robots | — | §5 | `9b0b994` |
+| 35 | …B1 ‡ | **0.5851** | [0.5807, 0.5894] | — | §5 | `9b0b994` |
+| 36 | …B2 ‡ | **0.5188** | [0.5144, 0.5232] | — | §5 | `9b0b994` |
+| 37 | …B3 ‡ | **0.6079** | [0.6036, 0.6122] | — | §5 | `9b0b994` |
 | 38 | Idea B wipeout share (§5 / §8) | 8.8 / 29 | — | % | §5, §8 | `9b0b994`, `c5203f4` |
 | 39 | start radius at n = 20 | 0.74 | — | m | model | `e175acb` |
 | 40 | r_p / R at r_p = 1.0 m | 1.35 | — | — | §5 | `c65abe2` |
@@ -2586,7 +2667,7 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 43 | κ-response, B0 at h = 1.93 s | ×4.10 | 0.144 → 0.592 | — | §8 | `c5203f4` |
 | 44 | κ-response, B1 ‡ | ×2.23 / ×1.91 | 0.258 → 0.575 / 0.328 → 0.628 | — | §8 | `c5203f4` |
 | 45 | κ-response, D ‡ | ×1.20 / ×1.13 | 0.530 → 0.638 / 0.591 → 0.666 | — | §8 | `c5203f4` |
-| 46 | survival at r_p = 0.35 m (0.47 R), h = 1.93, B0 / B1 ‡ / D ‡ | 0.00 / 0.55 / 0.65 | [0.00, 0.23] / [0.45, 0.65] / [0.60, 0.65] | — | §8 | `c5203f4` |
+| 46 | mean per-robot survival at r_p = 0.35 m (0.47 R), h = 1.93, B0 / B1 ‡ / D ‡ | **0.3636 / 0.4875 / 0.6238** | [0.3542,0.3731] / [0.4777,0.4973] / [0.6143,0.6332], 10 000 robots each | — | §8 | `c5203f4` |
 | 47 | D's state-0 arc | 99.45 (≈99) | — | cm | §8 | `c5203f4` |
 | 48 | time to wipeout at r_p = 0.35 m, κ = 0, B0 | 46.6 | n = 94 | s | §8 | `c5203f4` |
 | 49 | §9: dispersion at θ_m = 0, S2-gauci | 1.427 | [1.399, 1.467] | — | §9 | `f7376de` |
@@ -2607,12 +2688,12 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 64 | §11/§16: robot-timesteps pooled per point | 12 000 000 | — | — | §11, §16 | `f73cc8a` |
 | 65 | §12: D's dispersion across cells | 379.9 / 386.3 / 504.8 | [344.3, 399.9] / [357.9, 431.3] / [432.9, 613.9] | — | §12 | `91b8d57` |
 | 66 | §12: aggregating rows' dispersion | 1.43–1.63 | — | — | §12 | `91b8d57` |
-| 67 | §12: survival at r_p = 0.47 R, κ = 3, aggregating vs D ‡ | 0.80–0.85 vs 0.65 | — | — | §12 | `91b8d57` |
+| 67 | §12: mean per-robot survival at r_p = 0.47 R, κ = 3, four aggregating rows vs D ‡ | **0.7565–0.7765 vs 0.6510** | all four disjointly above D | — | §12 | `91b8d57` |
 | 68 | §13: decomposition, objective-tuning share | **96.9** (99.7 at 1.5 m) | — | % | §13, §14 | `9fa30a5`, `d0d95c3` |
 | 69 | §13: decomposition, terrain-tuning share | **3.1** (0.3 at 1.5 m) | — | % | §13, §14 | `9fa30a5`, `d0d95c3` |
 | 70 | §13: terrain-tuning cost on flat ground | 4.1 | — | % | §13 | `9fa30a5` |
-| 71 | §13: hold ratio at θ_m = 0.9 (ratio of medians) | 2.208 / 1.195 / 1.104 | [1.904, 2.410] / [1.146, 1.265] / [1.078, 1.150] | — | §13 | `9fa30a5` |
-| 72 | §13/§14: the same, as median of paired ratios | 2.149 / 1.200 / 1.099 | [1.853, 2.455] / [1.124, 1.272] / [1.044, 1.145] | — | §14 | `d0d95c3` |
+| 71 | §13: hold ratio at θ_m = 0.9, **paired** (the paper's single definition) | **2.149 / 1.200 / 1.099** | [1.853, 2.455] / [1.124, 1.272] / [1.044, 1.145] | — | §13 | `9fa30a5` |
+| 72 | §13: the retired ratio-of-medians form, kept for traceability only | 2.208 / 1.195 / 1.104 | [1.904, 2.410] / [1.146, 1.265] / [1.078, 1.150] | — | §12.1 | `9fa30a5` |
 | 73 | §13: crossing, S2-rough better at θ_m = 0.6 | +0.0421 | [+0.0107, +0.0659] | dispersion | §13 | `9fa30a5` |
 | 74 | §14: same cell re-run at 1.5 m | −0.0008 | [−0.0134, +0.0433] | dispersion | §14 | `d0d95c3` |
 | 75 | §14: paired ratio vs Gauci, θ_m = 0.9, n = 20, R = 0.74 m | 1.942 / 2.129 | [1.645, 2.267] / [1.807, 2.446] | — | §14 | `d0d95c3` |
@@ -2625,7 +2706,7 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 82 | §14: gather time on flat ground at 3.0 m, n = 20 | 140 / 280 / 330 | [130,150] / [260,295] / [310,345] | s | §14 | `d0d95c3` |
 | 83 | §15: shared peak λ | **7.46** | — | cm | §15 | `628570b` |
 | 84 | §15: that peak as λ/R₀ | 0.52 (Gauci) / 1.57 (S2-rough †) | — | — | §15 | `628570b` |
-| 85 | §15: hold ratio at the peak | 2.505 / 1.121 | [2.263, 2.822] / [1.090, 1.222] | — | §15 | `628570b` |
+| 85 | §15: hold ratio at the peak (paired) | 2.505 / 1.121 | [2.263, 2.822] / [1.090, 1.222] | — | §15 | `628570b` |
 | 86 | §15: flat-ground invariance across eight λ | 1.4267 / 1.2530, spread 0 | — | — | §15 | `628570b` |
 | 87 | §16: slope at ℓ/λ = 0.128 | 0.9943 | R² 0.9999 | — | §16 | `20d79b4` |
 | 88 | §16: slope at ℓ/λ = 2.04 | 0.1351 | R² 0.0870 | — | §16 | `20d79b4` |
@@ -2671,6 +2752,14 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 128 | §21: the same cell's paired ratio at τ = 3600 s | **1.436 / 1.430 / 1.441** | [1.249,1.673] / [1.311,1.746] / [1.224,1.753] | — | §21 | `ce427a8` |
 | 129 | §21: reach there at τ = 3600 s, reference vs seeds | 1.00 vs 0.86 / 0.93 / 0.88 | — | — | §21 | `ce427a8` |
 | 130 | §21: n = 50 flat-ground dispersion, three seeds at 3.0 m | 1.200 / 1.166 / 1.191 | disjoint pair present | — | §21 | `ce427a8` |
+| 131 | §13: terrain-tuning term, paired per run at 0.74 m | **+0.0818** | [−0.0008, +0.1331] — **includes zero** | dispersion | §13 | `9fa30a5` |
+| 132 | §13/§14: the same at 1.5 m | **−0.0124** | [−0.1116, +0.0775] — **includes zero** | dispersion | §14 | `d0d95c3` |
+| 133 | §13: how much the anchor's hold ratio overstates the matched controller's | **1.96×** | 2.149 / 1.099, paired | — | §13 | `9fa30a5` |
+| 134 | §13: dispersion recovered by matching the objective, as a share of the anchor's | **119%** | (3.1495 − 1.4379) / 1.4379 | % | §13 | `9fa30a5` |
+| 135 | §8: mean per-robot survival, matched pair (B1 ‡ / D ‡) at 0.14 R, h = 1.93 | **0.8788 / 0.8621** | [0.8723,0.8851] / [0.8552,0.8687] — disjoint, aggregating ahead | — | §8 | `c5203f4` |
+| 136 | §8: the same at 0.27 R | **0.7369 / 0.7442** | [0.7282,0.7454] / [0.7356,0.7527] — overlapping | — | §8 | `c5203f4` |
+| 137 | §8: the same at 0.81 R and 1.35 R | **0.1295 / 0.5084** and **0.0655 / 0.3816** | all four intervals width < 0.02 | — | §8 | `c5203f4` |
+| 138 | §8: mean per-robot survival, B0-blind at 0.81 R and 1.35 R, h = 1.93 | **0.0199** | [0.0173, 0.0228] at both | — | §8 | `c5203f4` |
 
 ---
 
