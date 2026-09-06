@@ -2760,6 +2760,30 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 136 | §8: the same at 0.27 R | **0.7369 / 0.7442** | [0.7282,0.7454] / [0.7356,0.7527] — overlapping | — | §8 | `c5203f4` |
 | 137 | §8: the same at 0.81 R and 1.35 R | **0.1295 / 0.5084** and **0.0655 / 0.3816** | all four intervals width < 0.02 | — | §8 | `c5203f4` |
 | 138 | §8: mean per-robot survival, B0-blind at 0.81 R and 1.35 R, h = 1.93 | **0.0199** | [0.0173, 0.0228] at both | — | §8 | `c5203f4` |
+| 139 | model: the incorrect axle length the build doc carried | 5.3 | corrected to 5.1 | cm | correction #4 | `47a5dd5` |
+| 140 | literature: reach reported for this controller at n = 2 | ~95.8 | Gauci et al. 2014 | % | validation §1 | `2441bfc` |
+| 141 | pursuer speed ρ·v_max | 19.2 | = 0.385 s between touching neighbours | cm/s | §8 | `c5203f4` |
+| 142 | §3: H1 fine sweep, zero-slope row | 1.406 / 1.388 / 1.385 / 1.414 | [1.389,1.429] / [1.360,1.406] / [1.371,1.414] / [1.399,1.436] | — | §3 | `c137593` |
+| 143 | §16: full-expansion slope at ℓ/λ = 0.255 | 0.9762 | R² 0.9983 | — | §16 | `f73cc8a` |
+| 144 | §14: S2-flat at 3.0 m, θ_m = 0.9, τ = 3600 s, paired vs Gauci | 1.297 | [0.960, 1.495] | — | §14 | `d0d95c3` |
+| 145 | §14: n = 50 flat-ground paired ratios (0.74 / 1.5 / 3.0 m), S2-rough † | 0.944 / 0.818 / 0.777 | every interval below 1 | — | §14 | `d0d95c3` |
+| 146 | §21: honest re-score of the anchor on the flat class objective | 1.2905 | 6 conditions, 100 runs each | — | §21 | `ce427a8` |
+| 147 | §21: winner's-curse gaps at full precision | +0.0194 / +0.0318 / +0.0181 | seeds 1 / 2 / 3 | — | §21 | `ce427a8` |
+| 148 | §18: body-half packing fraction as a percentage of the base body's | 20.6 | 3.7 cm body | % | §18 | `9335c56` |
+| 149 | §4: grid resolution of the powered sweep, λ from 1.25 to 40 cm | 2.6 | ratio between adjacent λ | × | §4 | `9b0b994` |
+| 150 | constants, S2-gauci (state 0 \| state 1) | −0.7000, −1.0000 \| +1.0000, −1.0000 | enumerated | — | §4.1 | `47a5dd5` |
+| 151 | constants, S2-flat † | −0.3289, −0.8923 \| +0.9983, −0.6589 | R₀ 5.53 cm | — | §4.1 | `9fa30a5` |
+| 152 | constants, S2-rough † | −0.2852, −0.9495 \| +0.9354, −0.2262 | R₀ 4.74 cm | — | §4.1 | `9af4707` |
+| 153 | constants, S2-class-flat † (seed 1) | −0.4330, −0.8820 \| +0.7924, −0.8865 | R₀ 7.47 cm | — | §19 | `e6c4145` |
+| 154 | constants, S2-class-flat † seed 2 | −0.5426, −0.9800 \| +0.9467, −0.8113 | R₀ 8.88 cm | — | §21 | `ce427a8` |
+| 155 | constants, S2-class-flat † seed 3 | −0.4097, −0.7527 \| +0.7326, −0.6060 | R₀ 8.64 cm | — | §21 | `ce427a8` |
+| 156 | constants, S2-class-rough † | −0.2491, −0.9093 \| +0.8620, −0.6283 | R₀ 4.47 cm | — | §19 | `e6c4145` |
+| 157 | constants, S2-class-rough-tau † | −0.2367, −0.8740 \| +0.7398, −0.2404 | R₀ 4.44 cm | — | §20 | `3229c59` |
+| 158 | derived rotation rates, S2-flat † / S2-rough † state 0 | −1.414 / −1.667 | rad/s | rad/s | §4.1 | `9fa30a5` |
+| 159 | §8: mean per-robot survival table, B0 / B1 ‡ / D ‡ at 0.14 R | 0.8077 / 0.8788 / 0.8621 | [0.7999,0.8153] / [0.8723,0.8851] / [0.8552,0.8687] | — | §8 | `c5203f4` |
+| 160 | §8: the same at 0.27 R | 0.6164 / 0.7369 / 0.7442 | [0.6068,0.6259] / [0.7282,0.7454] / [0.7356,0.7527] | — | §8 | `c5203f4` |
+| 161 | §8: the same at 0.81 R | 0.0199 / 0.1295 / 0.5084 | [0.0173,0.0228] / [0.1231,0.1362] / [0.4986,0.5182] | — | §8 | `c5203f4` |
+| 162 | §8: the same at 1.35 R (perfect perception) | 0.0199 / 0.0655 / 0.3816 | [0.0173,0.0228] / [0.0608,0.0705] / [0.3721,0.3912] | — | §8 | `c5203f4` |
 
 ---
 

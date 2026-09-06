@@ -278,13 +278,24 @@ hold-ratio definitions, §5.4 above) and D2/D3 (rounding at the last digit).
 3. Whether any of the eight excluded paper-ready figures should be restored; the
    draft is at the top of its word budget, so restoring them means cutting text.
 4. Whether Results C should be a separate paper (§8.3).
+5. The eleven reference titles supplied externally in Revision 2 and marked
+   "verify before submission" — none was checked against the source text.
+6. The body is 11,112 words against an 11,000 ceiling. Revision 2's corrections
+   added roughly 300 words of necessary qualification and Results C was kept in
+   full by instruction; the overage is 1% and is where a human author would cut
+   first.
 
 ---
 
 ## 8. Review pass, and what it changed
 
-The repository owner reviewed the first draft. Every hard error it found was in
-**the draft**, not in the source document — which is the honest verdict on §6
+**Who did what.** The first draft's seven hard errors were found by the
+repository owner, reading the compiled PDF in chat and listing them; this agent
+applied the fixes. No independent reviewer and no automated check was involved:
+the only check this agent had run at that point compared the draft against
+`docs/paper-source.md`, not against the compiled output, which is why none of the
+seven was caught here. Every hard error it found was in **the draft**, not in the
+source document — which is the honest verdict on §6
 above: the consistency check that produced §6 was run against
 `docs/paper-source.md` and never against the output. That is the process defect
 worth fixing before the next draft, and it is why §8.1 exists.
@@ -403,3 +414,137 @@ Framework, the Conclusion's restatement of results the Discussion already makes,
 the Discussion's three implication paragraphs, and the Introduction's
 contributions list. **No number, hedge, grade or limitation was dropped** to make
 room.
+
+
+---
+
+## 9. Revision 2
+
+Driven by a verification pass (`docs/verification-report.md`) and then a
+source-first correction pass. **No simulation was run.** Every number below was
+recomputed from already-logged runs by a script under `scripts/`.
+
+### 9.1 What Phase 0 verification found
+
+`scripts/verify_numbers.py` recomputed 98 of the then-130 numbers-table rows from
+`results/*.jsonl`; `scripts/verify_determinism.py` re-executed 35 logged runs
+across seven sections, all bit-for-bit identical; all 26 figures regenerated
+byte-identically; all 28 cited commit hashes exist on the branch; and every
+equation and parameter in §§2–3 matches the code. Six value discrepancies and
+three provenance findings were recorded, and all six are fixed below.
+
+### 9.2 What Phase A changed in the source
+
+| # | before | after |
+|---|---|---|
+| hold ratio, §13 | 2.208 / 1.195 / 1.104 (ratio of medians) | **2.149 / 1.200 / 1.099** (paired) |
+| hold ratio, §7 | 2.21 / 1.10 / 1.22 | **2.149 / 1.099 / 1.212** |
+| §6 per-wheel peak | 2.21 [1.90, 2.41] | **2.149 [1.853, 2.455]** |
+| §15 peak hold ratios | 2.505 / 1.121 | unchanged (already paired) |
+| survival, §5 grid | median 0.350 / 0.650 / 0.450 / 0.700 | **mean per-robot 0.4324 / 0.5851 / 0.5188 / 0.6079** |
+| survival at 0.47 R, h = 1.93 | 0.00 / 0.55 / 0.65 | **0.3636 / 0.4875 / 0.6238** |
+| §12 Pareto cell survival | 0.80–0.85 vs 0.65 | **0.7565–0.7765 vs 0.6510**, all four disjoint |
+| n = 2 reach | 93% | **0.88** (canonical cell) |
+| n = 2 hold | "~10% still touching at τ" | **0.15**; 0.10 is share-of-time |
+| realised FN rate | "mean 0.89" | **median 0.89**, mean 0.856 |
+| §4 peak count | "four of five rows" | **four of five at θ_m = 0.7**; two of five at 1.0 |
+| §20's 1.6009 / 2.6553 | "the returned row" | **S2-class-rough-tau** |
+| decomposition | 96.9 / 3.1 and 99.7 / 0.3 | **unchanged**, plus a paired test |
+| κ multipliers | 3.05 / 4.10 / 2.23 / 1.91 / 1.20 / 1.13 | **unchanged**, now all disjoint |
+
+**19 numbers changed; 32 rows added** (numbers table 130 → 162). The largest
+change is the blind row's survival at 0.47 R: a published **0.00 [0.00, 0.23]**
+becomes **0.3636 [0.3542, 0.3731]**, because the median of a per-run proportion at
+n = 20 lands on a twentieth and its bootstrap reports that grid, not the
+uncertainty. The largest change among the hold ratios is 2.7% (2.208 → 2.149).
+
+**The decomposition could not be recomputed as a paired ratio, and this is worth
+stating plainly.** A decomposition into two shares that add to the whole needs
+additive level estimates; per-run ratios are not additive, and here they are also
+ill-conditioned — the per-run gap is **negative in 11 of 100 runs at 0.74 m and 31
+of 100 at 1.5 m**, so a median of per-run shares is an artefact of sign changes in
+its own denominator (it gives 95.2/4.8 and 89.2/10.8, which are not measurements
+of anything). The decomposition therefore stays a level statistic at 96.9/3.1 and
+99.7/0.3, and the paired data contributes what it can support: a test on the
+terrain term, which is **+0.0818 [−0.0008, 0.1331]** at 0.74 m and **−0.0124
+[−0.1116, 0.0775]** at 1.5 m. Both include zero. That is a stronger and more
+defensible statement than either share.
+
+**Grades.** None moved down. **S10 and S12 strengthened** (every κ endpoint
+interval disjoint; all four aggregating rows disjointly above the dispersive row).
+**S11 changed content**: the matched-pair crossover moves from "beyond 0.47 R" to
+**between 0.27 R and 0.47 R**, because the median statistic overlapped at 0.47 R
+and the per-robot statistic does not. **S9 split into S9 and S9b** — peak location
+and peak magnitude, previously run together into one sentence. Claims 44 → 45.
+
+### 9.3 What Phase B changed in the draft
+
+Every hold-ratio and survival number in the text, Table 1, Table 3 and the
+appendix register was replaced from the updated numbers table. Beyond that:
+
+* The two derived numbers the draft had computed for itself are gone: "a factor
+  of six" became **1.96×** and "119%" was added to the numbers table (row 134)
+  rather than left uncited.
+* §6.6 was rewritten around the magnitude/location split; "read as *$R_0$ and not
+  the axle* the result stands" is deleted.
+* §9.2's "roughly 10%" became **10–20%** with both rows named.
+* The Conclusion's "the latter at SUGGESTED strength" now names the
+  body-diameter tracking as the hedged claim.
+* The G4 hedge is attached in the abstract, the contributions list and the
+  Conclusion, per the register's new rule.
+* Three SUGGESTED claims gained the hedge the register requires but the draft
+  lacked near the statement: G3 ("it does not locate that optimum either"), G6
+  ("neither was ablated") and G7 ("it was not run").
+* The bibliography's eight `[SOURCE GAP]` title markers are gone, replaced by the
+  supplied titles, each carrying *"Title supplied externally in revision; verify
+  before submission"*. Two of the three `[CITATION NEEDED]` markers are resolved
+  to real entries (Holling 1959, Graham & Sloane 1990); the insider-adversary one
+  remains, because no reference was supplied for it.
+* Steinberg and Solovey is cited as the arXiv preprint with the IEEE venue marked
+  unverified.
+* Results C was kept in full, per instruction.
+
+### 9.4 The C1 script's final output
+
+```
+draft:  AI-GENERATED-DRAFT-do-not-circulate.pdf, 39 pages, 88421 characters extracted
+source: 162 numbers, 45 claims
+
+(i)   unmatched numeric tokens: 0
+(ii)  SUGGESTED claims missing their hedge: 0
+(iii) disclosure markers not on every page: 0
+(iv)  unguarded NOT SUPPORTED readings: 0
+
+0 of 4 checks failing
+```
+
+### 9.5 C3 — contradictions found by reading the compiled text
+
+Two, both created by Phase B's own statistic change and both fixed:
+
+1. **Results B still said the timing ordering matched "the survival *medians*"**
+   after the section had moved to mean per-robot survival. Now "the survival
+   figures".
+2. **The Limitations said "the survival fraction pins at zero there"**, which
+   contradicts Table 1's 0.0199 for the blind row at the two longest ranges. Now
+   "survival collapses toward zero there — 0.0199 per robot at the two longest
+   ranges".
+
+Nothing else in the pass contradicted anything else. The sentences most at risk —
+the hold ratios in Results A against the register, the crossover in Results B
+against the Conclusion, the κ attachment everywhere, and the magnitude/location
+split in §6.6 against S9/S9b — were read against each other and agree.
+
+### 9.6 Word count after Revision 2
+
+| region | words |
+|---|---|
+| Introduction through the closing Disclosure | **11,112** |
+| the same, plus the mandated Section 1 Disclosure | 11,288 |
+
+Over the 11,000 ceiling by 1%. Revision 2 added roughly 300 words of
+qualification that the corrections require — the decomposition caveat, the
+survival-statistic paragraph, the magnitude/location split and three hedges — and
+Results C was kept in full by instruction. Methods, Related work, the Framework,
+the Discussion and the Limitations were tightened by about the same amount; the
+remainder is the cost of being right.
