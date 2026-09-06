@@ -341,3 +341,51 @@ Suggested amendment: state the ℓ/λ result with its established range — 4× 
 4× in axle, one decade of ℓ/λ, at θ_m = 0.9 — and keep it separate from #13.
 They are different objects: ℓ/λ governs the linearisation of one robot's turn
 rate; it does not govern where a swarm's aggregation degrades worst.
+
+## 15. Search the mission class, not one arena — and report the class
+
+**Build doc §2.2, how a searched row is obtained.** Every searched row in the
+literature this project draws on, and every searched row here before §19, is
+fitted at one operating point and then reported as a capability result. §14 shows
+what that costs: two rows searched at n = 20, start radius 0.74 m are worse than
+the *published* constants on flat ground at n = 50 at every radius, and one of
+them forms a cluster in 34% of runs at 4× the training radius against Gauci's
+100% — at six times the trial length.
+
+§19 shows the fix is cheap and that it works. Searching the same four constants
+against a six-condition class — start radius × swarm size, the conditions the
+evaluation grid is drawn from — with the objective the **geometric mean of the
+per-condition medians**, produces a row that matches or beats the published
+constants on dispersion in every cell at matched trial length, and on reach in
+ten of twelve. The two ingredients that mattered:
+
+* **A scale-free aggregation over conditions.** Median dispersion across this
+  class runs from about 1.2 to tens. An arithmetic mean, or a median over pooled
+  runs, is the hardest condition wearing a disguise and lets the optimiser
+  abandon the rest of the class. Averaging logs weights a proportional
+  improvement equally everywhere, and reduces to the single-condition objective
+  when the class has one member, so the two searches stay comparable.
+* **A budget scaled to the class, and stated.** 1200 × 12 against the
+  single-condition 600 × 12. Giving both the same budget confounds "no
+  transferring controller exists" with "the class search was not given enough
+  evaluations".
+
+Three things to report with any searched row, none of which is standard:
+
+1. **The class it was searched over**, as explicitly as the architecture. A row
+   searched at a point and a row searched over a class are different claims, and
+   the file that carries the constants should carry the class.
+2. **The budget, and how it scales with the class size.**
+3. **Whether the training objective was itself truncated.** §19's rough-trained
+   class row did not improve at the conditions it most needed to, because at the
+   trial length the *search* ran at, its candidates almost never aggregated
+   there. An optimiser cannot climb a gradient it cannot see, and a class search
+   whose hardest conditions are unreachable within the training τ has quietly
+   become a search over the easy ones.
+
+The caveat that travels with it: the class-searched row is still an upper bound
+(†) from a diagonal-covariance optimiser, and the published constants remain the
+only **enumerated** row and still own the hardest corner — largest start radius
+under terrain, where they reach a cluster in every run and the searched row in
+86%. A frontier figure should carry the class-searched row as its baseline and
+the published constants as the reference it did not beat everywhere.

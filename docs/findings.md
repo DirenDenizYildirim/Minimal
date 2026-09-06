@@ -1797,6 +1797,229 @@ Figure: `figures/terrain_lambda_body.png`
 
 ---
 
+## 19. Question B: a transferring four-constant controller exists, and it is the baseline
+
+**The c*(θ) baseline is now S2-class-flat †, not Gauci — with one stated
+exception.** Searched against the six-condition class rather than one arena, it
+matches or beats Gauci's median dispersion in **every cell of §14's grid at
+matched trial length** and matches or beats its reach in ten of twelve. The
+exception is the largest start radius under terrain, where Gauci reaches a
+cluster in 100% of runs and S2-class-flat in 86% (n = 20) and 95% (n = 50): any
+frontier statement in *that* corner still has to use Gauci. Everywhere else the
+class-searched row is strictly the better baseline, and it is the first searched
+row in this document that does not fall over outside its training condition.
+
+That is decision-rule branch 2 — wins in some cells, loses in others — and the
+§14 gather/hold reading predicts *which*: it loses exactly where reach is the
+binding constraint and wins everywhere reach is free.
+
+### The searches
+
+`configs/search/train_s2_class_flat.toml` and `..._rough.toml`, evaluated by
+`configs/sweeps/terrain_class_eval.toml`. sep-CMA-ES, **1200 evaluations × 12
+runs — double §9's budget**, because the same four constants are being fitted to
+six conditions instead of one; giving both the same budget would confound "no
+transferring controller exists" with "the class search was not given enough
+evaluations to find one". Training seed bases 910 000 and 920 000, disjoint from
+the evaluation seeds (20260904) and from §13's searches (900 000). Both rows
+carry †.
+
+The class is `swarm.init.radius ∈ {0.74, 1.5, 3.0} m × swarm.n ∈ {20, 50}`, the
+six conditions the evaluation grid is drawn from. The objective is the
+**geometric mean of the per-condition medians**: median dispersion across the
+class runs from about 1.2 to tens, so an arithmetic mean would be the 3.0 m cells
+wearing a disguise and the optimiser would be free to abandon the rest. Averaging
+logs weights a 10% improvement equally everywhere, and reduces to §9's objective
+exactly when the class has one member — so a class search and a fixed-condition
+search are one procedure at two class sizes, not two protocols. Each condition
+gets 2 of the 12 runs per evaluation; every candidate is scored on the same
+(condition, seed) pairs.
+
+### The five controllers
+
+| row | state | constants | R₀ | forward speed | rotation rate |
+|---|---|---|---|---|---|
+| S2-gauci | 0 (blind) | (−0.7000, −1.0000) | 14.45 cm | −10.88 cm/s | −0.753 rad/s |
+| | 1 (seen) | (+1.0000, −1.0000) | 0 (spin) | 0 | −5.020 rad/s |
+| S2-flat † | 0 (blind) | (−0.3289, −0.8923) | 5.53 cm | −7.82 cm/s | −1.414 rad/s |
+| | 1 (seen) | (+0.9983, −0.6589) | 0.52 cm | +2.17 cm/s | −4.159 rad/s |
+| S2-rough † | 0 (blind) | (−0.2852, −0.9495) | 4.74 cm | −7.90 cm/s | −1.667 rad/s |
+| | 1 (seen) | (+0.9354, −0.2262) | 1.56 cm | +4.54 cm/s | −2.915 rad/s |
+| **S2-class-flat †** | 0 (blind) | (−0.4330, −0.8820) | **7.47 cm** | −8.42 cm/s | −1.127 rad/s |
+| | 1 (seen) | (+0.7924, −0.8865) | 0.14 cm | −0.60 cm/s | −4.214 rad/s |
+| S2-class-rough † | 0 (blind) | (−0.2491, −0.9093) | **4.47 cm** | −7.41 cm/s | −1.657 rad/s |
+| | 1 (seen) | (+0.8620, −0.6283) | 0.40 cm | +1.50 cm/s | −3.741 rad/s |
+
+**The R₀ trade is the whole story, and only one of the two class searches made
+it.** Training on the class at θ_m = 0 moved R₀ from S2-flat's 5.53 cm to
+**7.47 cm** — 35% of the way back toward Gauci's 14.45 cm. Training on the class
+at θ_m = 0.9 moved it from 4.74 cm to 4.47 cm, i.e. not at all. L2 distances put
+S2-class-flat closer to Gauci (0.376) than any other searched row, and
+S2-class-rough closer to S2-flat (0.162) than to Gauci (0.607).
+
+### The grid at τ = 600 s
+
+Paired ratio of Gauci's median dispersion to the row's, matched by run index;
+**> 1 means the row beats Gauci**. **W** marks an interval entirely above 1,
+**L** entirely below.
+
+| cell | S2-flat † | S2-rough † | S2-class-flat † | S2-class-rough † |
+|---|---|---|---|---|
+| θ=0, n=20, r₀=0.74 m | 1.185 [1.159, 1.203] **W** | 1.144 [1.119, 1.162] **W** | 1.115 [1.099, 1.144] **W** | 1.126 [1.109, 1.154] **W** |
+| θ=0, n=20, r₀=1.5 m | 1.149 [1.125, 1.169] **W** | 1.082 [1.066, 1.103] **W** | 1.104 [1.078, 1.123] **W** | 1.086 [1.051, 1.122] **W** |
+| θ=0, n=20, r₀=3 m | 1.125 [1.103, 1.146] **W** | 1.064 [1.019, 1.099] **W** | 1.090 [1.072, 1.111] **W** | 1.053 [1.032, 1.080] **W** |
+| θ=0, n=50, r₀=0.74 m | 0.973 [0.956, 0.979] **L** | 0.944 [0.914, 0.953] **L** | 1.026 [1.020, 1.033] **W** | 0.953 [0.931, 0.966] **L** |
+| θ=0, n=50, r₀=1.5 m | 0.870 [0.834, 0.883] **L** | 0.818 [0.793, 0.840] **L** | 1.016 [1.009, 1.023] **W** | 0.825 [0.780, 0.849] **L** |
+| θ=0, n=50, r₀=3 m | 0.775 [0.738, 0.834] **L** | 0.777 [0.755, 0.798] **L** | 0.999 [0.991, 1.008] | 0.783 [0.727, 0.825] **L** |
+| θ=0.9, n=20, r₀=0.74 m | 1.942 [1.645, 2.267] **W** | 2.129 [1.807, 2.446] **W** | 1.809 [1.442, 2.072] **W** | 2.083 [1.711, 2.417] **W** |
+| θ=0.9, n=20, r₀=1.5 m | 1.541 [1.285, 1.647] **W** | 1.475 [1.199, 1.729] **W** | 1.357 [1.231, 1.548] **W** | 1.505 [1.352, 1.715] **W** |
+| θ=0.9, n=20, r₀=3 m | 0.296 [0.170, 0.638] **L** | 0.137 [0.098, 0.210] **L** | 0.348 [0.275, 0.636] **L** | 0.196 [0.127, 0.274] **L** |
+| θ=0.9, n=50, r₀=0.74 m | 1.181 [1.096, 1.235] **W** | 1.191 [1.117, 1.282] **W** | 1.137 [1.101, 1.220] **W** | 1.158 [1.064, 1.240] **W** |
+| θ=0.9, n=50, r₀=1.5 m | 1.280 [1.158, 1.438] **W** | 1.216 [1.099, 1.374] **W** | 1.158 [1.056, 1.331] **W** | 1.196 [1.046, 1.325] **W** |
+| θ=0.9, n=50, r₀=3 m | 0.902 [0.628, 1.094] | 0.807 [0.643, 0.944] **L** | 0.748 [0.610, 0.916] **L** | 0.644 [0.489, 0.719] **L** |
+
+| row | W | L | tied |
+|---|---|---|---|
+| S2-flat † | 7 | 4 | 1 |
+| S2-rough † | 7 | 5 | 0 |
+| **S2-class-flat †** | **9** | **2** | **1** |
+| S2-class-rough † | 7 | 5 | 0 |
+
+**The class objective fixed the swarm-size failure completely.** On flat ground
+at n = 50 the single-condition rows lose everywhere — 0.973, 0.870, 0.775
+(S2-flat) and 0.944, 0.818, 0.777 (S2-rough), all with intervals below 1, and §14
+showed that six times the trial length does not close it. S2-class-flat scores
+**1.026, 1.016, 0.999**: two wins and a tie. Its absolute dispersion at n = 50,
+3.0 m is 1.200 against Gauci's 1.204, where S2-flat sits at 1.545.
+
+**It did not fix the start-radius failure at τ = 600 s.** Both losses are at
+3.0 m under terrain: 0.348 [0.275, 0.636] at n = 20 and 0.748 [0.610, 0.916] at
+n = 50.
+
+### The 3.0 m column needs a longer trial — for every row, Gauci included
+
+At τ = 600 s Gauci itself reaches a cluster in **46%** of runs at 3.0 m, n = 20,
+θ_m = 0.9. A cell where the reference row fails in half its runs is not measuring
+holding, so §14's τ extension is repeated here for all five rows.
+
+#### n = 20 (start radius 3.0 m, θ_m = 0.9)
+
+| τ | S2-gauci | S2-flat † | S2-rough † | S2-class-flat † | S2-class-rough † |
+|---|---|---|---|---|---|
+| **600 s** | reach 0.46 [0.37, 0.56]<br>disp 3.90 | reach 0.23 [0.16, 0.32]<br>disp 19.51 | reach 0.11 [0.06, 0.19]<br>disp 37.99 | reach 0.17 [0.11, 0.26]<br>disp 12.52 | reach 0.11 [0.06, 0.19]<br>disp 31.28 |
+| **1800 s** | reach 0.99 [0.95, 1.00]<br>disp 2.93 | reach 0.53 [0.43, 0.62]<br>disp 2.05 | reach 0.29 [0.21, 0.39]<br>disp 26.27 | reach 0.76 [0.67, 0.83]<br>disp 1.98 | reach 0.34 [0.25, 0.44]<br>disp 18.46 |
+| **3600 s** | reach 1.00 [0.96, 1.00]<br>disp 2.89 | reach 0.60 [0.50, 0.69]<br>disp 1.91 | reach 0.34 [0.25, 0.44]<br>disp 24.01 | reach 0.86 [0.78, 0.91]<br>disp 1.76 | reach 0.36 [0.27, 0.46]<br>disp 13.42 |
+
+paired ratio Gauci/row:
+| τ | S2-flat † | S2-rough † | S2-class-flat † | S2-class-rough † |
+|---|---|---|---|---|
+| **600 s** | 0.296 [0.170, 0.638] **L** | 0.137 [0.098, 0.210] **L** | 0.348 [0.275, 0.636] **L** | 0.196 [0.127, 0.274] **L** |
+| **1800 s** | 0.996 [0.338, 1.333] | 0.141 [0.091, 0.245] **L** | 1.257 [1.181, 1.479] **W** | 0.181 [0.122, 0.336] **L** |
+| **3600 s** | 1.297 [0.960, 1.495] | 0.148 [0.104, 0.300] **L** | 1.436 [1.249, 1.673] **W** | 0.269 [0.148, 0.643] **L** |
+
+#### n = 50 (start radius 3.0 m, θ_m = 0.9)
+
+| τ | S2-gauci | S2-flat † | S2-rough † | S2-class-flat † | S2-class-rough † |
+|---|---|---|---|---|---|
+| **600 s** | reach 0.79 [0.70, 0.86]<br>disp 2.38 | reach 0.65 [0.55, 0.74]<br>disp 2.96 | reach 0.62 [0.52, 0.71]<br>disp 3.14 | reach 0.62 [0.52, 0.71]<br>disp 3.42 | reach 0.53 [0.43, 0.62]<br>disp 4.07 |
+| **1800 s** | reach 0.99 [0.95, 1.00]<br>disp 1.77 | reach 0.87 [0.79, 0.92]<br>disp 1.64 | reach 0.76 [0.67, 0.83]<br>disp 1.73 | reach 0.90 [0.83, 0.94]<br>disp 1.76 | reach 0.70 [0.60, 0.78]<br>disp 1.83 |
+| **3600 s** | reach 1.00 [0.96, 1.00]<br>disp 1.74 | reach 0.94 [0.88, 0.97]<br>disp 1.51 | reach 0.86 [0.78, 0.91]<br>disp 1.59 | reach 0.95 [0.89, 0.98]<br>disp 1.61 | reach 0.76 [0.67, 0.83]<br>disp 1.66 |
+
+paired ratio Gauci/row:
+| τ | S2-flat † | S2-rough † | S2-class-flat † | S2-class-rough † |
+|---|---|---|---|---|
+| **600 s** | 0.902 [0.628, 1.094] | 0.807 [0.643, 0.944] **L** | 0.748 [0.610, 0.916] **L** | 0.644 [0.489, 0.719] **L** |
+| **1800 s** | 1.105 [0.987, 1.202] | 1.006 [0.830, 1.193] | 1.004 [0.890, 1.132] | 0.871 [0.683, 1.049] |
+| **3600 s** | 1.098 [1.056, 1.161] **W** | 1.137 [0.992, 1.208] | 1.063 [0.934, 1.172] | 0.976 [0.821, 1.065] |
+
+At **τ = 3600 s** the picture is unambiguous:
+
+* **S2-class-flat wins the n = 20 cell outright**, 1.436 [1.249, 1.673], with
+  reach 0.86 against Gauci's 1.00 and median dispersion 1.76 against 2.89.
+* It **ties the n = 50 cell**, 1.063 [0.934, 1.172], with reach 0.95 against 1.00.
+* **S2-class-rough and S2-rough do not recover at all**: ratios 0.269 and 0.148 at
+  n = 20, reach 0.36 and 0.34 against Gauci's 1.00. Six times the budget moves
+  S2-rough's ratio from 0.137 to 0.148.
+
+So with the 3.0 m column given the trial length Gauci needs there too,
+S2-class-flat is **10 W, 2 tied, 0 L on dispersion across the twelve cells**.
+
+### Reach is where Gauci still wins, and it is why the exception exists
+
+Dispersion is not the whole task. Reach at θ_m = 0.9, with the 3.0 m cells at
+τ = 3600 s:
+
+| cell | S2-gauci | S2-class-flat † | verdict |
+|---|---|---|---|
+| n = 20, r₀ = 0.74 m | 0.86 [0.78, 0.91] | **0.98 [0.93, 0.99]** | class-flat better |
+| n = 20, r₀ = 1.5 m | 0.79 [0.70, 0.86] | 0.81 [0.72, 0.87] | tied |
+| n = 20, r₀ = 3.0 m | **1.00 [0.96, 1.00]** | 0.86 [0.78, 0.91] | **Gauci better** |
+| n = 50, r₀ = 0.74 m | 0.99 [0.95, 1.00] | 1.00 [0.96, 1.00] | tied |
+| n = 50, r₀ = 1.5 m | 0.96 [0.90, 0.98] | 0.99 [0.95, 1.00] | tied |
+| n = 50, r₀ = 3.0 m | **1.00 [0.96, 1.00]** | 0.95 [0.89, 0.98] | **Gauci better** |
+
+On flat ground every row reaches in every run at every radius, so reach separates
+nothing there.
+
+### The §14 gather/hold reading predicts the pattern
+
+§14 explained the single-condition rows' failure as a trade: a smaller R₀ holds a
+formed cluster better and covers ground more slowly, and the blind state *is* the
+search behaviour. That predicts three things, and all three hold:
+
+1. **Where reach is free, the searched rows win**; where it binds, they lose.
+   Every loss in this section is at 3.0 m under terrain and nowhere else.
+2. **A larger R₀ should buy gathering speed back.** Flat-ground time to first
+   cluster at 3.0 m, n = 20: Gauci **140 s**, S2-class-flat (R₀ 7.47 cm)
+   **245 s**, S2-flat (5.53 cm) **280 s**, S2-rough (4.74 cm) **330 s**,
+   S2-class-rough (4.47 cm) **340 s** — monotone in R₀ across five rows.
+3. **The class search should move R₀ only when the class makes gathering
+   expensive.** At θ_m = 0 the 3.0 m conditions are reachable within τ, so
+   gathering rate is priced and R₀ rose to 7.47 cm. At θ_m = 0.9 the 3.0 m
+   conditions are unreachable within the 600 s the search itself ran at, so
+   improving them was not on offer and R₀ did not move.
+
+Point 3 is also the honest limitation of S2-class-rough: **its training objective
+was measured under the same truncation the evaluation then punished it for.** The
+class search at θ_m = 0.9 was scored on 600 s runs at 3.0 m in which its
+candidates almost never aggregated, so the optimiser could see no gradient there.
+Whether a class search at θ_m = 0.9 with τ = 3600 s in the training loop would
+find a transferring rough-trained row is untested and is on the next list.
+
+### What this does to §14 and to the baseline
+
+§14 concluded that Gauci's constants are the ones that transfer. That was right
+about the rows it had. It is now too strong: **a four-constant controller that
+transfers exists**, it was found with a doubled budget and an objective averaged
+over the class, and it beats Gauci on the metric §§9–14 are stated in almost
+everywhere. What Gauci retains is reach in the hardest corner and a **tight**
+(enumerated) minimum — every class row is an upper bound (†).
+
+The practical consequence for the write-up: the baseline row in a c*(θ) figure
+should be **S2-class-flat †**, with Gauci kept as the enumerated reference and as
+the row that owns the 3.0 m terrain corner. This is correction #15.
+
+### Limitations
+
+* Two class searches, one seed each. The optimiser seed was 1 for both; a
+  different seed might find a different row, and nothing here bounds that spread.
+* The class is six points on two axes. λ, θ_m, τ and the arena are fixed, so
+  "transfers" means "transfers across start radius and swarm size".
+* S2-class-rough's training objective was truncated at the conditions it most
+  needed to improve, as above. Its failure is evidence about *this* search, not
+  about whether a rough-trained transferring row exists.
+* Both class rows remain upper bounds (†) from a diagonal-covariance optimiser.
+  The doubled budget removes the direction of the confound with §9 but not its
+  magnitude: 1200 evaluations over six conditions is 200 per condition against
+  §9's 600.
+* Dispersion is compared **within** a cell only; every cross-cell claim is a
+  paired ratio at fixed (radius, n, θ_m, τ).
+
+Figure: `figures/terrain_class_search.png`
+(regenerate with `harness/figures_class_search.py`).
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
@@ -1821,13 +2044,18 @@ remains, plus what §§14–16 surfaced:
    claim to be counted in `K`.
 7. **Budget scaled with dimension**, as opposed to a warm start. §10 removed the
    direction of the equal-budget confound; scaling the budget would remove it.
-8. **A search whose objective spans initial conditions.** §14 shows both searched
-   rows fail to transfer in start radius and in n. The cheap test of whether that
-   is the optimiser or the objective is to re-run the same search with the
-   training objective averaged over start radius ∈ {0.74, 1.5, 3.0} m and
-   n ∈ {20, 50}, same budget, and evaluate on the same grid. If the transferring
-   controller is no worse at 0.74 m, §13's whole comparison should be rebuilt on
-   it.
+8. ~~**A search whose objective spans initial conditions.**~~ **Answered in
+   §19**, and it changed the baseline. What it left open: the θ_m = 0.9 class
+   search was scored on 600 s runs at conditions where its candidates almost
+   never aggregated, so it had no gradient to climb there and its R₀ did not
+   move. **A class search with τ = 3600 s inside the training loop**, at the
+   3.0 m conditions only, is the direct test of whether a transferring
+   rough-trained row exists — and it is the one experiment in this list whose
+   answer would change §19's baseline again.
+12. **Seed spread on a class search.** §19 ran one optimiser seed per class row.
+    Three or five would say whether S2-class-flat's win over Gauci is a property
+    of the protocol or of one draw, and it is the cheapest remaining check on the
+    strongest claim in the document.
 9. **Which body-scaled length the worst λ actually is.** §18 shows the peak
    tracking body diameter at 1.01 and 0.97 diameters, but the cluster link
    distance (1.5 body diameters) and the occlusion footprint scale with the body

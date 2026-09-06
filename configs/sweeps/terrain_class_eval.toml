@@ -1,0 +1,84 @@
+# QUESTION B, EXPERIMENT 3 -- does a transferring four-constant controller exist?
+#
+# Section 14 found the two single-condition searched rows failing to transfer:
+# at 4x the training start radius S2-rough forms a cluster in 34% of runs against
+# Gauci's 100% even at six times the trial length, and at n = 50 both are worse
+# than Gauci on FLAT ground at every radius. That is a statement about two
+# controllers, not about the capability -- nothing had asked the optimiser to
+# work anywhere but the arena it was given.
+#
+# S2-class-flat and S2-class-rough were searched against the class the evaluation
+# grid is drawn from: start radius in {0.74, 1.5, 3.0} m crossed with n in
+# {20, 50}, six conditions, objective the geometric mean of the per-condition
+# medians. Budget 1200 x 12, DOUBLE section 9's, because the same four constants
+# are being fitted to six conditions instead of one; see
+# configs/search/train_s2_class_*.toml. Training seed bases 910000 (flat) and
+# 920000 (rough), both disjoint from these evaluation seeds and from the section
+# 13 searches' 900000.
+#
+# All five rows on section 14's grid so the comparison is like for like in one
+# file: the published constants, the two single-condition searched rows, and the
+# two class-searched rows.
+#
+# tau = 600 s, as on section 14's main grid. Section 14's tau extension showed
+# that at the 3.0 m radius this truncates the slower rows; the cells that matter
+# for the decision rule are re-run at longer tau in a companion sweep rather than
+# assumed away here.
+
+name = "terrain-class-eval"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [0.74, 1.5, 3.0]
+
+[[axis]]
+path = "swarm.n"
+values = [20, 50]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-flat"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.328887, -0.892324] },
+  { wheels = [0.998251, -0.658854] },
+] }
+
+[[rows]]
+label = "S2-rough"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
+
+[[rows]]
+label = "S2-class-flat"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.432983, -0.882043] },
+  { wheels = [0.792395, -0.886538] },
+] }
+
+[[rows]]
+label = "S2-class-rough"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.249091, -0.909332] },
+  { wheels = [0.862019, -0.628348] },
+] }
