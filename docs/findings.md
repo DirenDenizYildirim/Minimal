@@ -2524,3 +2524,88 @@ remains, plus what §§14–16 surfaced:
     turn an explanation into a measurement, and it is one sweep.
 11. **Whether the ℓ/λ collapse survives outside one decade.** §16 covers
     λ ∈ {5, 10, 20} cm. Nothing in it licenses λ = 1 cm or λ = 1 m.
+
+---
+
+## Freeze — Paper 1
+
+**Freeze commit: `ce427a8bcdc4a5922b0dec084773c35c55c5be1e`** ("Phase 0: the c*(theta) baseline scatters across
+optimiser seeds").
+
+**§1–§21 above are Paper 1's evidence base.** Together with
+`docs/literature-corrections.md` #1–#15 and `docs/validation.md`, they are the
+whole of it. Every number the paper quotes must be traceable to one of them.
+
+**No further simulation runs are permitted in this branch for Paper 1.** The
+experimental record is closed at the commit above. Consolidation and writing may
+read the record; they may not add to it, re-run any part of it, or recompute a
+quantity that is not already in it. Anything a later phase needs and cannot find
+is written down as a source gap and left as one.
+
+**In particular, the following are follow-up work and must not be run now:**
+
+* the rough class search with more runs per condition, or with a different
+  per-cell statistic in place of the median;
+* separating the three body-scaled lengths (body diameter, cluster link distance,
+  occlusion footprint);
+* the sensor-radius decoupling;
+* anything with a finite-range sensor.
+
+### Follow-up (not Paper 1)
+
+The next list as it stood at the freeze, verbatim, relabelled. Items struck
+through were answered during the study and are kept so the sequence is legible.
+
+
+Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
+remains, plus what §§14–16 surfaced:
+
+1. ~~**Does S2-searched hold up at a λ matched to its own R₀?**~~ **Answered in
+   §15.** It does: both rows share a worst λ of 7.46 cm, so the terrain effect
+   does not follow the controller down and §13's λ was near-worst for both.
+2. ~~**ℓ/λ across more than one λ.**~~ **Answered in §16.** It collapses: 0.0201
+   max slope spread at matched ℓ/λ over a 4× range of λ.
+3. **The scalar-field row's ~2% improvement** (§6), pooled 0.980 [0.976, 0.986].
+   Still unexplained, still small, still a real interval.
+4. **A searched dispersive row.** §12's front is between hand-designed spatial
+   strategies. Searching both ends would say whether the front is a property of
+   the strategies or of two guesses.
+5. **Where the D-vs-aggregating crossover sits in r_p.** §12 brackets it between
+   0.2 and 0.35 m (0.27 R and 0.47 R) at κ = 3; a denser r_p axis would locate
+   it. Worth doing at two start radii, since r_p is only meaningful relative to
+   R and the whole grid slides when R changes.
+6. **Row B4** — the received alarm bit — still needs communication wired, and the
+   delivery model (broadcast radius vs line-of-sight) is itself a capability
+   claim to be counted in `K`.
+7. **Budget scaled with dimension**, as opposed to a warm start. §10 removed the
+   direction of the equal-budget confound; scaling the budget would remove it.
+8. ~~**A search whose objective spans initial conditions.**~~ **Answered in
+   §19**, and it changed the baseline. ~~The τ-in-the-training-loop follow-up~~
+   **ran in §20**: it did not produce a transferring rough-trained row, and it
+   showed §19's diagnosis was wrong. What replaces it: **a class search with more
+   runs per condition** — §20 measures the per-evaluation noise at the worst
+   condition as 2.79 log units against a 0.48 log unit signal, so 12 runs over
+   six conditions cannot resolve what the search is being asked to resolve.
+   Raising runs/evaluation to 60 (10 per condition) at the same 1200 evaluations
+   is a 5× compute increase and the obvious next attempt; a variance-stabilising
+   statistic in place of the per-condition median is the cheaper alternative and
+   is untested.
+12. ~~**Seed spread on a class search.**~~ **Answered in §21**, and the answer is
+    that the baseline scatters: R₀ spans 16.9% across three seeds and 4 of 12
+    held-out cells contain a disjoint pair, so the baseline is best-of-three †
+    per cell. What remains open is a **second, structurally different optimiser**
+    — `docs/statistics.md` asks for two, and three seeds of one shares
+    sep-CMA-ES's diagonal covariance, so a bias common to that family would not
+    show up.
+9. **Which body-scaled length the worst λ actually is.** §18 shows the peak
+   tracking body diameter at 1.01 and 0.97 diameters, but the cluster link
+   distance (1.5 body diameters) and the occlusion footprint scale with the body
+   too. `metrics.cluster_link_radii` is a metric parameter rather than a physical
+   one, so varying it at a fixed body separates the metric's definition of
+   "together" from the robot — one sweep, and the obvious next one.
+10. **The gathering-rate / holding-quality trade-off as an axis in its own
+    right.** §14 reads it off two searched controllers. Sweeping R₀ directly at
+    fixed everything else — time to first cluster against held dispersion — would
+    turn an explanation into a measurement, and it is one sweep.
+11. **Whether the ℓ/λ collapse survives outside one decade.** §16 covers
+    λ ∈ {5, 10, 20} cm. Nothing in it licenses λ = 1 cm or λ = 1 m.
