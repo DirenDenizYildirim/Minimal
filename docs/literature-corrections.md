@@ -376,12 +376,35 @@ Three things to report with any searched row, none of which is standard:
    searched at a point and a row searched over a class are different claims, and
    the file that carries the constants should carry the class.
 2. **The budget, and how it scales with the class size.**
-3. **Whether the training objective was itself truncated.** §19's rough-trained
-   class row did not improve at the conditions it most needed to, because at the
-   trial length the *search* ran at, its candidates almost never aggregated
-   there. An optimiser cannot climb a gradient it cannot see, and a class search
-   whose hardest conditions are unreachable within the training τ has quietly
-   become a search over the easy ones.
+3. **The per-evaluation noise at the worst condition, against the differences
+   the search must resolve.** §19 guessed that its rough-trained class row failed
+   because the training objective was truncated — its candidates almost never
+   aggregated at the hardest conditions within the training τ. §20 tested that by
+   re-running the search with τ = 3600 s at exactly those conditions, everything
+   else held including the training seed base, and the guess was wrong: R₀ moved
+   4.47 → 4.44 cm and the row transferred no better.
+
+   What was actually wrong is measurable and worse. With 12 runs spread over six
+   conditions, each condition's median comes from **two** runs, and at the
+   hardest condition the outcome distribution spans two orders of magnitude. The
+   5th–95th percentile of that 2-run estimate covers **2.79 log units** against a
+   **0.48 log unit** gap between the row the search returned and a better one
+   that already existed — noise nearly six times the signal. Best-so-far
+   selection then returns whichever candidate drew a lucky pair, which is why the
+   search's own reported best objective, 1.6009, sits *below* an honest 100-run
+   re-score of the same constants, 2.6553.
+
+   So the check is not "was the objective truncated" but **"is any one
+   condition's per-evaluation estimate noisier than the differences being
+   resolved"**, and the remedy is runs per condition or a variance-stabilising
+   statistic, not a longer trial. Raising τ made it worse here: it turned uniform
+   failure into outcomes spanning two orders of magnitude, which is more gradient
+   *and* far more variance.
+
+   The corollary is a reporting rule with teeth: **a training objective must be
+   re-scored at high replication before it is quoted**, and a searched row's
+   standing must rest on held-out evaluation. §19's baseline survives §20 for
+   exactly that reason — held-out evaluation is what caught this.
 
 The caveat that travels with it: the class-searched row is still an upper bound
 (†) from a diagonal-covariance optimiser, and the published constants remain the

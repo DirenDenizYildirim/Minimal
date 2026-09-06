@@ -1,0 +1,79 @@
+# DIAGNOSTIC -- does the rough class objective PREFER the small-R0 row, or did
+# the optimiser simply fail to find the large-R0 one?
+#
+# S2-class-rough-tau kept R0 at 4.44 cm (S2-class-rough: 4.47 cm) even with the
+# truncation removed from its training objective, so section 19's explanation for
+# the unmoved R0 is wrong. Two explanations remain and they are distinguishable:
+#
+#   (a) the OBJECTIVE prefers a small R0 at theta_m = 0.9 -- the four easy
+#       conditions, where a tight circle holds better (section 13), outweigh the
+#       two hard ones where it cannot gather; or
+#   (b) the SEARCH failed -- a better point exists and sep-CMA-ES did not reach it.
+#
+# The test: score S2-class-flat, whose R0 is 7.47 cm and which transfers, on the
+# rough class's OWN objective. If it scores worse than the row the search found,
+# the objective prefers small R0 and (a) holds. If it scores better, a better
+# point existed and (b) holds.
+#
+# Scored on the TRAINING seed base (920000), not the held-out evaluation seeds,
+# because the question is about the training landscape rather than about
+# generalisation. 100 runs per condition instead of the search's 2, so the
+# comparison is not itself noise-limited.
+#
+# Two files because tau differs between conditions and the sweep axes cross:
+# this one is the four conditions at tau = 600 s, and
+# terrain_class_objective_probe_far.toml is the two at 3600 s. The analysis
+# combines them into the geometric mean of the six per-condition medians.
+
+name = "terrain-class-objective-probe"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.9]
+
+[[axis]]
+path = "sim.seed"
+values = [920000]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [0.74, 1.5]
+
+[[axis]]
+path = "swarm.n"
+values = [20, 50]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-class-flat"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.432983, -0.882043] },
+  { wheels = [0.792395, -0.886538] },
+] }
+
+[[rows]]
+label = "S2-class-rough"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.249091, -0.909332] },
+  { wheels = [0.862019, -0.628348] },
+] }
+
+[[rows]]
+label = "S2-class-rough-tau"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.236719, -0.874006] },
+  { wheels = [0.739824, -0.240389] },
+] }

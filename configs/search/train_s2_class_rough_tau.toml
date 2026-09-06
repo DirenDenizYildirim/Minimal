@@ -32,10 +32,14 @@
 # flat class search would be scored on the same runs at either tau and
 # S2-class-flat is carried forward unchanged.
 #
-# Budget 1200 x 12, identical to section 19's, so the only difference between
-# S2-class-rough and S2-class-rough-tau is the trial length inside the training
-# loop. Training seed base 930000: disjoint from the evaluation seeds (20260904),
-# from section 13's searches (900000) and from section 19's (910000, 920000).
+# Budget 1200 x 12 and optimiser seed 1, identical to section 19's, AND THE SAME
+# TRAINING SEED BASE, 920000, so that the only difference between S2-class-rough
+# and S2-class-rough-tau is the trial length inside the training loop. This is
+# the pairing section 13 used between S2-flat and S2-rough: reusing the seed base
+# is what makes the comparison about one dial rather than about one dial plus a
+# different draw of training arenas. 920000 stays disjoint from the evaluation
+# seeds (20260904) and from section 13's searches (900000), so held-out
+# evaluation is preserved.
 #
 # COST. Sim-seconds per evaluation rise 2.67x over section 19's rough search
 # (four conditions at 600 s, two at 3600 s, against six at 600 s). Stated because

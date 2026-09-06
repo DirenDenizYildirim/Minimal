@@ -2020,6 +2020,196 @@ Figure: `figures/terrain_class_search.png`
 
 ---
 
+## 20. The τ-corrected class search: §19's diagnosis was wrong
+
+**Removing the truncation from the training objective changed nothing, and the
+reason is not the one §19 gave.** R₀ moved from 4.47 cm to **4.44 cm** — that is,
+not at all — and the row transfers no better: **6 W / 5 L / 1 tied** on §14's
+grid against S2-class-rough's 7 / 5 / 0. The cause is not that the objective
+prefers a small R₀. It is that the objective was estimated at **2 runs per
+condition**, and at the hardest condition the noise in that estimate is about
+**six times the entire signal** the search had to follow. **S2-class-flat † stays
+the c*(θ) baseline**, unchanged from §19.
+
+`configs/search/train_s2_class_rough_tau.toml`, evaluated by
+`configs/sweeps/terrain_class_tau_eval.toml` and its τ companion.
+
+### The experiment
+
+§19's rough-trained class row kept R₀ at 4.47 cm while the flat-trained one moved
+5.53 → 7.47 cm and became the baseline. §19 attributed that to a truncated
+training objective: at τ = 600 s almost no candidate aggregates at 3.0 m under
+terrain, so those two conditions contributed a near-constant penalty with no
+gradient in it, and the search was effectively over the four easy ones. That was
+recorded as §19's own limitation, not as a result, and next-list item 8 named the
+test.
+
+S2-class-rough-tau is that test. τ = 3600 s at the two 3.0 m conditions — the
+trial length those conditions are *evaluated* at — and 600 s at the other four.
+Everything else is held: budget 1200 × 12, optimiser seed 1, and **the same
+training seed base, 920 000**, so trial length is the only difference between the
+two rows. This is §13's pairing discipline: reusing the seed base is what makes
+the comparison about one dial rather than one dial plus a different draw of
+training arenas.
+
+The class is not a product — τ differs *between* conditions — so it is given as
+six explicit `--class-point` conditions rather than crossed axes.
+
+### The row it found
+
+| row | state-0 constants | R₀ | state-1 | L2 from S2-class-rough |
+|---|---|---|---|---|
+| S2-class-rough † | (−0.2491, −0.9093) | 4.47 cm | (+0.8620, −0.6283) | — |
+| S2-class-rough-tau † | (−0.2367, −0.8740) | **4.44 cm** | (+0.7398, −0.2404) | 0.408 |
+
+The blind state is essentially unchanged. What moved is state 1 — the response on
+*seeing* a robot — which is not where the gathering-rate trade lives.
+
+### On §14's grid, at τ = 600 s
+
+| cell | S2-class-flat † | S2-class-rough † | S2-class-rough-tau † |
+|---|---|---|---|
+| θ=0, n=20, r₀=0.74 m | 1.115 [1.099, 1.144] **W** | 1.126 [1.109, 1.154] **W** | 1.115 [1.092, 1.152] **W** |
+| θ=0, n=20, r₀=1.5 m | 1.104 [1.078, 1.123] **W** | 1.086 [1.051, 1.122] **W** | 1.056 [1.022, 1.089] **W** |
+| θ=0, n=20, r₀=3 m | 1.090 [1.072, 1.111] **W** | 1.053 [1.032, 1.080] **W** | 0.986 [0.945, 1.036] |
+| θ=0, n=50, r₀=0.74 m | 1.026 [1.020, 1.033] **W** | 0.953 [0.931, 0.966] **L** | 0.946 [0.924, 0.959] **L** |
+| θ=0, n=50, r₀=1.5 m | 1.016 [1.009, 1.023] **W** | 0.825 [0.780, 0.849] **L** | 0.835 [0.804, 0.876] **L** |
+| θ=0, n=50, r₀=3 m | 0.999 [0.991, 1.008] | 0.783 [0.727, 0.825] **L** | 0.742 [0.712, 0.796] **L** |
+| θ=0.9, n=20, r₀=0.74 m | 1.809 [1.442, 2.072] **W** | 2.083 [1.711, 2.417] **W** | 2.097 [1.806, 2.365] **W** |
+| θ=0.9, n=20, r₀=1.5 m | 1.357 [1.231, 1.548] **W** | 1.505 [1.352, 1.715] **W** | 1.375 [1.117, 1.575] **W** |
+| θ=0.9, n=20, r₀=3 m | 0.348 [0.275, 0.636] **L** | 0.196 [0.127, 0.274] **L** | 0.146 [0.090, 0.203] **L** |
+| θ=0.9, n=50, r₀=0.74 m | 1.137 [1.101, 1.220] **W** | 1.158 [1.064, 1.240] **W** | 1.230 [1.126, 1.328] **W** |
+| θ=0.9, n=50, r₀=1.5 m | 1.158 [1.056, 1.331] **W** | 1.196 [1.046, 1.325] **W** | 1.303 [1.165, 1.408] **W** |
+| θ=0.9, n=50, r₀=3 m | 0.748 [0.610, 0.916] **L** | 0.644 [0.489, 0.719] **L** | 0.682 [0.531, 0.836] **L** |
+
+| row | W | L | tied |
+|---|---|---|---|
+| S2-class-flat † | 9 | 2 | 1 |
+| S2-class-rough † | 7 | 5 | 0 |
+| S2-class-rough-tau † | 6 | 5 | 1 |
+
+### The 3.0 m column at the trial length it needs
+
+#### n = 20 (start radius 3.0 m, θ_m = 0.9)
+
+| τ | S2-gauci | S2-class-flat † | S2-class-rough † | S2-class-rough-tau † |
+|---|---|---|---|---|
+| **600 s** | reach 0.46 [0.37, 0.56]<br>disp 3.90 | reach 0.17 [0.11, 0.26]<br>disp 12.52 | reach 0.11 [0.06, 0.19]<br>disp 31.28 | reach 0.07 [0.03, 0.14]<br>disp 44.96 |
+| **1800 s** | reach 0.99 [0.95, 1.00]<br>disp 2.93 | reach 0.76 [0.67, 0.83]<br>disp 1.98 | reach 0.34 [0.25, 0.44]<br>disp 18.46 | reach 0.19 [0.13, 0.28]<br>disp 29.85 |
+| **3600 s** | reach 1.00 [0.96, 1.00]<br>disp 2.89 | reach 0.86 [0.78, 0.91]<br>disp 1.76 | reach 0.36 [0.27, 0.46]<br>disp 13.42 | reach 0.26 [0.18, 0.35]<br>disp 24.97 |
+
+paired ratio Gauci/row:
+
+| τ | S2-class-flat † | S2-class-rough † | S2-class-rough-tau † |
+|---|---|---|---|
+| **600 s** | 0.348 [0.275, 0.636] **L** | 0.196 [0.127, 0.274] **L** | 0.146 [0.090, 0.203] **L** |
+| **1800 s** | 1.257 [1.181, 1.479] **W** | 0.181 [0.122, 0.336] **L** | 0.104 [0.067, 0.139] **L** |
+| **3600 s** | 1.436 [1.249, 1.673] **W** | 0.269 [0.148, 0.643] **L** | 0.129 [0.087, 0.197] **L** |
+
+#### n = 50 (start radius 3.0 m, θ_m = 0.9)
+
+| τ | S2-gauci | S2-class-flat † | S2-class-rough † | S2-class-rough-tau † |
+|---|---|---|---|---|
+| **600 s** | reach 0.79 [0.70, 0.86]<br>disp 2.38 | reach 0.62 [0.52, 0.71]<br>disp 3.42 | reach 0.53 [0.43, 0.62]<br>disp 4.07 | reach 0.61 [0.51, 0.70]<br>disp 3.74 |
+| **1800 s** | reach 0.99 [0.95, 1.00]<br>disp 1.77 | reach 0.90 [0.83, 0.94]<br>disp 1.76 | reach 0.70 [0.60, 0.78]<br>disp 1.83 | reach 0.76 [0.67, 0.83]<br>disp 1.98 |
+| **3600 s** | reach 1.00 [0.96, 1.00]<br>disp 1.74 | reach 0.95 [0.89, 0.98]<br>disp 1.61 | reach 0.76 [0.67, 0.83]<br>disp 1.66 | reach 0.78 [0.69, 0.85]<br>disp 1.69 |
+
+paired ratio Gauci/row:
+
+| τ | S2-class-flat † | S2-class-rough † | S2-class-rough-tau † |
+|---|---|---|---|
+| **600 s** | 0.748 [0.610, 0.916] **L** | 0.644 [0.489, 0.719] **L** | 0.682 [0.531, 0.836] **L** |
+| **1800 s** | 1.004 [0.890, 1.132] | 0.871 [0.683, 1.049] | 0.903 [0.686, 1.022] |
+| **3600 s** | 1.063 [0.934, 1.172] | 0.976 [0.821, 1.065] | 1.045 [0.854, 1.195] |
+
+At τ = 3600 s and n = 20 the new row reaches a cluster in **26%** of runs against
+Gauci's 100%, S2-class-flat's 86% and S2-class-rough's 36%. Training *at* that
+trial length made it **worse** at that condition than training at 600 s did.
+
+### Why: the objective was noise, not truncation
+
+Two explanations survived the result above, and they are distinguishable. Either
+the objective genuinely prefers a small R₀ at θ_m = 0.9 — the four easy
+conditions, where a tight circle holds better (§13), outweighing the two hard
+ones — or the search failed to find a better point that exists.
+
+`configs/sweeps/terrain_class_objective_probe*.toml` scores four controllers on
+the rough class's **own objective**, on its **own training seeds** (920 000), at
+100 runs per condition instead of 2:
+
+| row | 0.74/20 | 0.74/50 | 1.5/20 | 1.5/50 | 3.0/20 | 3.0/50 | **objective** |
+|---|---|---|---|---|---|---|---|
+| S2-gauci | 2.613 | 1.866 | 2.588 | 1.929 | 2.798 | 1.776 | 2.2237 |
+| **S2-class-flat †** | 1.655 | 1.605 | 1.715 | 1.710 | 1.641 | 1.553 | **1.6456** |
+| S2-class-rough † | 1.423 | 1.443 | 1.579 | 1.751 | 14.902 | 1.968 | 2.3456 |
+| S2-class-rough-tau † | 1.416 | 1.346 | 1.573 | 1.656 | **36.762** | 1.921 | 2.6553 |
+
+**S2-class-flat is a strictly better point on the objective this search was
+minimising** — 1.6456 against the returned row's 2.6553 — and it was found by a
+different search. So the objective does not prefer a small R₀; the search failed
+to find its own optimum.
+
+It failed because of that one cell. At 3.0 m, n = 20, τ = 3600 s the returned
+row's dispersion runs from 1.14 to 242.50 over 100 runs, with quartiles 13.69 and
+73.59. The search saw the median of **two** of those per evaluation:
+
+| quantity | log units |
+|---|---|
+| 5th–95th percentile of the 2-run estimate at that cell (6.98 → 114.07) | **2.79** |
+| the whole gap between the returned row and the better one that existed | **0.48** |
+
+The noise in one condition is **5.8×** the signal across the entire objective. A
+best-so-far selection under that noise returns whichever candidate drew a lucky
+pair, which is why the search's own reported best objective — **1.6009** — sits
+*below* the honest 100-run re-score of the very same constants, **2.6553**. The
+repository already warns that reporting a training objective is reporting the
+maximum of a noisy sample; here the **selection itself** was corrupted, not just
+the number that got printed.
+
+Raising τ made this worse rather than better: it moved the hard cells from
+"everything fails, uniformly" to "outcomes span two orders of magnitude", which
+is more gradient *and* far more variance, and the variance won.
+
+### What this does not undermine
+
+**§19's baseline stands.** S2-class-flat's status rests on held-out evaluation
+across §14's grid, not on its training objective — and held-out evaluation is
+exactly what caught this failure. The one number that was corrupted here is a
+training objective, and no claim in §19 or §20 rests on one.
+
+Nor does this reopen anything about terrain. §§13–14 are untouched: terrain
+remains a performance tax on a fixed controller at realistic start radius, and
+§16 is closed.
+
+### What it changes
+
+Correction #15's third reporting requirement was "check whether the training
+objective was itself truncated", written from §19's diagnosis. That is the wrong
+check. The right one is **whether any single condition's per-evaluation estimate
+is noisier than the differences the search must resolve** — and the fix is runs
+per condition, or a variance-stabilising statistic, not a longer trial. #15 is
+amended.
+
+### Limitations
+
+* One optimiser seed. This is one search failing, and the diagnosis explains why
+  a class of searches will fail the same way, but the seed spread is still
+  unmeasured (next-list item 12).
+* The probe scores four specific controllers on the objective, which shows a
+  better point exists; it does not locate the objective's optimum, so "the
+  objective prefers a large R₀" is not established either — only that it does not
+  prefer the returned one.
+* The noise figure is for one condition at one θ_m. The flat class search is much
+  better behaved — every condition reaches in every run — which is consistent
+  with S2-class-flat being the row that worked, but that is an observation, not a
+  controlled comparison.
+* Both class rows remain upper bounds (†).
+
+Figure: `figures/terrain_class_tau.png`
+(regenerate with `harness/figures_class_tau.py`).
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
@@ -2045,13 +2235,16 @@ remains, plus what §§14–16 surfaced:
 7. **Budget scaled with dimension**, as opposed to a warm start. §10 removed the
    direction of the equal-budget confound; scaling the budget would remove it.
 8. ~~**A search whose objective spans initial conditions.**~~ **Answered in
-   §19**, and it changed the baseline. What it left open: the θ_m = 0.9 class
-   search was scored on 600 s runs at conditions where its candidates almost
-   never aggregated, so it had no gradient to climb there and its R₀ did not
-   move. **A class search with τ = 3600 s inside the training loop**, at the
-   3.0 m conditions only, is the direct test of whether a transferring
-   rough-trained row exists — and it is the one experiment in this list whose
-   answer would change §19's baseline again.
+   §19**, and it changed the baseline. ~~The τ-in-the-training-loop follow-up~~
+   **ran in §20**: it did not produce a transferring rough-trained row, and it
+   showed §19's diagnosis was wrong. What replaces it: **a class search with more
+   runs per condition** — §20 measures the per-evaluation noise at the worst
+   condition as 2.79 log units against a 0.48 log unit signal, so 12 runs over
+   six conditions cannot resolve what the search is being asked to resolve.
+   Raising runs/evaluation to 60 (10 per condition) at the same 1200 evaluations
+   is a 5× compute increase and the obvious next attempt; a variance-stabilising
+   statistic in place of the per-condition median is the cheaper alternative and
+   is untested.
 12. **Seed spread on a class search.** §19 ran one optimiser seed per class row.
     Three or five would say whether S2-class-flat's win over Gauci is a property
     of the protocol or of one draw, and it is the cheapest remaining check on the
