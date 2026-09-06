@@ -106,8 +106,9 @@ robot-timesteps and show the worst terrain correlation length tracks the robot's
 body diameter rather than its turning circle. Second, against a pursuer with
 finite range, confusion and handling time, the minimum \emph{does} move, and
 confusion is shown to act through aggregation by a dispersive control with
-byte-identical pursuer sensing; reported on two axes, aggregation is
-Pareto-dominant in one regime and catastrophic in others. Third, and
+byte-identical pursuer sensing that is nearly insensitive to confusion where the
+aggregating rows swing three- to fourfold --- so which strategy wins at a given
+pursuer range depends on the confusion strength rather than on the range. Third, and
 methodologically, a controller searched at one operating point can be worse than
 the published constants at another; searching instead over a six-condition
 mission class produces a controller that transfers, but three independent
@@ -161,33 +162,30 @@ decision-making with the same budget \citep{gauci2014aamas, ozdemir2017,
 ozdemir2018, johnson2015}.
 
 Every one of those results is obtained in a flat, uniform, unthreatened arena.
-That is not an oversight --- it is what makes the minimum well defined. But it
-leaves a gap that a field deployment closes immediately: the minimum is reported
-as a property of the behaviour, when it may be a property of the behaviour
-\emph{and the arena}. Nothing in the literature fixes a performance threshold,
-parameterises the environment along hostility axes, and reports how the
-capability minimum moves.
+That is not an oversight --- it is what makes the minimum well defined --- but it
+leaves a gap a field deployment closes immediately: the minimum is reported as a
+property of the behaviour when it may be a property of the behaviour \emph{and
+the arena}.
 
-\paragraph{The inversion.} We make capability the dependent variable. We fix a
+\paragraph{The inversion.} We make capability the dependent variable: fix a
 behaviour (aggregation, and survival under predation), parameterise the
-environment, and ask how the minimum capability that meets a threshold changes
-as the environment gets worse. Capability is a vector $c = (S, M, A, K)$ ---
+environment, and ask how the minimum capability meeting a threshold changes as
+the environment gets worse. Capability is a vector $c = (S, M, A, K)$ ---
 sensor \emph{states} per timestep, persistent memory bits, an arithmetic flag,
 and communication bits broadcast per timestep --- and it is a set of vectors rather than a
 chain, because two extra sensor states and one memory bit are incomparable. The environment dials are occlusion, terrain, and a pursuer.
 
 \paragraph{The anchor that makes minimality probabilistic.}
-\citet{steinberg2024} prove that for any bimodal controller in this class ---
+\citet{steinberg2025} prove that for any bimodal controller in this class ---
 memoryless, binary line-of-sight sensor, no communication --- there exists a
 swarm size $n$ and an initial state for which it does not aggregate, under
 plastic collisions, no noise and no slippage. The same work identifies an
 unsound implicit assumption in the published two-robot proof for the anchor
-controller and reports it failing on 4.24\% of two-robot trials. Two
-consequences run through this paper. The minimum must be written $c^*(\theta,
-n)$: it is a function of swarm size as well as environment, and for one whole
-capability row it does not exist uniformly in $n$ at all. And minimality in this
-class is a probabilistic statement, so every claim here is an interval over runs
-rather than a guarantee. The impossibility result belongs in the framing, not the
+controller and reports it failing on 4.24\% of two-robot trials. Two consequences run through this paper.
+The minimum must be written $c^*(\theta, n)$ --- a function of swarm size as well
+as environment, and for one whole capability row it does not exist uniformly in
+$n$ at all --- and minimality here is probabilistic, so every claim is an interval
+over runs rather than a guarantee. The impossibility result belongs in the framing, not the
 reading list.
 
 \paragraph{Contributions.} Three, in decreasing order of how much the
@@ -195,42 +193,39 @@ environment moves the minimum.
 
 \begin{enumerate}
 \item \textbf{Terrain is a performance tax, not a capability step, and we
-locate its mechanism.} Over $0 \le \theta_m \le 0.9$ at a correlation length
-$\lambda/R_0 = 0.69$, $c = (2,0,0,0)$ suffices at every point. A fifth sensor
-state --- one bit of ``the ground here is rough'' --- does not buy back the
-degradation, and does not do so even when its search is warm started at the
-two-state optimum so that it begins holding that optimum and can only be asked
-whether \emph{using} the bit beats \emph{ignoring} it. What terrain does instead
-is tax a fixed controller, and the size of the tax is set almost entirely by how
-well matched the controller is: a controller searched for this objective on flat
+locate its mechanism.} Over $0 \le \theta_m \le 0.9$, $c = (2,0,0,0)$ suffices at
+every point. Small amounts do not help, across three nulls. A terrain-sensing
+state does not buy back the degradation, and does not do so even when its search
+is warm started at the two-state optimum, so that it begins holding that optimum
+and can only be asked whether \emph{using} the bit beats \emph{ignoring} it. What
+terrain does instead is tax a fixed controller, by an amount set almost entirely
+by how well matched that controller is: one searched for this objective on flat
 ground, which never saw terrain, degrades by 20\% where the published constants
-degrade by 121\%. We show by a paired control that the mechanism is per-wheel
-traction changing curvature rather than speed heterogeneity between robots, we
-regress the per-timestep heading-rate residual against an exact first-order
-decomposition over twelve million robot-timesteps per point, and we show that
-the worst correlation length is not proportional to the controller's turning
-circle --- it tracks the robot's body diameter.
+degrade by 121\%. A paired control shows the mechanism is per-wheel traction
+changing curvature rather than speed heterogeneity between robots; a regression
+of the heading-rate residual against an exact first-order decomposition over
+twelve million robot-timesteps per point confirms it; and the worst correlation
+length tracks the robot's body diameter rather than its turning circle.
 
 \item \textbf{Against a pursuer the minimum does move, and the axis it moves
 along is the one the spatial strategy can act on.} With finite sensing range,
 Olson-style confusion and a Holling handling time, one extra sensor state ---
 telling a pursuer from a robot --- is worth more than anything else we varied. A
-dispersive control row with byte-identical pursuer sensing shows that confusion
-acts \emph{through} aggregation rather than through the pursuer simply being bad
-at its job. Reported on two axes rather than on survival alone, there is one
-regime where aggregation dominates outright and others where it is
-catastrophic.
+dispersive control with byte-identical pursuer sensing shows that confusion acts
+\emph{through} aggregation rather than through the pursuer simply being bad at
+its job, and that the ordering between the two strategies at a fixed pursuer
+range is set by the confusion strength rather than by the range.
 
-\item \textbf{A methodological result about searched baselines.} A controller
-searched at one operating point can be worse than the published constants at
-another --- worse on flat ground at a larger swarm, at every start radius, and
-not because the trial was too short. Searching instead over a six-condition
-mission class produces a controller that transfers. But three searches differing
-only in the optimiser seed return controllers whose turning circles span 16.9\%
-and whose held-out intervals are disjoint in four of twelve cells, so the
-baseline is a reproduced region and must be reported as one. Along the way we
-measure the winner's curse directly: a training objective reported as 1.6009
-re-scores at 2.6553 when the same constants are evaluated at fifty times the
+\item \textbf{A methodological result about searched baselines}, which stands
+independently of the two above. A controller searched at one operating point can
+be worse than the published constants at another --- worse on flat ground at a
+larger swarm, at every start radius, and not because the trial was too short.
+Searching instead over a six-condition mission class produces a controller that
+transfers. But three searches differing only in the optimiser seed return
+controllers whose turning circles span 16.9\% and whose held-out intervals are
+disjoint in four of twelve cells, so the baseline is a reproduced region and must
+be reported as one. Along the way the winner's curse is measured directly: a
+training objective reported as 1.6009 re-scores at 2.6553 at fifty times the
 replication.
 \end{enumerate}
 
@@ -243,18 +238,18 @@ costs.
 
 \paragraph{The computation-free line.} \citet{gauci2014} is the anchor: one
 binary line-of-sight sensor, no memory, no arithmetic, four wheel-speed
-constants, exhaustive grid search at that resolution, and empirical validation
-to a thousand robots. The same group extended the programme to object clustering
+constants, exhaustive grid search at that resolution, and empirical validation to
+a thousand robots. The same group extended the programme to object clustering
 with a \emph{ternary} sensor \citep{gauci2014aamas}, to shepherding
-\citep{ozdemir2017}, and to collective decision-making \citep{ozdemir2018};
+\citep{ozdemir2017} and to collective decision-making \citep{ozdemir2018};
 \citet{johnson2015} add perimeter, rendezvous and foraging at the same budget,
 and \citet{brown2016} supply the capability-vector framing this paper adopts.
-Two corrections to how this line is usually cited are load-bearing here. The
-published two-robot proof is unsound: \citet{steinberg2024} identify an implicit
+Two corrections to how the line is usually cited are load-bearing here. The
+published two-robot proof is unsound: \citet{steinberg2025} identify an implicit
 assumption --- that a distance condition guarantees subsequent aggregation, when
 two robots can satisfy it while travelling the same circular perimeter without
 ever seeing each other --- and report the controller failing on 4.24\% of
-two-robot trials, with a corrected controller and proof of their own. And
+two-robot trials. And
 \citet{daymude2021} prove deadlock for $n > 3$ under uniform deterministic
 motion, with the practical caveat that the deadlocks ``are not observed in
 practice due to inherent noise in physical e-puck robots --- collisions and
@@ -265,23 +260,22 @@ reports what happens when the analogy is over-extended.
 
 \paragraph{BEECLUST, distinguished.} \citet{schmickl2008} is the obvious prior
 art for minimal robots aggregating in an explicitly non-uniform environment, and
-it must be cited and distinguished rather than merely cited. In BEECLUST the
-heterogeneity is the \emph{target} the swarm is meant to find --- a light or
-temperature optimum. Here it is a \emph{perturbation} the swarm is meant to
-survive while doing something else. Same mechanism class, opposite role, and the
-difference decides what the metric is: a BEECLUST-style experiment scores finding
-the gradient, and ours scores holding together despite it.
+must be distinguished rather than merely cited. There the heterogeneity is the
+\emph{target} the swarm is meant to find; here it is a \emph{perturbation} the
+swarm must survive while doing something else. Same mechanism class, opposite
+role, and the difference decides the metric: BEECLUST scores finding the
+gradient, this paper scores holding together despite it.
 
 \paragraph{Pursuit--evasion and predator confusion.} Idea~B sits at the
 minimal-sensing corner of the pursuit--evasion literature surveyed by
 \citet{chung2011}. The confusion mechanism is taken from \citet{olson2013}:
 attack success falls with the number of prey in the predator's sensing field, so
-confusion is a property of the \emph{predator's perception}, not of the prey's
-behaviour, and it is therefore modelled in the environment rather than in the
-controller. We instantiate it as $p_{\mathrm{lock}} = 1/(1 + \kappa
-n_{\mathrm{local}})$. Handling time --- the interval after a capture during which
-the predator is occupied --- is Holling's, and it turns out to be required
-rather than optional \citeneed{Holling's disc equation, original reference}.
+confusion is a property of the \emph{predator's perception} and is modelled in
+the environment rather than in the controller, here as
+$p_{\mathrm{lock}} = 1/(1 + \kappa n_{\mathrm{local}})$. Handling time --- the
+interval after a capture during which the predator is occupied --- is Holling's,
+and turns out to be required rather than optional
+\citeneed{Holling's disc equation, original reference}.
 
 \paragraph{Automatic design and the reality gap.} The methodological half of
 this paper sits next to the AutoMoDe line \citep{francesca2014, birattari2019},
@@ -311,16 +305,14 @@ left open (Section~\ref{sec:limitations}).
 \section{Framework}
 \label{sec:framework}
 
-\paragraph{Capability.} $c = (S, M, A, K)$, where $S$ counts sensor
-\emph{states} per timestep rather than bits (the anchor's binary line-of-sight
-sensor is $S = 2$; a ternary sensor is $S = 3$; a binary sensor crossed with a
-binary terrain bit is $S = 4$), $M$ counts persistent memory bits, $A$ is an
-arithmetic flag ($A = 0$ throughout this paper: every controller is a pure
-lookup table), and $K$ counts communication bits broadcast per timestep. Any
-``I can tell that a neighbour is fleeing'' cue is $K \ge 1$ on the sender
-\emph{and} an extra sensor state on the receiver; it is neither free nor
-sensing. The ladder is a set of vectors, not a chain of supersets, and the
-figures are drawn per row rather than along an ordering.
+\paragraph{Capability.} $c = (S, M, A, K)$: sensor \emph{states} per timestep
+rather than bits (the anchor's binary line-of-sight sensor is $S = 2$, a ternary
+sensor $S = 3$, a binary sensor crossed with a binary terrain bit $S = 4$),
+persistent memory bits, an arithmetic flag, and communication bits broadcast per
+timestep. Any ``I can tell a neighbour is fleeing'' cue is $K \ge 1$ on the sender
+\emph{and} an extra sensor state on the receiver; it is neither free nor sensing.
+The ladder is a set of vectors, not a chain of supersets, and the figures are
+drawn per row rather than along an ordering.
 
 \paragraph{Dials.} Occlusion $\theta_{\mathrm{occ}}$ (spatially correlated
 false-negative and false-positive rates on the sensor); terrain
@@ -330,19 +322,22 @@ $\theta_{\mathrm{pred}}$ (speed ratio $\rho$, sensing range $r_p$, confusion
 $\kappa$, handling time $h$). Section~\ref{sec:methods} gives the exact
 parameterisations.
 
-\paragraph{Thresholds and the figure.} The deliverable is not a one-step
-frontier. For each capability row we plot the performance surface over the
-hostility dial(s) and draw threshold contours $P = T$ on it; several contours on
-one panel show how the ``minimum'' depends on where the bar is set, which is the
-visual answer to the objection that minimality is ill-defined. The frontier
-$c^*(\theta, n)$ is then read off as the lowest row whose contour still encloses
-$\theta$. The primary metric is dispersion at $\tau$ in the swarm-centroid
-frame. That is a binding choice forced by measurement rather than a preference:
+\paragraph{What varies, and what this paper does not deliver.} Only $S$ and $M$
+move here: $A$ is 0 in every row and $K$ was never run, so two of the four
+coordinates are carried for the framing and are not measured. The primary metric
+is dispersion at $\tau$ in the swarm-centroid frame, forced by measurement ---
 across the terrain grid the share of runs that \emph{ever} reach a single cluster
-is 1.00 in every cell except one runaway corner, so a threshold set on ``did they
+is 1.00 in every cell but one runaway corner, so a threshold on ``did they
 aggregate'' sees almost nothing, while over a link distance from 2.2 to 6.0 body
-radii the median final dispersion does not move at all (1.401 at every value)
-while the share of time reading as a single cluster climbs from 0.43 to 0.98.
+radii the median final dispersion does not move at all (1.401 at every value) as
+the share of time reading as a single cluster climbs from 0.43 to 0.98.
+\textbf{No frontier table is produced.} The intended deliverable was a threshold
+$P = T$ per capability row with $c^*(\theta, n)$ read off as the lowest row whose
+contour still encloses $\theta$; a single $T$ was never pre-registered and the
+planned across-row test was never run, so results are reported as pairwise
+comparisons with intervals and both deviations are disclosed in
+Section~\ref{sec:limitations}. What the framework contributes here is the
+capability vector as an accounting unit and the two marks below.
 
 \paragraph{The baseline rule.} $c^*(\theta, n)$ is reported against the best
 known $S = 2$ controller \emph{per cell} over a fixed candidate set, not against
@@ -355,11 +350,10 @@ retained as the only \emph{enumerated} row and as the reference the baseline is
 measured against.
 
 \paragraph{The upper-bound rule.} The anchor's four-constant grid is exhaustive
-at its resolution, so that row alone is tight. At eight constants the grid grows
-as resolution$^4$ --- $20^8 \approx 2.6\times10^{10}$ points at the anchor's
-resolution --- and is not enumerable. Wherever an optimiser is used, ``no
-controller found meeting $T$'' means \emph{not found}, not \emph{not possible}.
-Two marks carry this through every table and caption in this paper:
+at its resolution, so that row alone is tight; at eight constants the grid is
+$20^8 \approx 2.6\times10^{10}$ points and is not enumerable. Wherever an optimiser
+is used, ``no controller found'' means \emph{not found}, not \emph{not possible}.
+Two marks carry this through every table and caption:
 
 \begin{quote}
 \dg\ searched, not exhaustive --- an upper bound.\\
@@ -393,15 +387,12 @@ has been green at every commit since.
 
 Integration is exact-arc: constant wheel speeds over a control step trace a
 circular arc integrated in closed form, so one period of the state-0 constants
-closes to $10^{-9}$\,m and the result is timestep-independent. A consequence
-worth stating is that the source paper's ``physics ten times per control cycle''
-is a no-op here, since substepping an exactly integrated constant-speed arc
-changes nothing; a fifty-fold refinement of the timestep, from 0.002 to 0.1\,s,
-changes no result. Contact is positional relaxation with early exit at a
-residual-overlap tolerance, converged to 0.01\% of a body diameter by 32 passes.
-Runs are bit-for-bit reproducible from a (seed, run index) pair, and the
-environment fields draw from separate seed streams so that changing $n$ does not
-reshuffle the terrain.
+closes to $10^{-9}$\,m and the result is timestep-independent --- a fifty-fold
+refinement of the timestep changes no result, and the source paper's substepping
+is a no-op here. Contact is positional relaxation, converged to 0.01\% of a body
+diameter by 32 passes. Runs are bit-for-bit reproducible from a (seed, run index)
+pair, and the environment fields draw from separate seed streams so that changing
+$n$ does not reshuffle the terrain.
 
 \subsection{The metric, and the correction the reproduction forced}
 
@@ -414,14 +405,13 @@ absolute dispersion values in this paper are provisional; every claim here is a
 comparison between cells that share the normalisation, and those are unaffected.
 
 The gate that reproduces the anchor initially failed at small $n$, and stayed
-failed across five hypotheses that were all wrong: sensor aliasing, time budget,
-missing actuation noise, sensor cone width, and timestep discretisation. The
-cause was not in the simulator. It was, first, that the check appealed to the
-published two-robot proof, which \citet{steinberg2024} have since shown to be
-unsound; and second, that the literature's definition of aggregation is
-\emph{reaching} a connected configuration, not being in one at $\tau$. For a
-pair the difference is an order of magnitude: 93\% of pairs here reach exact
-contact and only about 10\% are still touching at $\tau$. Measured against the
+failed across five hypotheses that were all wrong. The cause was not in the
+simulator. It was, first, that the check appealed to the published two-robot
+proof, which \citet{steinberg2025} have since shown to be unsound; and second,
+that the literature's definition of aggregation is \emph{reaching} a connected
+configuration, not being in one at $\tau$. For a pair the difference is an order
+of magnitude: 93\% of pairs reach exact contact and about 10\% are still touching
+at $\tau$. Measured against the
 criterion the literature actually uses, the reproduction agrees with it --- 88\%
 of pairs and 98\% of five-robot swarms reach a single cluster, against the
 $\approx$95.8\% reported for this controller at $n = 2$, and every swarm of ten
@@ -433,10 +423,9 @@ proportion carrying Wilson intervals; and \textbf{hold}, dispersion at $\tau$,
 carrying percentile-bootstrap intervals. Where rows differ on clean ground we
 report a \textbf{hold ratio} --- a row's dispersion under a hostile setting
 divided by its own dispersion on flat ground --- so that a row which simply
-aggregates better cannot masquerade as robust. Reach is a proportion, and its
-median is 1 whenever the majority succeed, so a median panel draws a flat line
-at 1 while the underlying probability falls; the first version of one figure in
-this project did exactly that and was wrong.
+aggregates better cannot masquerade as robust. Reach is a proportion whose median is 1 whenever
+the majority succeed, so a median panel draws a flat line at 1 while the
+underlying probability falls.
 
 \subsection{Terrain model}
 
@@ -450,13 +439,13 @@ where $m_w(x,y) = \max\!\big(1 + \theta_m f(x,y),\, m_{\min}\big)$ is a traction
 multiplier that \emph{each wheel samples at its own contact point}, and the
 gravity term depends on the robot's heading $\hat h$ relative to the uphill
 direction $\hat s$. Because the wheels generally sample different values, the
-curvature changes and the state-0 circle becomes a distorted loop. This is the
-whole point of the model: a scalar speed field scaling both wheels equally keeps
-the instantaneous centre of rotation fixed --- $v' = mv$, $\omega' = m\omega$,
-so $dp/d\theta = v/\omega$ is independent of $m$ --- and a constant drift is a
-Galilean shift that leaves every line-of-sight reading unchanged. Both facts are
-held by tests, and Section~\ref{sec:results-a} measures the difference the
-correction makes rather than arguing for it.
+curvature changes and the state-0 circle becomes a distorted loop. That is the
+point of the model: a scalar field scaling both wheels equally keeps the
+instantaneous centre of rotation fixed --- $v' = mv$, $\omega' = m\omega$, so
+$dp/d\theta = v/\omega$ is independent of $m$ --- and a constant drift is a
+Galilean shift leaving every line-of-sight reading unchanged. Both are held by
+tests, and Section~\ref{sec:results-a} measures the difference rather than
+arguing for it.
 
 The field $f$ is lattice value noise with quintic interpolation: stateless,
 exactly reproducible from a seed, output in $[-1,1]$ but bell-shaped rather than
@@ -474,10 +463,10 @@ the field reaches $|f| = 1$, so at $\theta_m = 1$ the multiplier can reach zero,
 a wheel stalls and the robot pivots --- a different dynamical regime, not terrain
 deformation. All terrain sweeps are cut at $\theta_m = 0.9$, below the
 $1/\max|f| = 1.0$ at which that becomes possible, and a floor $m_{\min} = 0.05$
-is a safety net verified never to bind inside the swept range. An earlier version
-of one figure ran to $\theta_m = 1.5$, where every row degraded six- to
-fourteen-fold and the ordering collapsed; that band is stall, and it was removed
-from the swept range rather than explained.
+is a safety net verified never to bind inside the swept range. An earlier figure ran to
+$\theta_m = 1.5$, where every row degraded six- to fourteen-fold and the ordering
+collapsed; that band is stall, and was removed from the swept range rather than
+explained.
 
 The $S = 4$ row's extra sensor state is a terrain bit, $|m(x,y) - 1| > \theta_{
 \mathrm{bit}}$ at the robot centre, with $\theta_{\mathrm{bit}}$ set to the field
@@ -499,31 +488,31 @@ when nothing is in range is a correlated random walk; alternatives (fewest
 neighbours, random visible, Archimedean spiral) are implemented and were not
 swept. Capture is at 0.08\,m centre to centre.
 
-Handling time is required rather than optional, and this is the single most
-consequential correction the pursuer model needed. With capture free on contact,
-a packed cluster is a buffet: the pursuer takes one robot per control step and
-twenty robots are gone in two seconds, so aggregation is maximally bad under any
-metric --- which is the failure mode that motivated adding perception limits in
-the first place, reappearing one level down. The values used are set against the
+Handling time is required rather than optional, and it is the most consequential
+correction the pursuer model needed. With capture free on contact a packed
+cluster is a buffet --- one robot per control step, twenty gone in two seconds ---
+so aggregation is maximally bad under any metric. The values are set against the
 pursuer's own travel time between touching neighbours in a formed cluster,
-7.4\,cm at $\rho v_{\max} = 19.2$\,cm/s $= 0.385$\,s, so $h = 0.39$\,s is
-comparable to it and $h = 1.93$\,s is five times it.
+7.4\,cm at $\rho v_{\max} = 19.2$\,cm/s $= 0.385$\,s: $h = 0.39$\,s is comparable
+to it and $h = 1.93$\,s is five times it. The first sweep used $h = 5.0$\,s,
+which is why its survival figures are not comparable cell for cell with the
+later ones.
 
-\paragraph{Reading $r_p$.} The pursuer's range is meaningless on its own and we
-report it in two units throughout. The swarm starts inside a disc of radius
+\paragraph{Reading $r_p$.} The pursuer's range is meaningless on its own and is
+reported in two units throughout. The swarm starts inside a disc of radius
 $R = 0.74$\,m at $n = 20$, so the five ranges are 0.14, 0.27, 0.47, 0.81 and
-$1.35\,R$. \textbf{$r_p \ge R$ is the perfect-perception corner}: the pursuer
-sees the whole starting swarm from anywhere in it, so that column is the
-degenerate end of the axis and not the hard one. Read in metres alone it looks
-like the most demanding cell; it is the cell where hiding is impossible.
+$1.35\,R$. \textbf{$r_p \ge R$ is the perfect-perception corner}: the pursuer sees
+the whole starting swarm from anywhere in it, so that column is the degenerate end
+of the axis, not the hard one --- the cell where hiding is impossible rather than
+the most demanding one.
 
 \subsection{Occlusion}
 
 Two rates on the line-of-sight reading, both optionally spatially correlated by
 a smoothed field. It was run once, as a harness shakedown, and contributes one
 methodological result to this paper: the modulation is multiplicative and
-clamped, so the mean \emph{realised} rate is close to the nominal but not equal
-to it --- at a nominal 0.6 the realised rate is 0.89, because the field is
+clamped, so the mean \emph{realised} rate can run far above the nominal one ---
+at a nominal 0.6 the realised rate is \textbf{0.89} --- because the field is
 sampled where the robots actually are and a cluster that settles in a bad patch
 draws its readings from that patch. Correlated and i.i.d. dropout must therefore
 be compared at matched realised rate, and this is a warning about \emph{any}
@@ -532,34 +521,29 @@ dial whose intensity varies in space.
 \subsection{Controller families and search protocol}
 
 Every searched row used sep-CMA-ES \citep{ros2008}, named precisely: the
-separable variant restricts the covariance to its diagonal, cannot exploit
-correlations between constants, and is therefore a \emph{weaker} searcher than
-full CMA-ES. That direction is the safe one --- a weaker searcher loosens an
-upper bound and never falsely tightens it. Constants are box-constrained to
-$[-1,1]$ with candidates repaired to the box and charged a quadratic penalty for
-the repair distance; the objective is the median over the trials of a candidate,
-matching how results are reported, because a mean sits between the two modes of
-a bimodal cell.
+separable variant restricts the covariance to its diagonal and is therefore a
+\emph{weaker} searcher than full CMA-ES, which is the safe direction --- it
+loosens an upper bound and never falsely tightens it. Constants are
+box-constrained to $[-1,1]$ with candidates repaired to the box and charged a
+quadratic penalty; the objective is the median over a candidate's trials, because
+a mean sits between the two modes of a bimodal cell.
 
-Seed discipline is uniform: searches run on training seeds and rows are then
-evaluated on a \emph{disjoint} seed range. Where two rows differ in exactly one
-respect they share a training seed base, so that the comparison is about that
-one dial and not about a different draw of training arenas. Single-condition
-searches used a budget of 600 evaluations $\times$ 12 runs; class searches used
-1200 $\times$ 12, doubled and stated, because the same four constants are being
-fitted to six conditions instead of one, and giving both the same budget would
-confound ``no transferring controller exists'' with ``the class search was not
-given enough evaluations''.
+Seed discipline is uniform: searches run on training seeds and rows are evaluated
+on a \emph{disjoint} seed range, and two rows differing in exactly one respect
+share a training seed base so the comparison is about that dial rather than a
+different draw of arenas. Single-condition searches used 600 evaluations
+$\times$ 12 runs; class searches used 1200 $\times$ 12, doubled and stated,
+because giving both the same budget would confound ``no transferring controller
+exists'' with ``the class search was under-resourced''.
 
 \paragraph{The class objective.} With one training condition the objective is the
-median final dispersion. With several it is the \textbf{geometric mean of the
-per-condition medians}. Median dispersion across the class runs from about 1.2
-to tens, so an arithmetic mean --- or a median over pooled runs --- is the
-hardest condition wearing a disguise, and lets the optimiser abandon the rest of
-the class; averaging logs weights a proportional improvement equally everywhere.
-It reduces exactly to the single-condition objective when the class has one
-member, so a class search and a fixed-condition search are one procedure at two
-class sizes rather than two protocols that cannot be compared.
+median final dispersion; with several it is the \textbf{geometric mean of the
+per-condition medians}. Median dispersion across the class runs from about 1.2 to
+tens, so an arithmetic mean --- or a median over pooled runs --- is the hardest
+condition wearing a disguise and lets the optimiser abandon the rest of the class,
+while averaging logs weights a proportional improvement equally everywhere. It
+reduces exactly to the single-condition objective at class size one, so both are
+one procedure rather than two incomparable protocols.
 
 \paragraph{Honest re-scoring.} A search reports the best objective value it saw,
 which is the minimum of a noisy sample: the best-looking candidate is partly the
@@ -588,6 +572,31 @@ reported after that one.
 \section{Results A --- terrain}
 \label{sec:results-a}
 
+\subsection{Small perturbations do not help}
+
+The hypothesis this section had to dispose of first is the one carried over from
+the discrete model: that a small amount of terrain, like a small amount of motion
+noise, should \emph{help} by breaking deadlocks. It does not, and the answer is
+the paper's strongest negative result.
+
+It was tested three independent ways: an actuation-noise probe found no
+improvement; the coarse terrain grid showed degradation rising monotonically from
+zero with no beneficial shoulder; and a dedicated fine sweep of the neighbourhood
+of zero --- slope $\alpha \in \{0, 0.5, 1, 1.5, 2, 3\}^{\circ}$ crossed with
+$\theta_m \in \{0, 0.02, 0.05, 0.1\}$ at \textbf{200 runs per cell}, twice the
+protocol minimum --- put the whole grid between \textbf{1.385 and 1.430} in median
+dispersion, with \textbf{0 of 23 non-baseline cells} having an interval disjoint
+from the clean baseline's. Every interval overlaps every other; the zero-slope row
+reads 1.406 \CI{1.389}{1.429}, 1.388 \CI{1.360}{1.406}, 1.385 \CI{1.371}{1.414},
+1.414 \CI{1.399}{1.436}.
+
+Three nulls at that replication are a bound on the effect's size, not a failure to
+find it. The analogy fails because the published mechanism is noise perturbing a
+\emph{precise balancing of forces} so robots can push past one another --- a
+contact deadlock in a discrete model --- and this continuous model shows no sign
+of such a deadlock at $n = 20$. Whether the deadlock exists here at all was never
+tested directly, which is the one thing this result does not settle.
+
 \subsection{The capability minimum does not move}
 
 Over $0 \le \theta_m \le 0.9$ at $\lambda/R_0 = 0.69$, $c = (2,0,0,0)$ suffices
@@ -595,13 +604,13 @@ at every point, at a start radius of 0.74\,m and at 1.5\,m. Three measurements
 establish it, and the third is constructive.
 
 First, the extra sensor state does not buy back the degradation. At the worst
-cell the searched $S = 4$ row sits at a hold ratio of 1.22 \CI{1.16}{1.26}
-against the searched $S = 2$ row's 1.10 \CI{1.08}{1.15} --- \emph{disjoint}
-intervals, with the cheaper row ahead (Figure~\ref{fig:h3}). The honest statement
-is not that $S = 4$ is worse than $S = 2$, because both rows are upper bounds and
-600 evaluations over eight constants is a thinner search per dimension than 600
-over four; it is that \textbf{no $S = 4$ controller better than the searched
-$S = 2$ one was found at equal budget}.
+cell the searched $S = 4$ row sits at a hold ratio of 1.22 \CI{1.16}{1.26} against
+the searched $S = 2$ row's 1.10 \CI{1.08}{1.15} --- \emph{disjoint} intervals,
+with the cheaper row ahead (Figure~\ref{fig:h3}). The honest statement is not that
+$S = 4$ is worse, since both rows are upper bounds and 600 evaluations over eight
+constants is a thinner search per dimension than 600 over four; it is that
+\textbf{no $S = 4$ controller better than the searched $S = 2$ one was found at
+equal budget}.
 
 Second, warm starting removes the direction of that objection. A search started
 at an eight-constant table whose two halves are equal --- an $S = 4$ controller
@@ -609,9 +618,12 @@ that ignores its own terrain bit and behaves exactly like the $S = 2$ optimum --
 begins holding that optimum, so the only question it can be asked is whether
 \emph{using} the bit beats \emph{ignoring} it. The search did move (L2 distance
 0.464 from its start, halves diverging by up to 0.254, so the returned controller
-genuinely uses the bit) and it ties: 1.412 \CI{1.349}{1.503} against
-1.383 \CI{1.350}{1.441}, overlapping, with the point estimate 2.1\%
-\emph{worse}.
+genuinely uses the bit) and it ties: absolute dispersion at the worst cell 1.412
+\CI{1.349}{1.503} against 1.383 \CI{1.350}{1.441}, overlapping, with the point
+estimate 2.1\% \emph{worse}. Its reported training objective, 1.2595, was better
+than either cold search's (1.3012 and 1.3009) and bought nothing on held-out
+seeds --- the first of three encounters in this paper with a search's own score
+as an optimistic estimate.
 
 Third, a hand-built composite that switches between the two $S = 2$ rows on the
 terrain bit is worse than either at every $\theta_m$ --- 1.999 \CI{1.861}{2.143}
@@ -620,6 +632,11 @@ deliberately selects the worse of its two behaviours. Its $\theta_m = 0$ value
 reproduces the published constants exactly (1.427 \CI{1.399}{1.467}), which is
 the internal consistency check: on flat ground the bit is never set, so the
 composite \emph{is} the anchor.
+
+These three are quoted in two different units and the switch matters: the first
+pair are hold ratios, each row against its own flat-ground baseline, while the
+second and third are \emph{absolute} dispersion at $\theta_m = 0.9$. A hold ratio
+of 1.10 and an absolute dispersion of 1.383 describe the same row.
 
 \begin{figure}[t]
 \centering
@@ -720,12 +737,11 @@ wheel contact to the right,
 Both terms are the \emph{same} per-wheel mechanism --- the wheels seeing
 different ground, and a turning robot on ground uniformly slower than nominal ---
 and this is arithmetic verified to six decimals against the simulator, not a
-second hypothesis. It matters because the two terms are built from the same field
-and are therefore correlated, so regressing on the gradient alone yields a
-\emph{biased} slope rather than merely a noisy one. We report both fits.
+second hypothesis. Because the two terms are built from the same field they are
+correlated, so regressing on the gradient alone yields a \emph{biased} slope
+rather than a merely noisy one, and both fits are reported.
 $\partial m/\partial n$ is differenced from the field at the robot centre, never
-from the two wheel samples, since the wheel difference is what the residual is
-made of and regressing on it would be an identity.
+from the wheel samples, since regressing on those would be an identity.
 
 Regressed over twelve million robot-timesteps per point, the full expansion has
 slope \textbf{0.9943} with $R^2$ \textbf{0.9999} at $\ell/\lambda = 0.128$: the
@@ -757,13 +773,12 @@ the widest-axle row places the wheel contacts outside the body.}
 \subsection{The worst correlation length is not the turning circle}
 
 The hypothesis this project began with was that terrain bites hardest when the
-correlation length is comparable to the controller's own turning circle, at
-$\lambda/R_0 \approx 0.7$. That is what the first measurement found, with the
-peak sitting at $\lambda/R_0 \approx 0.69$ for four of five rows across a
-fourfold range of axle length, while peak degradation varied by 5\% when the axle
-was varied fourfold at fixed $R_0$ and by 560\% when $R_0$ was varied fourfold at
-fixed axle. Read as ``$R_0$ and not the axle'', that result stands. Read as a
-ratio law, it does not.
+correlation length is comparable to the controller's turning circle, at
+$\lambda/R_0 \approx 0.7$. The first measurement found exactly that --- the peak at
+$\lambda/R_0 \approx 0.69$ for four of five rows, with peak degradation varying by
+5\% when the axle was varied fourfold at fixed $R_0$ and by 560\% when $R_0$ was
+varied fourfold at fixed axle. Read as ``$R_0$ and not the axle'' the result
+stands; read as a ratio law it does not.
 
 Two controllers differing threefold in $R_0$ peak at the \emph{same} $\lambda$ in
 metres, 7.46\,cm, which is $\lambda/R_0 = 0.52$ for one and 1.57 for the other;
@@ -837,11 +852,11 @@ swarm has a large $n_{\mathrm{local}}$, so this is the mechanism doing what it i
 written to do --- but it had not been \emph{shown} before, because nothing
 separated it from the pursuer simply being worse at its job.
 
-Handling time sharpens it in the predicted direction. Raising $h$ from
-comparable to the pursuer's inter-neighbour travel time (0.385\,s) to five times
-it grows the blind row's $\kappa$-response from $\times3.05$ to $\times4.10$
-while the dispersive row's shrinks. Dilution needs the predator to be busy, and
-making it busier makes clustering pay more.
+Handling time sharpens it in the predicted direction: raising $h$ from comparable
+to the pursuer's inter-neighbour travel time to five times it grows the blind
+row's $\kappa$-response from $\times3.05$ to $\times4.10$ while the dispersive
+row's shrinks. Dilution needs the predator busy, and making it busier makes
+clustering pay more.
 
 \begin{figure}[t]
 \centering
@@ -854,36 +869,73 @@ pursuer sensing and differ only in spatial strategy.}
 
 \subsection{Where aggregation is a liability, and where it dominates}
 
-Over the swept grid, aggregation is on average a net liability. Survival pooled
-over $\kappa$ at $h = 1.93$\,s: at $r_p = 0.35$\,m $= 0.47\,R$ the blind row is at
-0.00 \CI{0.00}{0.23} and the dispersive row at 0.65 \CI{0.60}{0.65}; at
-$0.60$\,m $= 0.81\,R$, 0.00 against 0.50; at $1.00$\,m $= 1.35\,R$ --- the
-perfect-perception corner --- 0.00 against 0.35. Confusion narrows the gap ---
-mean survival at $\kappa = 5$ is 0.592, 0.628 and 0.666 across the three rows ---
-but does not close it. Two of the five columns are at or past half the start
-radius and one is the degenerate corner, so the grid's upper half is deliberately
-brutal, and that qualification belongs with the claim.
+Two comparisons are available and only one is about aggregation. The blind row
+sits at 0.00 survival everywhere beyond $r_p = 0.2$\,m while the dispersive row
+keeps 0.65, 0.50 and 0.35 --- but the blind row has neither pursuer sensing nor a
+flee response, so that pair varies capability and spatial strategy at once.
+\textbf{The matched comparison is the ternary row\,\ddg\ against the dispersive
+row\,\ddg}: identical pursuer sensing, same flee response, differing only in
+whether the swarm clusters. It is what the control was built for and what the
+claim must rest on.
 
-Survival alone is the wrong axis, and on two axes the picture changes in one
-regime. Dispersion among survivors for the dispersive row is \textbf{380--505}
-against \textbf{1.43--1.63} for every aggregating row: that is the price of its
-survival, stated in the units of the task the swarm exists to perform. It is the
-task-abandoning end of the front, not a competitor controller, and reading it as
-``the best row'' treats the axis it gives up as free. \textbf{At $r_p = 0.35$\,m
-$= 0.47\,R$, $\kappa = 3$ there is no trade-off at all}: every aggregating row
-beats it on \emph{both} coordinates --- survival 0.80--0.85 against 0.65,
-dispersion about 1.5 against 386 --- so the dispersive row is Pareto-dominated
-(Figure~\ref{fig:pareto}). That cell, not the trade-off cells, is where
-``aggregation protects the swarm'' is true without qualification: confusion has
-made clustering safe, and clustering is also what the task wants.
+\begin{table}[h]
+\centering
+\caption{Survival pooled over $\kappa$ at $h = 1.93$\,s. The first column varies
+capability and strategy together; the last two differ only in spatial strategy
+and are the comparison that speaks to aggregation. Both hand-designed rows are
+\ddg.}
+\small
+\begin{tabular}{llll}
+\toprule
+$r_p$ ($r_p/R$) & blind & ternary\,\ddg & dispersive\,\ddg \\
+\midrule
+0.10\,m (0.14) & 0.90 \CI{0.90}{0.95} & 0.95 \CI{0.95}{0.95} & 0.90 \CI{0.85}{0.90} \\
+0.20\,m (0.27) & 0.85 \CI{0.80}{0.85} & 0.85 \CI{0.85}{0.90} & 0.75 \CI{0.75}{0.78} \\
+0.35\,m (0.47) & 0.00 \CI{0.00}{0.23} & 0.55 \CI{0.45}{0.65} & 0.65 \CI{0.60}{0.65} \\
+0.60\,m (0.81) & 0.00 \CI{0.00}{0.00} & 0.05 \CI{0.05}{0.05} & 0.50 \CI{0.45}{0.50} \\
+1.00\,m (1.35)\rlap{\,\,perfect perception} & 0.00 \CI{0.00}{0.00} & 0.00 \CI{0.00}{0.00} & 0.35 \CI{0.30}{0.35} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Where survival saturates, timing still separates the rows. At $r_p = 0.2$\,m,
-$\kappa = 0$ the median time to wipeout runs 47.1\,s, 63.8\,s, 81.0\,s and
-109.8\,s across the four aggregating rows --- the same ordering the survival
-medians show at unsaturated cells, recovered where they are pinned. Saturation is
-substantial and is stated rather than averaged over: 29\% of runs in the
-dispersive-control sweep ended with the swarm wiped out, concentrated exactly
-where the claim is strongest.
+On the matched pair, aggregating wins the two shortest ranges, the intervals
+overlap at $0.47\,R$, and dispersing wins decisively past it. \textbf{The
+crossover for the matched pair lies between $0.47\,R$ and $0.81\,R$}, and the
+paper cannot place it more finely: a denser range axis was never run. Confusion
+narrows the remaining gap --- mean survival at $\kappa = 5$ is 0.592, 0.628 and
+0.666 across the three rows --- but does not close it. That aggregation loses on
+average \emph{over this grid} is a fact about the grid as much as about
+aggregation: two of five columns are at or past half the start radius and one is
+the degenerate corner, so the upper half is deliberately brutal, and the
+qualification belongs with the claim.
+
+Survival alone is the wrong axis. Dispersion among survivors for the dispersive
+row is \textbf{380--505} against \textbf{1.43--1.63} for every aggregating row:
+the price of its survival, in the units of the task the swarm exists to perform.
+It is the task-abandoning end of the front rather than a competitor controller,
+and reading it as ``the best row'' treats the axis it gives up as free. \textbf{At $r_p = 0.35$\,m
+$= 0.47\,R$ \emph{and} $\kappa = 3$ there is no trade-off at all}: every
+aggregating row beats it on \emph{both} coordinates --- survival 0.80--0.85
+against 0.65, dispersion about 1.5 against 386 --- so the dispersive row is
+Pareto-dominated (Figure~\ref{fig:pareto}).
+
+\textbf{The $\kappa$ in that sentence is doing the work, not the range.} It is
+the same $0.47\,R$ column in which the blind row is at 0.00 and the ternary row at
+0.55 once survival is pooled over $\kappa$; at $\kappa = 3$ alone every
+aggregating row is at 0.80--0.85. That is exactly what the control predicts: the
+dispersive row is nearly $\kappa$-insensitive, gaining 1.20 and 1.13 from
+confusion, while the aggregating rows swing 3.05 to 4.10. \textbf{The ordering at
+a given pursuer range is therefore a function of $\kappa$, not of range alone},
+and no statement of the form ``aggregation wins inside this radius'' is
+well formed without one. Where confusion is strong, confusion has made clustering
+safe and clustering is also what the task wants.
+
+Where survival saturates, timing still separates the rows: at $r_p = 0.2$\,m,
+$\kappa = 0$ the median time to wipeout runs 47.1, 63.8, 81.0 and 109.8\,s across
+the four aggregating rows, recovering at pinned cells the ordering the survival
+medians show elsewhere. Saturation is stated rather than averaged over: 29\% of
+runs in this sweep ended in a wipeout, concentrated exactly where the claim is
+strongest.
 
 \begin{figure}[t]
 \centering
@@ -899,16 +951,22 @@ front is between spatial strategies rather than between capabilities.}
 
 Among the rows tried, going from $S = 2$ to $S = 3$ --- being able to tell a
 pursuer from a robot --- is worth more than anything else on the capability axis.
-Median survival fraction over the grid is 0.350 \CI{0.300}{0.375} for the blind
-row, 0.650 \CI{0.600}{0.700} for the ternary row\,\ddg\ and 0.700
-\CI{0.650}{0.750} with a memory bit added\,\ddg. The blind row is wiped out at
+The numbers here come from the \emph{first} pursuer sweep, which used a long
+handling time of $h = 5.0$\,s and which is pooled differently from the survival
+table above: a single median over the whole $r_p \times \kappa$ grid, rather than
+one figure per range column. Median survival fraction over that grid is 0.350
+\CI{0.300}{0.375} for the blind row, 0.650 \CI{0.600}{0.700} for the ternary
+row\,\ddg\ and 0.700 \CI{0.650}{0.750} with a memory bit added\,\ddg. The blind
+row's 0.350 here and its 0.00 in three columns of the table above are the same
+row under a different handling time and a different pooling, not a
+disagreement. The blind row is wiped out at
 $\kappa = 0$ for every range beyond 0.10\,m while any row that can see the
 pursuer keeps three to eighteen robots.
 
 This is stated at SUGGESTED strength with its hedge attached, because the rows
-above the blind one are hand-designed\,\ddg\ rather than searched. It is a lower
-bound on what $S = 3$ offers, not a measurement of it. The same caution kills a
-tempting reading in the other direction: a five-state row scores \emph{below} the
+above the blind one are hand-designed\,\ddg\ rather than searched: a lower bound
+on what $S = 3$ offers, not a measurement of it. The same caution kills a tempting
+reading in the other direction: a five-state row scores \emph{below} the
 three-state row over most of the grid (0.450 against 0.650 median survival), and
 that is a hand-design artefact. Its table is a written guess and a bad one; it
 says no good five-state controller was found by hand, and reporting it as ``more
@@ -922,6 +980,11 @@ not $K$.
 
 \section{Results C --- methodology}
 \label{sec:results-c}
+
+This section shares no apparatus with the two above beyond the simulator and the
+anchor controller. It is about how a searched controller is obtained and reported
+rather than about what any environment does to a swarm, and it can be read on its
+own.
 
 \subsection{A controller searched at one operating point need not work at
 another}
@@ -972,11 +1035,11 @@ predict, rather than accommodate, the pattern in the next subsection.
 
 \subsection{Searching the mission class produces a controller that transfers}
 
-The failure above is a statement about two controllers, not about the capability:
-nothing had asked the optimiser to work anywhere but the arena it was given.
-Asking it --- the same four constants, the same optimiser, a doubled and stated
-budget, and an objective averaged over the six conditions the evaluation grid is
-drawn from --- produces a row that transfers.
+The failure above is about two controllers, not about the capability: nothing had
+asked the optimiser to work anywhere but the arena it was given. Asking it --- the
+same four constants, the same optimiser, a doubled and stated budget, and an
+objective averaged over the six conditions the evaluation grid is drawn from ---
+produces a row that transfers.
 
 Cell by cell on the held-out grid at $\tau = 600$\,s, the class-searched
 row\,\dg\ wins 9 of 12 cells, loses 2 and ties 1, against 7/4/1 and 7/5/0 for the
@@ -987,13 +1050,11 @@ flat ground at $n = 50$, where the single-condition rows score 0.973, 0.870,
 tie, with absolute dispersion at the hardest of those cells 1.200 against the
 anchor's 1.204 where the single-condition row sits at 1.545.
 
-Both of its losses are at the largest start radius under terrain, and that column
-needs a longer trial for \emph{every} row: at $\tau = 600$\,s the anchor itself
-reaches a cluster in only 46\% of runs there. Re-run at $\tau = 3600$\,s the
-class row wins that cell at $n = 20$ --- \textbf{1.436} \CI{1.249}{1.673}, with
-median dispersion 1.76 against 2.89 --- and ties it at $n = 50$. With that column
-taken at the trial length the anchor needs there too, the class row is
-\textbf{10 W, 2 tied, 0 L} on dispersion across the twelve cells
+Both losses are at the largest start radius under terrain, a column needing a
+longer trial for \emph{every} row: at $\tau = 600$\,s the anchor itself reaches a
+cluster in only 46\% of runs there. At $\tau = 3600$\,s the class row wins that
+cell at $n = 20$ --- \textbf{1.436} \CI{1.249}{1.673} --- and ties at $n = 50$,
+making it \textbf{10 W, 2 tied, 0 L} on dispersion across the twelve cells
 (Figure~\ref{fig:class}).
 
 Reach is where the anchor still wins, and it is why the claim carries an
@@ -1005,10 +1066,10 @@ against 0.86 \CI{0.78}{0.91}), tied at 1.5\,m and at both $n = 50$ cells below
 everywhere except the largest start radius under terrain, where the enumerated
 row still owns the corner.
 
-The mechanism reading predicts which cells those are. Training on the class at
-$\theta_m = 0$ moved $R_0$ from 5.53\,cm to 7.47\,cm --- 35\% of the way back
-toward the anchor's 14.45\,cm --- buying back some gathering rate, and every loss
-in the section is at the one cell where reach binds and nowhere else.
+The mechanism reading predicts which cells those are: training on the class moved
+$R_0$ from 5.53\,cm to 7.47\,cm, 35\% of the way back toward the anchor's
+14.45\,cm, buying back gathering rate --- and every loss in this section is at the
+one cell where reach binds.
 
 \begin{figure}[t]
 \centering
@@ -1124,12 +1185,11 @@ organising result. \textbf{Passive hostility taxes the minimal
 controller without moving it; active hostility moves the minimum along the dial
 the spatial strategy can act on.} Terrain --- an environment that resists but does
 not respond --- degrades aggregation quality by a factor set almost entirely by
-how well matched the controller is to its objective, and at no point in the swept
-range does it make two sensor states insufficient or four
-sufficient-and-better. A pursuer --- an environment that responds --- changes
-which spatial arrangement survives, and the one capability that separates the
-rows we could build by hand is the sensor state that distinguishes a pursuer
-from a robot.
+the controller's match to its objective, and never makes two sensor states
+insufficient or four sufficient-and-better. A pursuer --- an environment that
+responds --- changes which spatial arrangement survives, and the one capability
+separating the rows we could build by hand is the sensor state that tells a
+pursuer from a robot.
 
 The first half rests on three measurements with disjoint intervals: the two-state
 controller suffices at every point of the terrain dial at both start radii
@@ -1140,30 +1200,29 @@ than either of its own halves everywhere. Three independent routes to the same
 negative answer is the strongest form this claim can take without an exhaustive
 search of the four-state space, which this dimensionality does not permit.
 
-The second half is weaker by construction and must be stated so. Every pursuer
-row above the baseline is hand-designed, so the capability statement is a
-\emph{lower bound on what three sensor states offer, not a measurement of it},
-and the poor showing of the five-state row is a hand-design artefact rather than
-evidence that more sensing hurts. What is not weak is the mechanism: the
-dispersive control shares the pursuer's sensing byte for byte and differs only
-in what it does with it, and it gains a factor of $1.20$ and $1.13$ from
-confusion where the aggregating rows gain $3.05$ and $4.10$. Confusion is a
-property of the group the robots form, not of the sensor they carry.
+The second half is weaker by construction. Every pursuer row above the baseline
+is hand-designed, so the capability statement is a \emph{lower bound on what three
+sensor states offer, not a measurement of it}, and the five-state row's poor
+showing is a hand-design artefact rather than evidence that more sensing hurts.
+What is not weak is the mechanism: the dispersive control shares the pursuer's
+sensing byte for byte and gains $1.20$ and $1.13$ from confusion where the
+aggregating rows gain $3.05$ and $4.10$. Confusion is a property of the group the
+robots form, not of the sensor they carry.
 
 \subsection{The tax is mostly not about terrain}
 
-The most transferable finding for practitioners is also the least intuitive one.
-Decomposing the gap between the published constants and a terrain-trained
-controller at the strongest terrain amplitude gives $96.9\%$ objective-tuning
-against $3.1\%$ terrain-tuning at a start radius of $0.74$\,m, and
-$99.7\%$ against $0.3\%$ at $1.5$\,m. Nearly all of what looks like ``the
-controller was re-tuned for terrain'' is the controller being re-tuned for
-\emph{this dispersion objective at this start radius}, which the published
-constants were never tuned for --- they were found by exhaustive search on a
-different criterion. The terrain-specific share is small at the tuned start
-radius and vanishing at twice it, and on flat ground it reverses sign: the
-rough-trained row is the better flat-ground controller of the two by a small
-margin. A reader who takes ``re-tuning solves terrain'' from the raw hold ratios
+The most transferable finding for practitioners is the least intuitive one.
+Nearly all of what looks like ``the controller was re-tuned for terrain'' is the
+controller being re-tuned for \emph{this dispersion objective at this start
+radius}, which the published constants were never tuned for --- they were found by
+exhaustive search on a different criterion. The decomposition is $96.9\%$
+objective-tuning against $3.1\%$ terrain-tuning at $0.74$\,m, and $99.7\%$ against
+$0.3\%$ at $1.5$\,m. The terrain-specific share is small at the tuned start
+radius, vanishing at twice it, and on flat ground it reverses sign: there the
+rough-trained row \emph{costs} 4.1\% against the flat-trained one, so the
+flat-trained row is the better flat-ground controller of the two. Terrain-specific
+tuning is worth about $\pm 4\%$ of dispersion in either direction; matching the
+controller to the objective at all is worth 119\%. A reader who takes ``re-tuning solves terrain'' from the raw hold ratios
 takes the wrong lesson; the right one is that terrain-specific tuning buys very
 little, and that most of the apparent benefit is available without ever
 simulating terrain.
@@ -1179,43 +1238,31 @@ system designer can budget for, not a capability requirement.
 
 Three practical statements follow, at the grades the register gives them.
 
-\emph{Design over the mission class, not over one arena.} A controller searched
-at a single start radius and swarm size can be worse than the published
-constants at a different one, and a longer trial does not repair it: the
-single-point row fails outright at four times its training start radius and is
-worse than the published constants at $n = 50$ on flat ground at every radius
-tested. Searching over six conditions spanning start radius and swarm size, with
-a geometric mean of per-condition medians as the objective, produces a
-controller that matches or beats the published constants on dispersion in every
-cell of the held-out grid at matched trial length. It is the cheapest of the
-three statements to adopt.
+\emph{Design over the mission class, not over one arena}, which is the cheapest
+of the three to adopt: a geometric mean of per-condition medians over six
+conditions spanning start radius and swarm size costs one search and buys a row
+that holds up across the whole held-out grid, where a single-point row does not.
 
-\emph{Report the baseline as a region.} Three searches differing only in the
-optimiser seed return turning circles of $7.47$, $8.88$ and $8.64$\,cm --- a
-spread of $16.9\%$ of the mean --- and produce held-out intervals that are
-disjoint in four of twelve cells. The behavioural conclusion reproduces in every
-draw and the returned parameters do not. A paper that quotes a single searched parameter
-vector without a seed study is quoting one sample from a distribution it has not
-measured.
+\emph{Report the baseline as a region.} The behavioural conclusion reproduces in
+every seed draw and the returned parameters do not. A paper quoting a single
+searched parameter vector without a seed study is quoting one sample from a
+distribution it has not measured.
 
-\emph{Match the estimator to the noise.} At the worst training condition the
-two-run estimate a search sees spans $2.79$ log units against a $0.48$ log unit
-signal. No optimiser can follow a gradient through that, and the failure looks exactly
-like a real optimum: a plausible parameter vector, a good reported objective, and
-no held-out advantage. Two cheap diagnostics separate the cases --- an honest
-re-score of the returned parameters at high replication, and a spread measurement
-at the hardest training condition. The remedy that follows from them was not
-run.
+\emph{Match the estimator to the noise.} A search whose per-evaluation estimate
+is noisier than the differences it must resolve fails in a way that looks exactly
+like success: a plausible parameter vector, a good reported objective, no
+held-out advantage. Two cheap diagnostics separate the cases --- an honest
+re-score at high replication, and a spread measurement at the hardest training
+condition.
 
 \subsection{Plasticity, and what the axle reads}
 
 The motivation for asking the capability question in hostile environments is the
 observation, made as a position rather than a result by \citet{hunt2020}, that
 field swarms meet conditions their designers did not enumerate and that minimal
-designs have no margin to absorb them. This study is one instance of that
-programme with the environment on the independent axis, and its answer is mixed:
-for one hostility axis the minimum is unmoved and the cost is performance, for
-the other the cost is capability.
+designs have no margin to absorb them. The answer here is mixed in the way that
+position anticipates: on one axis the minimum is unmoved and the cost is
+performance, on the other the cost is capability.
 
 One connection to sensing theory is available and must be stated at the strength
 the data supports, which is an observation and not a result. The exact
@@ -1238,27 +1285,24 @@ them.
 \paragraph{Simulation only, and the reality gap is untested.}
 Every number in this paper comes from a purpose-built simulator. A second-tier
 replication in an established simulator was specified in the project plan and
-never run, and no hardware experiment exists. Contact between robots is resolved
-as positional relaxation rather than contact dynamics, converged to $0.01\%$
-residual overlap after 32 passes, which is adequate for the comparisons made
-here and is precisely why a second tier was planned. The automatic-design
-literature treats the reality gap as a first-class design constraint
+never run, and no hardware experiment exists. Contact is positional relaxation
+rather than contact dynamics, which is adequate for the comparisons made here and
+is precisely why a second tier was planned. The automatic-design literature treats
+the reality gap as a first-class design constraint
 \citep{jakobi1995,francesca2014,ligot2018,birattari2019}; this study has taken
-none of those steps --- no independent-simulator replication, no
-simulation-only perturbation study, no hardware. We therefore claim simulation
-results and state plainly that transfer is untested. Where a result is about protocol rather than about robots --- the winner's
+none of those steps. We claim simulation results and state plainly that transfer
+is untested. Where a result is about protocol rather than about robots --- the winner's
 curse, the noise floor, the seed scatter --- the reality gap is a weaker threat,
 since those are properties of the search.
 
 \paragraph{The dispersion normalisation is provisional.}
 The dispersion metric follows the normalised second moment convention
 \citeneed{Graham \& Sloane, normalised second moment}, under which a packed
-cluster is designed to score near $1$; the clean baseline lands at $1.40$, and
-the constant has never been checked against the published figures of
-\citet{gauci2014}. Every comparison in this paper is between cells that share
-the normalisation, so no claim depends on the absolute value, but absolute
-dispersion should not be compared across papers, across swarm sizes, or across
-body diameters.
+cluster is designed to score near $1$; the clean baseline lands at $1.40$ and the
+constant has never been checked against \citet{gauci2014}'s published figures.
+Every comparison here is between cells sharing the normalisation, so no claim
+depends on the absolute value --- but absolute dispersion should not be compared
+across papers, swarm sizes, or body diameters.
 
 \paragraph{Coverage.}
 Almost every result is at $n = 20$; the exceptions are the clean-arena scaling
@@ -1275,16 +1319,14 @@ swarm size wherever a sweep pins the start radius.
 
 \paragraph{Rows that are not measurements of a capability.}
 Every searched row is an upper bound from a diagonal-covariance optimiser at a
-fixed budget: a stronger searcher could find more, and this is the framework's
-own rule rather than a defect. Every pursuer row above the baseline is
-hand-designed and supports claims about spatial strategy, never about what a
-given number of sensor states can do. The communication row was never run:
-communication is not wired and the received-bit channel is held at zero, so this
-paper covers sensing and memory only. Several geometry rows are not buildable
-robots --- two put the wheel contacts outside the body shell --- and exist only
-to break numerical confounds; the widest-axle row carries the two largest
-$\ell/\lambda$ points, so that curve's shape beyond $\ell/\lambda = 1$ rests
-on it.
+fixed budget: a stronger searcher could find more, which is the framework's own
+rule rather than a defect. Every pursuer row above the baseline is hand-designed
+and supports claims about spatial strategy, never about what a given number of
+sensor states can do. The communication row was never run. Several geometry rows
+are not buildable robots --- two put the wheel contacts outside the body shell ---
+and exist only to break numerical confounds; the widest-axle row carries the two
+largest $\ell/\lambda$ points, so that curve's shape beyond $\ell/\lambda = 1$
+rests on it.
 
 \paragraph{Confounds that remain inside the body-diameter result.}
 Three lengths scale with the body and are not separated: the body as an
@@ -1320,53 +1362,48 @@ independent seeds of the same optimiser, which cannot detect a bias common to
 the diagonal-covariance family. (iv) The second experimental tier was never run.
 
 \paragraph{Recorded and unexplained.}
-Three observations are recorded without explanation and are not claimed: the
-small reach dip at $n = 3$ and $n = 4$, for which the simplest account is
-combinatorial rather than deadlock; the scalar-field row's $\sim\!2\%$
-improvement over flat ground; and occlusion, which was run once as a shakedown
-sweep and never revisited, with no capability row searched under it. The
+Three observations are recorded without explanation and not claimed: the small
+reach dip at $n = 3$ and $n = 4$, for which the simplest account is combinatorial
+rather than deadlock; the scalar-field row's $\sim\!2\%$ improvement over flat
+ground; and occlusion, run once as a shakedown sweep and never revisited. The
 anisotropy result the project set out to prove as a theorem was narrowed by
 measurement --- from a function of the turning circle and sensor range to one of
 correlation length, body diameter and the axle-to-correlation-length ratio ---
-and then never attempted analytically.
+and never attempted analytically.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
 We fixed a behaviour, parameterised the environment, and asked how the minimum
-capability moves. Along a passive hostility axis it does not move: two sensor
-states, no memory and no arithmetic suffice over the whole swept terrain range,
-an added terrain state does not help even from a warm start, and terrain acts as
-a performance tax of which, at the strongest amplitude tested, $96.9\%$ is
-objective mismatch and $3.1\%$ is terrain at the tuned start radius --- $99.7\%$
-against $0.3\%$ at twice it. The mechanism is per-wheel curvature rather than
-speed heterogeneity: a scalar field of the same amplitude produces no degradation
-at all, the heading-rate residual is the first-order per-wheel traction effect
-(slope $0.9943$, $R^2 = 0.9999$), and that linearisation's quality collapses onto
-the ratio of axle length to correlation length across a fourfold range of the
-latter. The worst correlation length is not proportional to the turning circle
---- doubling it moves the peak by $1.39\times$, excluding $2.00$ --- and tracks
-body diameter over a twofold range, as suggestion rather than result.
+capability moves. Along a passive hostility axis it does not move. Two sensor
+states, no memory and no arithmetic suffice over the whole swept terrain range;
+small perturbations do not help, across three nulls; an added terrain state does
+not help either, even from a warm start; and terrain acts as a performance tax of
+which $96.9\%$ is objective mismatch and $3.1\%$ terrain at the tuned start
+radius, $99.7\%$ against $0.3\%$ at twice it. The mechanism is per-wheel
+curvature, not speed heterogeneity, and the length scale it is worst at tracks
+the robot's body rather than its turning circle --- the latter at SUGGESTED
+strength.
 
 Along an active hostility axis the minimum does move, and the capability that
-matters is the one that lets a robot distinguish a pursuer from a neighbour.
-Confusion acts through aggregation, demonstrated by a dispersive control with
-identical sensing that gains a factor of $1.20$--$1.13$ from confusion where
-aggregating rows gain $3.05$--$4.10$. Reported on the two axes the result
-requires --- survival and the base task --- aggregation is Pareto-dominant at
-short pursuer range and catastrophic beyond roughly half the swarm radius.
+matters is the one that tells a pursuer from a neighbour. Confusion acts through
+aggregation, shown by a dispersive control with identical sensing that gains
+$1.20$--$1.13$ where aggregating rows gain $3.05$--$4.10$. Because that control is
+nearly insensitive to confusion and the aggregating rows are not, \textbf{which
+strategy wins at a given pursuer range is a function of $\kappa$, not of range
+alone}, and no claim of the form ``aggregation wins inside this radius'' is well
+formed without one.
 
 The methodological findings are the ones we would most want carried forward. A
 controller searched at one operating point can be worse than the published
-constants at another, and a longer trial does not fix it. Searching over a
-mission class produces a controller that transfers, and the ingredients that
-made it work were not ablated. A search whose per-evaluation noise is nearly six
-times its signal returns a plausible controller with a good reported objective
-and no real advantage. And a class search
-reliably produces a controller that beats the enumerated reference --- three
-seeds score $9/2/1$, $10/0/2$ and $10/1/1$ across twelve held-out cells --- while
-returning parameters that scatter by $16.9\%$ in turning circle, so the
-reproducible object is a region of behaviour and not a point in parameter space.
+constants at another, and a longer trial does not fix it. Searching over a mission
+class produces a controller that transfers, though the ingredients that made it
+work were not ablated. A search whose per-evaluation noise is nearly six times its
+signal returns a plausible controller with a good reported objective and no real
+advantage. And three optimiser seeds of that class search all beat the enumerated
+reference while returning parameters that scatter by $16.9\%$ in turning circle:
+the reproducible object is a region of behaviour, not a point in parameter
+space.
 
 \paragraph{Follow-up.}
 The experimental record for this paper is frozen. The following are recorded as
@@ -1468,7 +1505,8 @@ sensing range $r_p$ & 0.10, 0.20, 0.35, 0.60, 1.00\,m & omnidirectional, not a r
 $r_p / R$ & 0.14, 0.27, 0.47, 0.81, 1.35 & $R = 0.74$\,m at $n = 20$ \\
 confusion $\kappa$ & 0, 0.5, 1.0, 2.5, 5.0 (3.0 in Pareto cells) & $p_{\mathrm{lock}} = 1/(1 + \kappa n_{\mathrm{local}})$ \\
 confusion radius & 0.5\,m & window for $n_{\mathrm{local}}$ \\
-handling time $h$ & 5.0\,s; 0.39\,s and 1.93\,s & $1\times$ and $5\times$ the 0.385\,s neighbour transit \\
+handling time $h$ & 5.0\,s (first sweep) & --- \\
+ & 0.39\,s and 1.93\,s (later sweeps) & $1\times$ and $5\times$ the 0.385\,s neighbour transit \\
 targeting & nearest & two alternatives implemented, unswept \\
 search & correlated random walk, 1.0\,rad/s & spiral implemented, unswept \\
 capture distance & 0.08\,m & centre to centre \\
@@ -1531,7 +1569,7 @@ design cannot tell which choices were forced.
 
 \begin{enumerate}
 \item \textbf{The two-robot proof of \citet{gauci2014} is unsound.} Theorem~3
-claims two robots always aggregate; \citet{steinberg2024} identify the
+claims two robots always aggregate; \citet{steinberg2025} identify the
 unsound assumption and report a $4.24\%$ two-robot failure rate for the same
 controller. A validation gate built on the theorem failed for two weeks before
 the cause was found in the literature rather than in the code.
@@ -1635,8 +1673,8 @@ S7 & The heading-rate residual is the first-order per-wheel traction effect: slo
 S8 & The quality of that linearisation collapses on $\ell/\lambda$: maximum slope spread $0.0201$ across a fourfold range of $\lambda$, against a range of $0.86$ along the trend. \\
 S9 & The worst correlation length is not proportional to $R_0$: peak ratio $1.39$ \CI{0.72}{1.93} for a doubling of $R_0$, excluding $2.00$. \\
 S10 & Confusion acts through aggregation: $\kappa: 0 \to 5$ multiplies aggregating rows' survival by $3.05$ and $4.10$ while a dispersive control with identical sensing gains $1.20$ and $1.13$. \\
-S11 & Beyond $r_p \approx 0.47R$ the dispersive row survives far better, and confusion narrows but does not close the gap. \\
-S12 & At $r_p = 0.47R$, $\kappa = 3$ the dispersive row is Pareto-dominated: every aggregating row beats it on both survival and the base task. \\
+S11 & With survival pooled over $\kappa$ at $h = 1.93$\,s, the dispersive row survives far better beyond $r_p \approx 0.47R$, and confusion narrows but does not close the gap. Against the matched ternary row\,\ddg\ the crossover lies between $0.47R$ and $0.81R$; at a fixed $\kappa = 3$ the ordering reverses (S12), so the $\kappa$ is part of the claim. \\
+S12 & At $r_p = 0.47R$ \emph{and} $\kappa = 3$ the dispersive row is Pareto-dominated: every aggregating row beats it on both survival and the base task. \\
 S13 & Survival and base task differ by two orders of magnitude between strategies, so the pursuer results must be reported on two axes. \\
 S14 & A controller searched at one operating point can be worse than the published constants at another, and a longer trial does not fix it. \\
 S15 & The class-searched flat row matches or beats the published constants on dispersion in every cell at matched trial length (10 W, 2 tied, 0 L) and loses reach only at the largest start radius under terrain. \\
@@ -1798,10 +1836,12 @@ Schmickl, Kernbach et al. (2008).
 \newblock \gap{title not recorded in the repository; the reference is the
 BEECLUST aggregation work, 2008--2009}.
 
-\bibitem[Steinberg and Solovey(2024)]{steinberg2024}
-Steinberg and Solovey (2024).
+\bibitem[Steinberg and Solovey(2025)]{steinberg2025}
+Steinberg and Solovey (2025).
 \newblock Impossibility of self-organized aggregation without computation.
-\newblock arXiv:2501.00390; IEEE, 2025.
+\newblock arXiv:2501.00390; IEEE, 2025. (The project's literature record dates
+the preprint 2024; the arXiv identifier and the IEEE entry both place it in
+2025, and 2025 is used throughout.)
 
 \end{thebibliography}
 

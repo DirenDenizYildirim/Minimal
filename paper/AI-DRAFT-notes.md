@@ -22,18 +22,24 @@ re-rounding and no derived percentages.
 
 | region | words |
 |---|---|
-| Section 1 (Disclosure) through the closing Disclosure, excluding figures, tables, appendices and references | **10,996** |
-| Introduction through the closing Disclosure, on the same exclusions | **10,820** |
-| abstract (separate, not counted above) | 291 |
+| Introduction through the closing Disclosure, excluding figures, tables, appendices and references | **10,854** |
+| the same, plus the mandated Section 1 Disclosure | 11,030 |
+| abstract (separate, not counted above) | 293 |
 
-Both are inside the 8,000–11,000 target. The count is by a script that strips
+The article body is inside the 8,000–11,000 target. Counting the mandated
+disclosure furniture in Section 1 as body text puts it 30 words over, which is
+inside the noise of the counting method described below. The count is by a script that strips
 LaTeX markup, keeps the text inside `\textbf`/`\emph`, drops figure and table
 environments, and counts a token as a word if it contains a letter or digit;
 quantities like `96.9%` count as one word.
 
 **Compilation.** `pdflatex`, three passes, **succeeded**: 38 pages, no errors,
-no undefined references, no overfull boxes. One overfull `\hbox` in the terrain
-parameter table was found and fixed by splitting a cell across two lines.
+no undefined references, no undefined citations, no overfull boxes. One overfull
+`\hbox` in the terrain parameter table was found and fixed by splitting a cell.
+
+**Revision.** This draft was revised once after review by the repository owner.
+Section 8 below lists what the review found and what changed; every hard error it
+identified was in the draft rather than in the source document.
 
 **Rebuilding.** The compiled PDF is a build product and is not committed, in
 keeping with the repository's rule for generated artefacts. To rebuild:
@@ -152,7 +158,7 @@ entry anywhere in the repository:
   `gauci_scaling.png` were excluded** for length: each supports a claim already
   carried by an included figure or by numbers in the text. All are paper-ready
   and any of them could be restored. **12 of the inventory's 26 figures are
-  included.**
+  included**, `terrain_lambda_r0_family.png` among them.
 * **The n = 3 / n = 4 reach dip, the scalar field's ~2% improvement and the
   anisotropy lemma appear only in the Limitations**, not in Results. The register
   grades the first two SUGGESTED-with-hedge or "recorded, not claimed", and the
@@ -176,6 +182,9 @@ paraphrase that keeps all of its qualifiers. Specifically:
   rows, with the five-state row's poor showing labelled a hand-design artefact.
   The Discussion repeats the hedge rather than relying on the Results section
   having stated it.
+* **S11 and S12 (the pursuer range claims)** — every statement of either now
+  carries the κ it holds at. In the first draft the Conclusion did not, and said
+  something false as a result; see §8.
 * **G5 (R₀ and gathering rate)** — stated as an association across five
   controllers, with the explicit note that R₀ was never swept as a dial.
 * **G10 (the axle as a spatial gradient sensor)** — used only as an observation,
@@ -223,7 +232,10 @@ because acting on it would require recomputation.
 
 ## 6. Internal inconsistencies found in `docs/paper-source.md`
 
-Four, none fatal; the first two changed how the draft is worded.
+Four, none fatal; the first two changed how the draft is worded. **This section
+lists inconsistencies in the *source document* only. Seven were later found in
+the draft itself, by review rather than by any check run here — see §8, which
+also supersedes item 1 below.**
 
 1. **S11 and S12 read as contradictory at the same cell.** S11: "Beyond
    r_p ≈ 0.47 R the dispersive row survives far better." S12: "At r_p = 0.47 R,
@@ -235,9 +247,9 @@ Four, none fatal; the first two changed how the draft is worded.
    baseline, the hand-designed row and the dispersive row, which is a κ-swept
    figure, while S12's cell is specifically κ = 3 — but the register does not say
    so, and a reader taking the two claims at face value would find them
-   incompatible. The draft states both with their κ attached and never places them
-   in the same sentence without it. **A human author should add κ to S11's
-   wording.**
+   incompatible. **Superseded by §8.1(2):** the κ-dependence is not a caveat to be
+   attached, it is the result, and S11 and S12 in Appendix C have been restated
+   accordingly.
 2. **The claims register states S1 with a ratio (λ/R₀ = 0.69) that N6 rules out
    as a law.** Handled as in §5.5 above. Not an error — S1 is naming a condition,
    not asserting a law — but the phrasing invites the reading N6 exists to
@@ -263,6 +275,131 @@ hold-ratio definitions, §5.4 above) and D2/D3 (rounding at the last digit).
    model and currently has no title.
 2. The hold-ratio definition (§5.4) — a one-line decision with paper-wide
    consequences.
-3. S11's missing κ (§6.1).
-4. Whether any of the eight excluded paper-ready figures should be restored; the
+3. Whether any of the eight excluded paper-ready figures should be restored; the
    draft is at the top of its word budget, so restoring them means cutting text.
+4. Whether Results C should be a separate paper (§8.3).
+
+---
+
+## 8. Review pass, and what it changed
+
+The repository owner reviewed the first draft. Every hard error it found was in
+**the draft**, not in the source document — which is the honest verdict on §6
+above: the consistency check that produced §6 was run against
+`docs/paper-source.md` and never against the output. That is the process defect
+worth fixing before the next draft, and it is why §8.1 exists.
+
+### 8.1 Hard errors found and fixed
+
+1. **A sign contradiction on the flat-ground effect.** Results A said the
+   terrain-tuning term reverses sign on flat ground and costs 4.1%; the
+   Discussion said the reverse — that the *rough*-trained row is the better
+   flat-ground controller. The source is unambiguous ("S2-rough costs 4.1%
+   against S2-flat"), the hold ratios back it out the same way (1.438/1.195 =
+   1.203 against 1.383/1.104 = 1.253, lower being better), and so does the
+   paired-difference panel. **Results A was right; the Discussion sentence was
+   wrong and has been replaced**, and it was the paragraph a reviewer would
+   quote. This was a generation error with no counterpart in the source.
+
+2. **The Conclusion dropped κ from the pursuer result and contradicted itself.**
+   It read "Pareto-dominant at short pursuer range and catastrophic beyond
+   roughly half the swarm radius" — but the Pareto-dominant cell *is* at 0.47 R,
+   roughly half the swarm radius, and holds only at κ = 3. The replacement states
+   the mechanism instead: the dispersive row is nearly κ-insensitive (1.20/1.13)
+   while the aggregating rows swing 3.05–4.10, **so the ordering at a given range
+   is a function of κ, not of range alone**. The abstract had the same defect and
+   now carries the same statement.
+
+   **This also supersedes §6.1's account of the S11/S12 tension.** The earlier
+   note said the two claims are "reconcilable through κ" and left it there. The
+   correct resolution is stronger: the κ-dependence is not a caveat attached to
+   two claims, it is the finding, and it follows directly from the control the
+   experiment was built around. S11 in Appendix C has been restated with its κ
+   and its pooling; S12 now reads "at 0.47 R *and* κ = 3".
+
+3. **The headline pursuer comparison was confounded.** "Aggregation is on average
+   a net liability" rested on the blind row at 0.00 against the dispersive row at
+   0.65 — but the dispersive row has pursuer sensing and a flee response and the
+   blind row has neither, so that pair varies capability and spatial strategy at
+   once. The matched pair is the **ternary** row against the dispersive row, both
+   hand-designed, both with identical pursuer sensing. Results B now leads with
+   the matched pair, states the full survival table for all three rows, and
+   reports what the matched pair actually shows: aggregating wins the two
+   shortest ranges, the intervals overlap at 0.47 R, dispersing wins past it, so
+   **the crossover lies between 0.47 R and 0.81 R** and the paper cannot place it
+   more finely. This was the weakest inference in the draft and the fix makes the
+   claim narrower and better supported.
+
+4. **"Close to the nominal" for a realised rate of 0.89 against a nominal 0.6.**
+   The phrasing undercut its own finding and has been replaced with "can run far
+   above the nominal one".
+
+5. **An unexplained handling time.** Table 3 listed h = 5.0 s alongside the two
+   values the body justifies. It turns out 5.0 s is not orphaned — it is the
+   handling time of the *first* pursuer sweep, whose survival medians are the
+   ones quoted in Results B's capability subsection. The body never said so.
+   Methods and the table now name it, and the same sentence resolves the
+   "pooled" ambiguity below.
+
+6. **Steinberg and Solovey's year.** Cited as (2024) against a reference giving
+   arXiv:2501.00390 and "IEEE, 2025". **2025 is now used in all four places**,
+   and the bibliography entry records that the project's own literature record
+   dates the preprint 2024 while the arXiv identifier and the IEEE entry both say
+   2025. A human author should settle which the repository means.
+
+7. **An orphan number.** S16 in the claims register quoted a training objective
+   of 1.2595 that appeared nowhere else in the draft. It is the warm-start
+   search's reported objective, and it now appears where the warm start is
+   described, alongside the two cold searches' 1.3012 and 1.3009 — which makes it
+   the first of the paper's three encounters with an over-optimistic training
+   score rather than a loose number in an appendix.
+
+### 8.2 Structural problems, and what was done
+
+* **The Framework promised apparatus the paper never uses.** It defined threshold
+  contours P = T and a frontier read off the lowest enclosing contour, then the
+  Limitations admitted no T was ever pre-registered and no across-row test was
+  ever run. **The threshold-contour machinery has been cut** and replaced with an
+  explicit "no frontier table is produced", naming both deviations at the point
+  the reader would otherwise form the expectation. The capability vector and the
+  two provenance marks — which the paper does use, consistently — stay.
+* **Two of the vector's four coordinates never vary.** The Framework now says so
+  outright: A is 0 in every row, K was never run, and the vector is an accounting
+  unit rather than a space this paper searches.
+* **The strongest negative result was stranded in an appendix.** S21 (the
+  noise-helps null: three independent tests, 200 runs/cell, 0 of 23 cells
+  disjoint from baseline) was graded SUPPORTED, forward-referenced from Related
+  work, and then never delivered. **Results A now opens with it** as
+  "Small perturbations do not help", with the fine sweep's numbers and the reason
+  the discrete-model analogy fails. The forward reference now resolves.
+* **Results A switched between hold ratios and absolute dispersion silently.**
+  One sentence now says which is which and that a 1.10 hold ratio and a 1.383
+  absolute dispersion describe the same row.
+* **"Pooled" did undefined work.** The blind row's 0.00 in three columns and its
+  0.350 median over the grid come from different sweeps at different handling
+  times under different poolings. Results B now says so explicitly.
+
+### 8.3 What was *not* done, and why
+
+**Results C was not moved.** The review is right that it is a self-contained
+methods contribution, that it shares almost no machinery with the two
+experimental sections, and that it is the part most likely to be cited from the
+bottom of a 38-page paper. But reordering it ahead of Results A and B would
+invert the paper's organising claim — the passive/active hostility contrast that
+the Discussion is built on — and that is a decision about what the paper *is*,
+which belongs to the author rather than to a comparison draft. Two smaller things
+were done instead: Results C now opens by saying it can be read on its own, and
+the Introduction's third contribution says it stands independently of the other
+two. **If the author wants it as its own paper, nothing in Results C depends on
+Results A or B beyond the simulator and the anchor controller.**
+
+### 8.4 Cuts made to stay inside the word budget
+
+The fixes above added roughly 900 words. To stay inside 8,000–11,000 the
+following were tightened, none of them a claim: Methods (the exact-arc and
+contact-model detail, the five wrong hypotheses behind the reproduction gate, the
+search-protocol prose), Related work (BEECLUST and confusion paragraphs), the
+Framework, the Conclusion's restatement of results the Discussion already makes,
+the Discussion's three implication paragraphs, and the Introduction's
+contributions list. **No number, hedge, grade or limitation was dropped** to make
+room.
