@@ -1,0 +1,64 @@
+# PHASE 0 COMPANION -- the honest re-score, i.e. the winner's-curse gap.
+#
+# Each search reports the best objective value it saw, which is the minimum of
+# a noisy sample: 12 runs per candidate over 1200 candidates, so the
+# best-looking candidate is partly the luckiest. Section 20 measured that gap
+# at 1.05 in the objective's own units for a rough-trained class row.
+#
+# This scores every returned controller on the flat class's OWN objective, on
+# its OWN training seeds (910000), at 100 runs per condition instead of 2. The
+# geometric mean of the six per-condition medians is the objective; the gap
+# between it and the reported best_training_objective is the winner's curse.
+
+name = "phase0-seeds-objective-probe"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0]
+
+[[axis]]
+path = "sim.seed"
+values = [910000]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [0.74, 1.5, 3.0]
+
+[[axis]]
+path = "swarm.n"
+values = [20, 50]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-class-flat-s1"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.432983, -0.882043] },
+  { wheels = [0.792395, -0.886538] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s2"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.542573, -0.980003] },
+  { wheels = [0.946660, -0.811344] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s3"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.409734, -0.752740] },
+  { wheels = [0.732649, -0.606024] },
+] }

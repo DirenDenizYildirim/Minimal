@@ -2210,6 +2210,266 @@ Figure: `figures/terrain_class_tau.png`
 
 ---
 
+## 21. Phase 0: the baseline scatters across optimiser seeds
+
+**Branch (b): they scatter.** Three searches differing only in the optimiser seed
+return controllers whose R₀ spans **7.47, 8.88 and 8.64 cm — a 16.9% spread,
+outside the pre-registered 10% rule** — and whose held-out dispersion intervals
+are **disjoint in 4 of 12 cells**. So the baseline is **best-of-three † per cell**,
+this spread is the baseline's uncertainty, and every `c*(θ)` number downstream is
+stated against best-of-three. Seed 1 — the row §19 named as the baseline — is the
+**weakest** of the three by cell count.
+
+`configs/search/train_s2_class_flat.toml` with optimiser seeds 2 and 3, evaluated
+by `configs/sweeps/phase0_seeds.toml` (§14's full held-out grid, 48 cells, 4 800
+trials), `phase0_seeds_tau.toml` (the 3.0 m θ_m = 0.9 column at τ = 600, 1800,
+3600 s, 2 400 trials) and `phase0_seeds_objective_probe.toml` (the honest
+re-score, 2 400 trials).
+
+**Nothing changed but the seed.** sep-CMA-ES, 1200 evaluations × 12 runs, the
+six-condition class `radius ∈ {0.74, 1.5, 3.0} m × n ∈ {20, 50}`, θ_m = 0,
+geometric mean of the per-condition medians, and the **same training seed base,
+910 000**, as §19's seed-1 search. The spread below is the optimiser's own
+variability and nothing else.
+
+### What the three searches returned
+
+| row | state | constants | R₀ | forward speed | rotation rate |
+|---|---|---|---|---|---|
+| S2-gauci | 0 (blind) | (-0.7000, -1.0000) | 14.45 cm | -10.88 cm/s | -0.753 rad/s |
+|  | 1 (seen) | (+1.0000, -1.0000) | 0 (spin) | +0.00 cm/s | -5.020 rad/s |
+| S2-class-flat-s1 | 0 (blind) | (-0.4330, -0.8820) | 7.47 cm | -8.42 cm/s | -1.127 rad/s |
+|  | 1 (seen) | (+0.7924, -0.8865) | 0.14 cm | -0.60 cm/s | -4.214 rad/s |
+| S2-class-flat-s2 | 0 (blind) | (-0.5426, -0.9800) | 8.88 cm | -9.74 cm/s | -1.098 rad/s |
+|  | 1 (seen) | (+0.9467, -0.8113) | 0.20 cm | +0.87 cm/s | -4.412 rad/s |
+| S2-class-flat-s3 | 0 (blind) | (-0.4097, -0.7527) | 8.64 cm | -7.44 cm/s | -0.861 rad/s |
+|  | 1 (seen) | (+0.7326, -0.6060) | 0.24 cm | +0.81 cm/s | -3.360 rad/s |
+
+
+**R₀ across the three seeds: 7.47, 8.88, 8.64 cm — spread 1.41 cm = 16.9% of the
+mean, outside the 10% rule.** All three moved R₀ up from S2-flat's 5.53 cm toward
+Gauci's 14.45 cm, by 35%, 60% and 56% of the way, so the *direction* of the trade
+§19 identified reproduces in every seed; the *magnitude* does not.
+
+Pairwise L2 distances in constant space:
+
+| pair | L2 |
+|---|---|
+| seed 1 ↔ seed 2 | 0.226 |
+| seed 1 ↔ seed 3 | 0.315 |
+| seed 2 ↔ seed 3 | 0.397 |
+| S2-gauci ↔ seed 1 | 0.376 |
+| S2-gauci ↔ seed 2 | **0.252** |
+| S2-gauci ↔ seed 3 | 0.610 |
+
+The three seeds are **not** tightly clustered relative to their distance from the
+published constants: seed 2 is closer to Gauci (0.252) than it is to seed 3
+(0.397).
+
+### The winner's-curse gap, measured for every seed
+
+Each search reports the best objective value it saw, which is the minimum of a
+noisy sample. Re-scored on the flat class's own objective, on its own training
+seeds (910 000), at **100 runs per condition instead of 2**:
+
+| row | 0.74 m, n=20 | 0.74 m, n=50 | 1.5 m, n=20 | 1.5 m, n=50 | 3 m, n=20 | 3 m, n=50 | geometric mean | reported | gap |
+|---|---|---|---|---|---|---|---|---|---|
+| S2-gauci | 1.396 | 1.202 | 1.380 | 1.198 | 1.388 | 1.201 | **1.2905** | — | — |
+| S2-class-flat-s1 | 1.282 | 1.171 | 1.281 | 1.177 | 1.286 | 1.211 | **1.2338** | 1.2143 | +0.0194 |
+| S2-class-flat-s2 | 1.284 | 1.162 | 1.291 | 1.166 | 1.281 | 1.172 | **1.2246** | 1.1927 | +0.0318 |
+| S2-class-flat-s3 | 1.294 | 1.163 | 1.285 | 1.168 | 1.277 | 1.201 | **1.2301** | 1.2120 | +0.0181 |
+
+Every seed's reported objective is optimistic, by **+0.019, +0.032 and +0.018**
+in the objective's own units — 1.5% to 2.7%. That is an order of magnitude
+smaller than §20's rough-class gap of **+1.05** (1.6009 reported against 2.6553
+honest), and the reason is the noise floor: on flat ground every condition
+reaches a cluster in every run and the per-condition dispersion is tightly
+distributed, so a 2-run median is a usable estimate. The same protocol at
+θ_m = 0.9 is not, which is exactly §20's finding.
+
+Note also that the **ordering of the reported objectives survives the re-score**
+— seed 2 is best on both (1.1927 reported, 1.2246 honest) — so on flat ground the
+training objective ranks the seeds correctly even though it misstates their level.
+
+### The held-out grid: where they agree and where they do not
+
+| cell | S2-gauci | S2-class-flat-s1 | S2-class-flat-s2 | S2-class-flat-s3 |
+|---|---|---|---|---|
+| θ=0, n=20, r₀=0.74 m | 1.427 [1.399, 1.467] | 1.279 [1.263, 1.289] | 1.293 [1.276, 1.311] | 1.284 [1.275, 1.298] |
+| θ=0, n=20, r₀=1.5 m | 1.394 [1.375, 1.426] | 1.267 [1.255, 1.280] | 1.280 [1.268, 1.300] | 1.291 [1.276, 1.303] |
+| θ=0, n=20, r₀=3 m | 1.385 [1.362, 1.409] | 1.275 [1.260, 1.289] | 1.301 [1.281, 1.315] | 1.274 [1.259, 1.293] |
+| θ=0, n=50, r₀=0.74 m | 1.206 [1.200, 1.213] | 1.171 [1.166, 1.178] | 1.163 [1.157, 1.165] | 1.162 [1.158, 1.170] |
+| θ=0, n=50, r₀=1.5 m | 1.203 [1.197, 1.208] | 1.180 [1.177, 1.187] | 1.163 [1.157, 1.170] | 1.181 [1.169, 1.185] |
+| θ=0, n=50, r₀=3 m | 1.204 [1.200, 1.212] | 1.200 [1.194, 1.217] | 1.166 [1.162, 1.172] | 1.191 [1.185, 1.203] |
+| θ=0.9, n=20, r₀=0.74 m | 3.150 [2.716, 3.439] | 1.757 [1.663, 1.845] | 1.757 [1.687, 1.863] | 1.749 [1.669, 1.972] |
+| θ=0.9, n=20, r₀=1.5 m | 2.899 [2.554, 3.224] | 1.765 [1.643, 2.049] | 1.899 [1.724, 2.071] | 2.065 [1.828, 2.329] |
+| θ=0.9, n=20, r₀=3 m | 3.902 [3.047, 5.623] | 12.517 [8.787, 16.527] | 3.701 [2.430, 7.876] | 13.701 [8.590, 18.733] |
+| θ=0.9, n=50, r₀=0.74 m | 1.756 [1.642, 1.980] | 1.514 [1.399, 1.625] | 1.556 [1.453, 1.735] | 1.517 [1.383, 1.731] |
+| θ=0.9, n=50, r₀=1.5 m | 2.130 [1.933, 2.338] | 1.630 [1.523, 1.905] | 1.642 [1.537, 1.821] | 1.734 [1.568, 1.946] |
+| θ=0.9, n=50, r₀=3 m | 2.375 [1.997, 2.879] | 3.417 [2.755, 3.824] | 2.700 [2.227, 3.079] | 2.770 [2.407, 3.561] |
+
+Seed-to-seed agreement, testing whether any pair of the three has disjoint
+intervals in each cell:
+
+    θ=0 n=20 r₀=0.74  s1:1.279  s2:1.293  s3:1.284   overlap
+    θ=0 n=20 r₀=1.5   s1:1.267  s2:1.280  s3:1.291   overlap
+    θ=0 n=20 r₀=3     s1:1.275  s2:1.301  s3:1.274   overlap
+    θ=0 n=50 r₀=0.74  s1:1.171  s2:1.163  s3:1.162   DISJOINT S2-class-flat-s1/S2-class-flat-s2
+    θ=0 n=50 r₀=1.5   s1:1.180  s2:1.163  s3:1.181   DISJOINT S2-class-flat-s1/S2-class-flat-s2
+    θ=0 n=50 r₀=3     s1:1.200  s2:1.166  s3:1.191   DISJOINT S2-class-flat-s2/S2-class-flat-s3
+    θ=0.9 n=20 r₀=0.74  s1:1.757  s2:1.757  s3:1.749   overlap
+    θ=0.9 n=20 r₀=1.5   s1:1.765  s2:1.899  s3:2.065   overlap
+    θ=0.9 n=20 r₀=3     s1:12.517  s2:3.701  s3:13.701   DISJOINT S2-class-flat-s2/S2-class-flat-s3
+    θ=0.9 n=50 r₀=0.74  s1:1.514  s2:1.556  s3:1.517   overlap
+    θ=0.9 n=50 r₀=1.5   s1:1.630  s2:1.642  s3:1.734   overlap
+    θ=0.9 n=50 r₀=3     s1:3.417  s2:2.700  s3:2.770   overlap
+
+
+**4 of 12 cells contain a disjoint pair.** Three of them are the n = 50 flat-ground
+cells, where every row is tightly determined and differences of 0.02–0.03 in
+dispersion are resolvable at 100 runs; the fourth is the 3.0 m, θ_m = 0.9 cell,
+where the spread is enormous — **12.517, 3.701, 13.701** — and reach runs 0.17,
+0.45, 0.28 against Gauci's 0.46.
+
+That fourth cell is the τ-truncated one. At τ = 3600 s the three seeds agree
+closely and all three beat Gauci:
+
+
+#### n = 20
+
+| τ | S2-gauci | S2-class-flat-s1 | S2-class-flat-s2 | S2-class-flat-s3 |
+|---|---|---|---|---|
+| **600 s** | reach 0.46 [0.37, 0.56]<br>disp 3.90 | reach 0.17 [0.11, 0.26]<br>disp 12.52 | reach 0.45 [0.36, 0.55]<br>disp 3.70 | reach 0.28 [0.20, 0.37]<br>disp 13.70 |
+| **1800 s** | reach 0.99 [0.95, 1.00]<br>disp 2.93 | reach 0.76 [0.67, 0.83]<br>disp 1.98 | reach 0.87 [0.79, 0.92]<br>disp 1.85 | reach 0.77 [0.68, 0.84]<br>disp 1.91 |
+| **3600 s** | reach 1.00 [0.96, 1.00]<br>disp 2.89 | reach 0.86 [0.78, 0.91]<br>disp 1.76 | reach 0.93 [0.86, 0.97]<br>disp 1.82 | reach 0.88 [0.80, 0.93]<br>disp 1.87 |
+
+paired ratio Gauci/row:
+
+| τ | S2-class-flat-s1 | S2-class-flat-s2 | S2-class-flat-s3 |
+|---|---|---|---|
+| **600 s** | 0.348 [0.275, 0.636] **L** | 0.943 [0.778, 1.410] | 0.479 [0.322, 0.845] **L** |
+| **1800 s** | 1.257 [1.181, 1.479] **W** | 1.456 [1.272, 1.630] **W** | 1.196 [1.013, 1.545] **W** |
+| **3600 s** | 1.436 [1.249, 1.673] **W** | 1.430 [1.311, 1.746] **W** | 1.441 [1.224, 1.753] **W** |
+
+#### n = 50
+
+| τ | S2-gauci | S2-class-flat-s1 | S2-class-flat-s2 | S2-class-flat-s3 |
+|---|---|---|---|---|
+| **600 s** | reach 0.79 [0.70, 0.86]<br>disp 2.38 | reach 0.62 [0.52, 0.71]<br>disp 3.42 | reach 0.78 [0.69, 0.85]<br>disp 2.70 | reach 0.64 [0.54, 0.73]<br>disp 2.77 |
+| **1800 s** | reach 0.99 [0.95, 1.00]<br>disp 1.77 | reach 0.90 [0.83, 0.94]<br>disp 1.76 | reach 0.98 [0.93, 0.99]<br>disp 1.62 | reach 0.93 [0.86, 0.97]<br>disp 1.60 |
+| **3600 s** | reach 1.00 [0.96, 1.00]<br>disp 1.74 | reach 0.95 [0.89, 0.98]<br>disp 1.61 | reach 0.98 [0.93, 0.99]<br>disp 1.51 | reach 0.98 [0.93, 0.99]<br>disp 1.47 |
+
+paired ratio Gauci/row:
+
+| τ | S2-class-flat-s1 | S2-class-flat-s2 | S2-class-flat-s3 |
+|---|---|---|---|
+| **600 s** | 0.748 [0.610, 0.916] **L** | 0.908 [0.762, 1.065] | 0.899 [0.696, 1.002] |
+| **1800 s** | 1.004 [0.890, 1.132] | 1.077 [0.987, 1.143] | 1.106 [0.963, 1.220] |
+| **3600 s** | 1.063 [0.934, 1.172] | 1.088 [1.025, 1.213] **W** | 1.120 [1.073, 1.213] **W** |
+
+**At τ = 3600 s the seeds agree to within 0.011 in the paired ratio at n = 20 —
+1.436, 1.430, 1.441 — and all three beat Gauci.** The scatter in that cell at
+τ = 600 s is a truncation artefact: a trial length that stops every row mid-gather
+amplifies small differences in gathering rate into order-of-magnitude differences
+in dispersion. It is still scatter that a reader of a τ = 600 s table would see,
+which is why the cell counts below are given at both trial lengths.
+
+### Each seed against the enumerated reference
+
+| cell | S2-class-flat-s1 | S2-class-flat-s2 | S2-class-flat-s3 |
+|---|---|---|---|
+| θ=0, n=20, r₀=0.74 m | 1.115 [1.099, 1.144] **W** | 1.099 [1.074, 1.123] **W** | 1.114 [1.080, 1.135] **W** |
+| θ=0, n=20, r₀=1.5 m | 1.104 [1.078, 1.123] **W** | 1.076 [1.062, 1.101] **W** | 1.098 [1.064, 1.113] **W** |
+| θ=0, n=20, r₀=3 m | 1.090 [1.072, 1.111] **W** | 1.075 [1.048, 1.096] **W** | 1.086 [1.061, 1.105] **W** |
+| θ=0, n=50, r₀=0.74 m | 1.026 [1.020, 1.033] **W** | 1.036 [1.029, 1.043] **W** | 1.037 [1.027, 1.043] **W** |
+| θ=0, n=50, r₀=1.5 m | 1.016 [1.009, 1.023] **W** | 1.034 [1.024, 1.040] **W** | 1.017 [1.012, 1.025] **W** |
+| θ=0, n=50, r₀=3 m | 0.999 [0.991, 1.008] | 1.031 [1.021, 1.038] **W** | 1.011 [1.002, 1.015] **W** |
+| θ=0.9, n=20, r₀=0.74 m | 1.809 [1.442, 2.072] **W** | 1.565 [1.289, 1.839] **W** | 1.533 [1.346, 1.906] **W** |
+| θ=0.9, n=20, r₀=1.5 m | 1.357 [1.231, 1.548] **W** | 1.347 [1.188, 1.549] **W** | 1.252 [1.037, 1.522] **W** |
+| θ=0.9, n=20, r₀=3 m | 0.348 [0.275, 0.636] **L** | 0.943 [0.778, 1.410] | 0.479 [0.322, 0.845] **L** |
+| θ=0.9, n=50, r₀=0.74 m | 1.137 [1.101, 1.220] **W** | 1.106 [1.040, 1.197] **W** | 1.153 [1.052, 1.212] **W** |
+| θ=0.9, n=50, r₀=1.5 m | 1.158 [1.056, 1.331] **W** | 1.097 [1.032, 1.220] **W** | 1.180 [1.027, 1.337] **W** |
+| θ=0.9, n=50, r₀=3 m | 0.748 [0.610, 0.916] **L** | 0.908 [0.762, 1.065] | 0.899 [0.696, 1.002] |
+
+| seed | W | L | tied |
+|---|---|---|---|
+| S2-class-flat-s1 | 9 | 2 | 1 |
+| S2-class-flat-s2 | 10 | 0 | 2 |
+| S2-class-flat-s3 | 10 | 1 | 1 |
+
+At τ = 600 s: seed 1 **9 W / 2 L / 1 tied**, seed 2 **10 W / 0 L / 2 tied**, seed 3
+**10 W / 1 L / 1 tied**. With the 3.0 m θ_m = 0.9 column taken at τ = 3600 s
+instead, all three seeds win that cell at n = 20 and seeds 2 and 3 also win it at
+n = 50 (1.088 [1.025, 1.213] and 1.120 [1.073, 1.213]) while seed 1 ties
+(1.063 [0.934, 1.172]).
+
+**Seed 1, the row §19 named as the baseline, is the weakest of the three.** Head
+to head, paired by run index:
+
+* S2-class-flat-s1 vs S2-class-flat-s2: S2-class-flat-s1 better in 2 cells, worse in 5, tied in 5
+* S2-class-flat-s1 vs S2-class-flat-s3: S2-class-flat-s1 better in 1 cells, worse in 1, tied in 10
+* S2-class-flat-s2 vs S2-class-flat-s3: S2-class-flat-s2 better in 3 cells, worse in 2, tied in 7
+
+No seed dominates another — seed 2 beats seed 1 in 5 of 12 cells and loses in 2,
+which is a lead, not a dominance — so "the dominant one becomes the baseline" does
+not apply. What applies is the scatter branch.
+
+### The ruling
+
+**The baseline is best-of-three † per cell**, the framework's
+best-known-S = 2-per-cell rule applied to the candidate set
+`{S2-gauci, S2-class-flat-s1 †, S2-class-flat-s2 †, S2-class-flat-s3 †}`, and the
+16.9% spread in R₀ together with the four disjoint cells **is the baseline's
+uncertainty**. Concretely, for the paper:
+
+* Every `c*(θ)` statement is made against the best of the three searched rows in
+  that cell, and the row that achieves it is named.
+* Where the three disagree, the disagreement is reported rather than the best
+  value alone. The four cells are: n = 50 flat ground at all three radii (a
+  0.02–0.03 spread in dispersion, resolvable but small) and 3.0 m under terrain at
+  n = 20 at τ = 600 s (a threefold spread that closes at τ = 3600 s).
+* **§19's headline survives with its subject changed.** "A transferring
+  four-constant controller exists" is now supported by three independent searches
+  rather than one, and more strongly: every seed beats the enumerated reference in
+  at least 9 of 12 cells, two of them lose nothing at all, and the flat-ground
+  n = 50 failure that defeated every single-condition row is fixed by all three.
+  What does *not* survive is naming one row as *the* baseline — that was one draw.
+* **Next-list item 12 closes**, with the answer "no": the baseline is not a
+  reproduced optimum. It is a reproduced *region*, and the paper must say so.
+
+### What this does not disturb
+
+§§13–14 (terrain as a performance tax on a fixed controller at realistic start
+radius) and §16 (the ℓ/λ mechanism) are untouched — no row in them is
+class-searched. §20's finding is reinforced rather than weakened: it showed that a
+2-run per-condition estimate cannot resolve the differences a search must resolve
+*at θ_m = 0.9*, and this section shows the same protocol on *flat ground* giving a
+winner's-curse gap an order of magnitude smaller (+0.02 against +1.05), which is
+what the noise-floor account predicts.
+
+### Limitations
+
+* **Three seeds is enough to reject "reproduced optimum" and not enough to
+  characterise the distribution.** The spread quoted is a range over three draws,
+  not a confidence interval on the optimiser's variability.
+* Two of the four disjoint cells differ by 0.02–0.03 in absolute dispersion. They
+  are statistically disjoint at 100 runs and practically small; the section reports
+  both facts rather than choosing one.
+* The scatter in the 3.0 m θ_m = 0.9 cell at τ = 600 s is a truncation artefact,
+  and the same cell at τ = 3600 s agrees to 0.011. A reader who only saw the
+  τ = 600 s grid would overstate the scatter; one who only saw τ = 3600 s would
+  understate it.
+* Still one optimiser. `docs/statistics.md` asks for two *independent optimisers*
+  and this is three seeds of one; sep-CMA-ES's diagonal covariance is common to all
+  three, so a shared bias would not show up here.
+* All three rows remain upper bounds (†), and the flat class objective is still
+  the six-condition one — λ, θ_m, τ and the arena are fixed inside it.
+
+Figure: `figures/phase0_seed_reproducibility.png`
+(regenerate with `harness/figures_seed_reproducibility.py`).
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
@@ -2245,10 +2505,13 @@ remains, plus what §§14–16 surfaced:
    is a 5× compute increase and the obvious next attempt; a variance-stabilising
    statistic in place of the per-condition median is the cheaper alternative and
    is untested.
-12. **Seed spread on a class search.** §19 ran one optimiser seed per class row.
-    Three or five would say whether S2-class-flat's win over Gauci is a property
-    of the protocol or of one draw, and it is the cheapest remaining check on the
-    strongest claim in the document.
+12. ~~**Seed spread on a class search.**~~ **Answered in §21**, and the answer is
+    that the baseline scatters: R₀ spans 16.9% across three seeds and 4 of 12
+    held-out cells contain a disjoint pair, so the baseline is best-of-three †
+    per cell. What remains open is a **second, structurally different optimiser**
+    — `docs/statistics.md` asks for two, and three seeds of one shares
+    sep-CMA-ES's diagonal covariance, so a bias common to that family would not
+    show up.
 9. **Which body-scaled length the worst λ actually is.** §18 shows the peak
    tracking body diameter at 1.01 and 0.97 diameters, but the cluster link
    distance (1.5 body diameters) and the occlusion footprint scale with the body

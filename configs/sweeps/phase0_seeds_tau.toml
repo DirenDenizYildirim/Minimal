@@ -1,0 +1,58 @@
+# PHASE 0 COMPANION -- the 3.0 m, theta_m = 0.9 column at the trial length it
+# needs. At tau = 600 s the enumerated reference itself reaches a cluster in
+# only 46% of runs there (section 19), so that cell cannot decide anything at
+# 600 s. Same cell, all four rows, tau = 600, 1800 and 3600 s, both swarm
+# sizes, same held-out evaluation seeds.
+
+name = "phase0-seeds-tau"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.9]
+
+[[axis]]
+path = "swarm.init.radius"
+values = [3.0]
+
+[[axis]]
+path = "sim.duration"
+values = [600.0, 1800.0, 3600.0]
+
+[[axis]]
+path = "swarm.n"
+values = [20, 50]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-class-flat-s1"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.432983, -0.882043] },
+  { wheels = [0.792395, -0.886538] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s2"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.542573, -0.980003] },
+  { wheels = [0.946660, -0.811344] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s3"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.409734, -0.752740] },
+  { wheels = [0.732649, -0.606024] },
+] }
