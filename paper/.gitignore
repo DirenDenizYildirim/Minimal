@@ -1,0 +1,9 @@
+# LaTeX build products: regenerate with pdflatex, never commit.
+# The figures the draft includes live in /figures, which is itself generated
+# and not committed, so the PDF cannot be rebuilt from a bare clone until the
+# figures are regenerated from configs first.
+*.aux
+*.log
+*.out
+*.toc
+*.pdf
