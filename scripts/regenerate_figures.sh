@@ -41,11 +41,22 @@ SCRIPTS=(
   figures_seed_reproducibility.py     # §21
 )
 
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
 for s in "${@:-${SCRIPTS[@]}}"; do
   echo "======== $s"
   t0=$(date +%s)
-  out=$($PY "harness/$s" 2>&1 | tee /dev/stderr | grep -oE 'figures/[a-z0-9_]+\.png' | sort -u | tr '\n' ' ')
+  # Combined output to a file rather than through a pipeline: a script that
+  # names no PNG on stdout (figures_mechanism_regression prints only "ok") makes
+  # `grep` exit 1, and under `pipefail` that would abort the whole run.
+  $PY "harness/$s" > "$TMP/out" 2>&1
   t1=$(date +%s)
+  cat "$TMP/out"
+  out=$(grep -oE 'figures/[a-z0-9_]+\.png' "$TMP/out" | sort -u | tr '\n' ' ' || true)
+  # Fall back to whatever the script's own savefig calls name, so a script that
+  # prints nothing still gets its outputs recorded.
+  [ -n "$out" ] || out=$(grep -oE 'figures/[a-z0-9_]+\.png' "harness/$s" | sort -u | tr '\n' ' ')
   printf '| 0.4 figures | `%s` | `PYTHONPATH=harness/src .venv/bin/python harness/%s` | `%s` | %s | %s s |\n' \
     "$(git rev-parse --short HEAD)" "$s" "$(date -u +%Y-%m-%dT%H:%MZ)" \
     "$(for f in $out; do printf '`%s` ' "$f"; done)" "$((t1 - t0))" >> "$LOG"

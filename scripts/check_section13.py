@@ -22,7 +22,9 @@ Exit status is 0 when every §13 row that `verify_numbers.py` covers is matched 
 explained, 1 otherwise. "Explained" means either that the script
 deliberately recomputes a statistic §13 retired (RETIRED-STATISTIC -- a finding
 about the script, not about the record) or that §12.1 already recorded the
-difference against the published value (DOCUMENTED §12.1). A MISMATCH is a §13
+difference against the published value (DOCUMENTED §12.1), or that the row is a
+resample whose seed moved while the data behind it verifiably did not
+(RE-SEEDED RESAMPLE). A MISMATCH is a §13
 row that no longer reproduces from the committed configs, which is a finding
 about the record and must be reported rather than fixed in place.
 """
@@ -62,6 +64,16 @@ DOCUMENTED = {
         "[1.154, 1.190] -- the same runs; the section calls it a re-seeded bootstrap",
     26: "§12.1: 0.979 [0.973, 0.986] recomputed against the published 0.980 "
         "[0.976, 0.986] -- the same runs",
+}
+
+# Rows whose value is a resample rather than a statistic of the data, so it moves
+# when the resampling seed does. Each entry names the row that shows the
+# underlying data is unchanged -- without that corroboration this would be an
+# ordinary mismatch, not an explanation.
+RESEEDED = {
+    114: "a 20 000-draw resample of 2-run medians, seeded inside verify_numbers.py; "
+         "row 117 reproduces the same cell's min, max and quartiles exactly, so the "
+         "100 dispersions are identical and only the resample differs",
 }
 
 # Rows whose ids are crossed between the two documents: `verify_numbers.py`
@@ -177,6 +189,8 @@ def main() -> int:
             verdict = "RETIRED-STATISTIC"
         elif r["id"] in DOCUMENTED:
             verdict = "DOCUMENTED §12.1"
+        elif r["id"] in RESEEDED:
+            verdict = "RE-SEEDED RESAMPLE"
         else:
             verdict = "MISMATCH"
         note = r["note"]
@@ -184,6 +198,8 @@ def main() -> int:
             note = RETIRED[r["id"]]
         elif verdict == "DOCUMENTED §12.1":
             note = DOCUMENTED[r["id"]]
+        elif verdict == "RE-SEEDED RESAMPLE":
+            note = RESEEDED[r["id"]]
         elif verdict == "MATCH (crossed id)":
             note = (f"recomputes the quantity §13 lists as row {CROSSED[r['id']]}; "
                     "the two ids are swapped between the documents")

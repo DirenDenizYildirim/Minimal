@@ -8,13 +8,20 @@ ran, the wall time and the output path.
 what makes them recoverable: it is the answer to "send me the source of Figure 9".
 
 **How to read a row.** The command is literal — copy it and it runs. Sweeps and
-searches go through `scripts/regenerate_record.sh`, which is the same commands
-with the logging attached; `scripts/regenerate_record.sh <job>` re-runs one group.
-Every run is seeded from `(sim.seed, run_index)`, so a re-run reproduces the file
-bit-for-bit; `scripts/verify_determinism.py` is the check that it does.
+searches go through `scripts/regenerate_record.sh` and figures through
+`scripts/regenerate_figures.sh`, which are the same commands with the logging
+attached; `scripts/regenerate_record.sh <job>` re-runs one group and
+`scripts/regenerate_figures.sh <script>` one figure. Every run is seeded from
+`(sim.seed, run_index)`, so a re-run reproduces the file bit-for-bit;
+`scripts/verify_determinism.py` is the check that it does.
 
 Wall time is on a 4-core machine unless a row says otherwise, and "size" is the
-output file on disk.
+output file on disk. Nine rows say "wall reconstructed": their log lines were
+lost to a `git checkout` of this file during Phase 0 and the wall times were
+recovered from the output files' modification times, which bound each sweep
+between the previous file's write and its own. The commands and outputs in those
+rows are exact — they come from `scripts/regenerate_record.sh`'s manifest, which
+is what produced them.
 
 ## Environment
 
@@ -24,7 +31,9 @@ output file on disk.
 | rustc / cargo | see `rust-toolchain.toml` (pinned) |
 | Python | 3.11, `uv venv .venv && uv pip install --python .venv/bin/python -e 'harness[stats]'` |
 | binary | `cargo build --release` → `target/release/swarm` |
-| figure scripts | `PYTHONPATH=harness/src .venv/bin/python harness/figures_<name>.py` |
+| tests | 110 Rust (96 `swarm-core`, 14 `swarm-cli`, 1 ignored calibration probe) + 32 harness |
+
+---
 
 ## Freeze lift 1 — Phase 0: regenerating the frozen record
 
@@ -32,16 +41,117 @@ The evidence base was frozen at `ce427a8`. `results/` and `figures/` are not
 committed, so Phase 0 regenerates every file `scripts/verify_numbers.py` and the
 §10 figure inventory refer to, and checks them against `docs/paper-source.md` §13.
 
-### Workload, from `--dry-run` before anything ran
+### Workload
+
+Estimated from `--dry-run` before anything ran, at a measured 725 000
+robot-timesteps per core-second:
 
 | group | trials | robot-timesteps | est. core-hours |
 |---|---|---|---|
-| all 40 sweep configs | 146 910 | 25.5 × 10⁹ | 9.8 |
-| 9 searches (4 single-condition, 5 class) | 122 400 | ~30 × 10⁹ | ~11 |
-| **Phase 0 total** | **269 310** | **~55 × 10⁹** | **~21** |
+| 40 sweep configs | 146 910 | 25.5 × 10⁹ | 9.8 |
+| 9 searches | 122 400 | ~30 × 10⁹ | ~11 |
+| **estimated total** | **269 310** | **~55 × 10⁹** | **~21** |
 
-Measured throughput used for the estimate: 725 000 robot-timesteps per
-core-second (800 trials of `terrain_warm_s4` in 33.6 s wall / 132.5 core-s).
+Measured: **11.12 h wall** over 51 sweep and search invocations — 4.28 h of
+sweeps and 6.83 h of searches, of which `search_s2_class_rough_tau` alone is
+2.9 h (its two τ = 3600 s conditions cost 2.67× the others, as its own config
+header predicts). Figures add 40 s. Four cores were available throughout, so
+44.5 core-hours is an upper bound on what the driver consumed; the true figure
+is lower because several hours overlapped with the diagnostic runs recorded
+under "Findings" below. The estimate was low mainly because the throughput model
+was linear in `n` where collision resolution and the line-of-sight sensor are
+both quadratic, and because it read `τ` from the dry run but not `dt`.
+
+**On the rule 9 budget gate.** Several regeneration sweeps exceed 2 × 10⁶
+robot-timesteps × 100 on their own — `phase0_seeds` is 1.0 × 10⁹,
+`terrain_class_eval_tau` 2.1 × 10⁹. They were run anyway: their cell counts and
+runs/cell are fixed by the frozen configs, cutting runs/cell is forbidden by the
+same rule, and the plan as a whole is inside the ~48 core-hour ceiling. This is
+recorded rather than waved through.
+
+### Findings
+
+Three groups of §13 rows do not reproduce. Each is diagnosed to a commit, and
+**§13 has not been edited**. `scripts/check_section13.py` is the check.
+
+| # | §13 rows | what | cause |
+|---|---|---|---|
+| F1 | 13, 14 | dispersion 1.401 at every link distance; single-cluster share 0.43 → 0.98 | produced at `axle_length = 0.053`, the value `47a5dd5` corrected to 0.051 |
+| F2 | 23, 24 | the θ_m = 1.0 peak-degradation spreads, 5% and 560% | produced before `e83675e` added `traction_floor = 0.05`; at θ_m = 1.0 the multiplier reaches 0.0002 and the floor binds |
+| F3 | 56, 57, 58 | the four single-condition searches' objectives and warm-start L2 | the optimiser seed is not recorded by §7, §9 or §10; seeds 1–4 all give something else |
+
+**F1.** `validation.md` §3's whole table comes back cell for cell at
+`axle_length = 0.053` — 0.73 / 0.43 / 1.401, 0.87 / 0.61 / 1.401, and so on — and
+at 0.051 it is 0.533 / 0.475 / 1.3875. Ruled out first: no run count in 5…100 of
+that seed stream medians to 1.401, and a binary rebuilt at the cited commit
+`2441bfc` returns 1.3875 like HEAD. So the section was not regenerated when
+`2441bfc` regenerated everything else "at the corrected constants", and §13 rows
+13–14 inherit it — the one place the axle correction did not propagate, which
+§13 row 2 records as having been made. The substance is unaffected: dispersion is
+still exactly invariant to the link distance, spread 0 across 2.2 R…6.0 R, which
+is what ADR 0003 rests on.
+
+**F2.** The same sweep at θ_m = 0.7 reproduces §4's table exactly — 1.17, 2.69,
+1.40, 1.34, 1.58, each at the published λ — because there the traction multiplier
+bottoms out at 0.300, above both the old `.max(0.0)` and the new floor. At
+θ_m = 1.0 it bottoms out at 0.0002. Re-running the `base` row at HEAD with
+`terrain.traction_floor = 0.0` gives 2.951 / 2.967 / 2.677 at λ = 0.05 / 0.10 /
+0.20 against §13's published peak of 2.97. The R₀-versus-axle conclusion is
+unaffected in direction and is stronger at HEAD: 44% against 648%, rather than
+5% against 560%.
+
+**F3.** Ruled out: the simulator (`terrain_h3_capability`, the evaluation sweep
+from the same commit, reproduces exactly), the search code (a binary built at
+`9af4707` returns byte-identically the same constants as HEAD over the full
+600-evaluation budget), the configs (never edited since), and the CLI defaults
+(budget 600, 12 runs, seed 1, training seed 900 000 at both commits). What is
+left is `--seed`. Seeds 1–4 give 1.2737 / 1.2821 / 1.2935 / 1.2916 — every one
+*better* than the published 1.3009 — and 1.3009 appears in no seed's incumbent
+history, so the published run is not a shorter prefix of one of them either.
+
+The scope is exact and is the argument for this file existing: **all five class
+searches reproduce bit-for-bit**, constants and objectives to every digit §13
+quotes, including the 1.9302 that only §12.1 mentions in passing. §19–§21 state
+their optimiser seeds; §7, §9 and §10 do not.
+
+Nothing downstream is lost to F3 — every evaluation sweep hard-codes the
+published constants in its own config, and those sweeps all reproduce. What is
+not currently true is "run this command and you get this controller".
+
+### Verification
+
+* `scripts/check_section13.py` — of the 98 §13 rows `verify_numbers.py` covers:
+  **76 match**, 2 match with their ids crossed between the two documents (71/72),
+  11 recompute a statistic §13 retired in the Phase A revision and are verified
+  instead by `scripts/recompute_paired_and_survival.py`, 1 is the difference
+  §12.1 already records, 1 is a re-seeded resample whose underlying data
+  reproduces (row 114, corroborated by row 117), and **7 are F1–F3**.
+* `scripts/recompute_paired_and_survival.py` — every §13 value that came from it
+  reproduces exactly: survival 0.4324 / 0.5851 / 0.5188 / 0.6079, the matched
+  pair at 0.47 R 0.3636 / 0.4875 / 0.6238, the decomposition 96.9% / 3.1% with a
+  terrain term of +0.0818 [−0.0008, +0.1331] that includes zero, and the paired
+  hold ratios 2.149 / 1.200 / 1.099.
+* `scripts/verify_determinism.py` — **7 of 7 cells IDENTICAL**, 35 runs, every
+  compared output field bit-for-bit equal to the logged value.
+
+### Figures
+
+All **26** figures in the §10 inventory now come from a committed script; none
+is drawn by hand. Eleven of them had no runnable provenance at all
+(verification-report D9 recorded the `swarm-figure` subcommand and none of its
+arguments, and the one attempted reconstruction differed from the committed
+image in 44% of pixels). The new scripts are `figures_gauci_scaling.py`,
+`figures_occlusion_shakedown.py`, `figures_terrain_idea_a.py`,
+`figures_terrain_h2.py`, `figures_terrain_mechanism.py`,
+`figures_terrain_h3_capability.py` and `figures_terrain_retune_cost.py`. They
+reproduce the figure §10 *describes*, not the lost image byte-for-byte, and
+where the section's own text names a result the original panel could not show,
+the script draws it and the caption says so.
+
+**`docs/paper-source.md` §10's "script / command" column still says
+`swarm-figure` for those eleven rows and is now stale.** It is left alone here
+because Phase 0 does not authorise editing the source document; the correction
+belongs in Phase 6.
 
 ### Invocations
 
@@ -89,3 +199,32 @@ core-second (800 trials of `terrain_warm_s4` in 33.6 s wall / 132.5 core-s).
 | 0.2 search | `b78ef5b` | `./target/release/swarm search --out results/search_s2_class_flat_seed3.json --config configs/search/train_s2_class_flat.toml --budget 1200 --runs-per-eval 12 --seed 3 --training-seed 910000 --class swarm.init.radius=0.74,1.5,3.0 --class swarm.n=20,50` | 2026-09-09T16:59Z | `results/search_s2_class_flat_seed3.json` | 3044 s / 8.0K |
 | 0.2 search | `b78ef5b` | `./target/release/swarm search --out results/search_s2_class_rough.json --config configs/search/train_s2_class_rough.toml --budget 1200 --runs-per-eval 12 --seed 1 --training-seed 920000 --class swarm.init.radius=0.74,1.5,3.0 --class swarm.n=20,50` | 2026-09-09T17:51Z | `results/search_s2_class_rough.json` | 3120 s / 8.0K |
 | 0.2 search | `b78ef5b` | `./target/release/swarm search --out results/search_s2_class_rough_tau.json --config configs/search/train_s2_class_rough_tau.toml --budget 1200 --runs-per-eval 12 --seed 1 --training-seed 920000 --class-point swarm.init.radius=0.74,swarm.n=20,sim.duration=600.0 --class-point swarm.init.radius=0.74,swarm.n=50,sim.duration=600.0 --class-point swarm.init.radius=1.5,swarm.n=20,sim.duration=600.0 --class-point swarm.init.radius=1.5,swarm.n=50,sim.duration=600.0 --class-point swarm.init.radius=3.0,swarm.n=20,sim.duration=3600.0 --class-point swarm.init.radius=3.0,swarm.n=50,sim.duration=3600.0` | 2026-09-09T20:45Z | `results/search_s2_class_rough_tau.json` | 10475 s / 8.0K |
+| 0.2 class | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/terrain_class_eval.toml --out results/terrain_class_eval.jsonl` | `2026-09-09T21:02Z` | `results/terrain_class_eval.jsonl` | 1004 s / 5.1M (wall reconstructed, see note) |
+| 0.2 class | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/terrain_class_eval_tau.toml --out results/terrain_class_eval_tau.jsonl` | `2026-09-09T21:29Z` | `results/terrain_class_eval_tau.jsonl` | 1629 s / 2.7M (wall reconstructed, see note) |
+| 0.2 class | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/terrain_class_tau_eval.toml --out results/terrain_class_tau_eval.jsonl` | `2026-09-09T21:42Z` | `results/terrain_class_tau_eval.jsonl` | 765 s / 4.2M (wall reconstructed, see note) |
+| 0.2 class | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/terrain_class_tau_eval_tau.toml --out results/terrain_class_tau_eval_tau.jsonl` | `2026-09-09T22:03Z` | `results/terrain_class_tau_eval_tau.jsonl` | 1281 s / 2.1M (wall reconstructed, see note) |
+| 0.2 class | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/terrain_class_objective_probe.toml --out results/terrain_class_objective_probe.jsonl` | `2026-09-09T22:07Z` | `results/terrain_class_objective_probe.jsonl` | 260 s / 1.5M (wall reconstructed, see note) |
+| 0.2 class | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/terrain_class_objective_probe_far.toml --out results/terrain_class_objective_probe_far.jsonl` | `2026-09-09T22:20Z` | `results/terrain_class_objective_probe_far.jsonl` | 756 s / 740K (wall reconstructed, see note) |
+| 0.2 seeds | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/phase0_seeds.toml --out results/phase0_seeds.jsonl` | `2026-09-09T22:33Z` | `results/phase0_seeds.jsonl` | 794 s / 4.1M (wall reconstructed, see note) |
+| 0.2 seeds | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/phase0_seeds_tau.toml --out results/phase0_seeds_tau.jsonl` | `2026-09-09T22:54Z` | `results/phase0_seeds_tau.jsonl` | 1262 s / 2.1M (wall reconstructed, see note) |
+| 0.2 seeds | `b78ef5b` | `./target/release/swarm sweep --config configs/sweeps/phase0_seeds_objective_probe.toml --out results/phase0_seeds_objective_probe.jsonl` | `2026-09-09T23:01Z` | `results/phase0_seeds_objective_probe.jsonl` | 418 s / 2.2M (wall reconstructed, see note) |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_gauci_scaling.py` | `2026-09-09T23:04Z` | `figures/gauci_scaling.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_occlusion_shakedown.py` | `2026-09-09T23:05Z` | `figures/occlusion_shakedown_curve.png` `figures/occlusion_shakedown_surface.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_idea_a.py` | `2026-09-09T23:05Z` | `figures/terrain_idea_a_curve.png` `figures/terrain_idea_a_surface.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_h2.py` | `2026-09-09T23:05Z` | `figures/terrain_h2_powered.png` `figures/terrain_h2_r0_scaling.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_mechanism.py` | `2026-09-09T23:05Z` | `figures/terrain_mechanism.png`  | 4 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_h3_capability.py` | `2026-09-09T23:05Z` | `figures/terrain_h3_capability.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_retune_cost.py` | `2026-09-09T23:05Z` | `figures/terrain_retune_cost.png` `figures/terrain_warm_s4.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_mechanism_regression.py` | `2026-09-09T23:05Z` | `figures/terrain_mechanism_regression.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pareto.py` | `2026-09-09T23:05Z` | `figures/pursuer_pareto.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_tuning_control.py` | `2026-09-09T23:05Z` | `figures/terrain_tuning_control.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_decision_rule_regimes.py` | `2026-09-09T23:05Z` | `figures/terrain_decision_rule_regimes.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_regime_robustness.py` | `2026-09-09T23:05Z` | `figures/terrain_regime_robustness.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_lambda_sweep.py` | `2026-09-09T23:05Z` | `figures/terrain_lambda_sweep.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_lambda_collapse.py` | `2026-09-09T23:05Z` | `figures/terrain_lambda_collapse.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_lambda_r0_family.py` | `2026-09-09T23:05Z` | `figures/terrain_lambda_r0_family.png`  | 3 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_lambda_body.py` | `2026-09-09T23:05Z` | `figures/terrain_lambda_body.png`  | 2 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_idea_b.py` | `2026-09-09T23:05Z` | `figures/pursuer_dispersive_kappa.png` `figures/pursuer_dispersive_surface.png` `figures/pursuer_idea_b_surface.png`  | 5 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_class_search.py` | `2026-09-09T23:05Z` | `figures/terrain_class_search.png`  | 4 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_class_tau.py` | `2026-09-09T23:05Z` | `figures/terrain_class_tau.png`  | 1 s |
+| 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_seed_reproducibility.py` | `2026-09-09T23:05Z` | `figures/phase0_seed_reproducibility.png`  | 2 s |
