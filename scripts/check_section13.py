@@ -88,11 +88,13 @@ def numbers(text: str) -> list[tuple[float, float]]:
     digits*, so "1.43" is satisfied by 1.427 and "1.401" is not satisfied by
     1.3875. A leading "~" means the source itself is approximate and buys 10%.
     """
-    text = text.replace("−", "-").replace(",", " ")
+    text = text.replace("−", "-")
     # §13 groups thousands with a space ("7 200", "50 000"); the recomputation
     # prints them unspaced. Join the groups back up before tokenising, or one
-    # number is read as two.
+    # number is read as two. Strictly before the comma becomes a space,
+    # or the interval "[130,150]" is joined into the single number 130150.
     text = re.sub(r"(?<=\d)[   ](?=\d{3}(?!\d))", "", text)
+    text = text.replace(",", " ")
     out = []
     for m in _NUM.finditer(text):
         token = m.group()
@@ -120,7 +122,10 @@ def _subsequence(want, got, percent: bool) -> bool:
             g = got[j]
             j += 1
             scales = (1.0, 0.01, 100.0) if percent else (1.0,)
-            if any(abs(g * s - w) <= tol for s in scales):
+            # The 1e-12 is against the knife edge: a published 0.25 against a
+            # recomputed 0.255 differs by 0.005 + 4e-18 in binary floating point
+            # and would fail a tolerance of exactly 0.005.
+            if any(abs(g * s - w) <= tol + 1e-12 for s in scales):
                 break
         else:
             return False
