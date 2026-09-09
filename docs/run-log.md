@@ -58,3 +58,4 @@ core-second (800 trials of `terrain_warm_s4` in 33.6 s wall / 132.5 core-s).
 | 0.2 validation | `b485750` | `./target/release/swarm sweep --config configs/sweeps/timestep_fov_gate.toml --out results/timestep_fov_gate.jsonl` | 2026-09-09T12:07Z | `results/timestep_fov_gate.jsonl` | 73 s / 1.2M |
 | 0.2 terrain | `b485750` | `./target/release/swarm sweep --config configs/sweeps/terrain_idea_a.toml --out results/terrain_idea_a.jsonl` | 2026-09-09T12:09Z | `results/terrain_idea_a.jsonl` | 136 s / 2.5M |
 | 0.2 terrain | `b485750` | `./target/release/swarm sweep --config configs/sweeps/terrain_h1_fine.toml --out results/terrain_h1_fine.jsonl` | 2026-09-09T12:14Z | `results/terrain_h1_fine.jsonl` | 277 s / 4.0M |
+| 0.2 terrain | `1ef805f` | `./target/release/swarm sweep --config configs/sweeps/terrain_h2_r0_scaling.toml --out results/terrain_h2_r0_scaling.jsonl` | 2026-09-09T12:18Z | `results/terrain_h2_r0_scaling.jsonl` | 258 s / 5.1M |
