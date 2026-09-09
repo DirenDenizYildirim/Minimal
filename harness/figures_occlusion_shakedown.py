@@ -111,19 +111,32 @@ def curve():
 
 
 def surface():
-    plot.surface(
+    fig = plot.surface(
         r,
         x="occlusion.fn_rate",
         y=CORR_FIELD,
         metric="final_dispersion",
         thresholds=[2.0, 3.0, 4.0],
+        # The correlated corner reaches ~39 and would leave the whole low half of
+        # the grid one flat colour. The scale stops at 5 and that corner
+        # saturates; contours are computed per panel from the unclipped values.
+        vmin=1.4,
+        vmax=5.0,
         title="§1 shakedown: median final dispersion over (nominal FN rate, spatial correlation).\n"
         "n = 20, τ = 600 s, start radius 0.74 m, 100 runs/cell.  Clean-arena baseline is 1.43.\n"
         "The correlation axis has two values by design (i.i.d. and amplitude 0.9); the honest comparison "
         "between them is at matched REALISED rate, in the curve figure's right panel, not on this axis.",
         annotate=["n", "duration", "start_radius"],
-        out="figures/occlusion_shakedown_surface.png",
     )
+    # `plot.surface` uses one wspace for every panel count, and the dotted-path y
+    # label of the second panel lands inside the first. Widening the gap moves
+    # the panels but not the colorbar, which `fig.colorbar` placed already, so
+    # the colorbar is re-seated by hand afterwards. Local to this figure, so
+    # nothing else in the inventory moves.
+    fig.subplots_adjust(wspace=0.30, right=0.86)
+    box = fig.axes[0].get_position()
+    fig.axes[-1].set_position([0.885, box.y0, 0.016, box.height])
+    fig.savefig("figures/occlusion_shakedown_surface.png", dpi=160, bbox_inches="tight")
     print("wrote figures/occlusion_shakedown_surface.png")
 
 

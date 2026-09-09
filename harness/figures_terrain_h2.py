@@ -39,6 +39,15 @@ import sys
 from swarm_harness import plot
 from swarm_harness.load import load_jsonl
 
+# `plot.surface` reserves a fixed fraction of the width for the colorbar, which
+# at five panels leaves its label off the canvas. Saving with a tight bounding
+# box grows the canvas to fit instead of cropping the label, and changes nothing
+# else about the figure -- so the fix stays here rather than in the shared
+# plotting code every other figure also uses.
+def save_tight(fig, out):
+    fig.savefig(out, dpi=160, bbox_inches="tight")
+    print(f"wrote {out}")
+
 # `axle-x2-R0-same` puts the wheel contacts outside the 7.4 cm body. It is a
 # numerical device for separating two length scales, not a buildable robot, and
 # it is also the row that makes the 5% spread meaningful — so it stays in,
@@ -49,29 +58,36 @@ NOT_BUILDABLE = ("axle-x2-R0-same ‡ has its wheel contacts OUTSIDE the 7.4 cm 
 
 def powered():
     r = load_jsonl("results/terrain_h2_powered_valid.jsonl")
-    plot.surface(
+    fig = plot.surface(
         r,
         x="terrain.correlation_length",
         y="terrain.friction_amplitude",
         metric="final_dispersion",
         baseline_y=0.0,
         thresholds=[1.5, 2.0, 3.0],
+        # The R0-x2 row reaches 10.46 at the peak. On a shared scale reaching
+        # that, the other four panels are one flat colour and the figure says
+        # only "one row is much worse", which the caption can say in words. The
+        # colour scale therefore stops at 3.0 and that row saturates; the
+        # contours are computed per panel from the unclipped values, so the
+        # T = 3 line still sits where it belongs.
+        vmin=1.0,
+        vmax=3.0,
         title="§4, H2 powered: the transition tracks R₀, not the axle.  Five rows holding one length scale fixed while\n"
         "varying the other; each column divided by its OWN θ_m = 0 cell at the same λ.  n = 20, τ = 600 s, start radius\n"
         "0.74 m, slope 0, 100 runs/cell, θ_m ≤ 1.0 (the sweep's θ_m = 1.5 band is stall, not terrain — correction #10).\n"
         "At θ_m = 1.0: axle 4× at fixed R₀ moves the peak by 5%; R₀ 4× at fixed axle moves it by 560%.\n"
         "SUPERSEDED IN PART: §15/§17 show the peak is not proportional to R₀ within one controller family, and §18\n"
         "identifies the length as the body diameter.  Use this figure for R₀ versus axle only.\n"
-        + NOT_BUILDABLE,
+        "Colour saturates at 3.0; R0-x2-axle-same reaches 10.46 at its peak.  " + NOT_BUILDABLE,
         annotate=["n", "duration", "start_radius"],
-        out="figures/terrain_h2_powered.png",
     )
-    print("wrote figures/terrain_h2_powered.png")
+    save_tight(fig, "figures/terrain_h2_powered.png")
 
 
 def r0_scaling():
     r = load_jsonl("results/terrain_h2_r0_scaling.jsonl")
-    plot.surface(
+    fig = plot.surface(
         r,
         x="terrain.correlation_length",
         y="terrain.friction_amplitude",
@@ -85,9 +101,8 @@ def r0_scaling():
         "SUPERSEDED by terrain_h2_powered.png, which breaks the confound and carries the θ_m range to find a peak.\n"
         "n = 20, τ = 600 s, start radius 0.74 m, 100 runs/cell.",
         annotate=["n", "duration", "start_radius"],
-        out="figures/terrain_h2_r0_scaling.png",
     )
-    print("wrote figures/terrain_h2_r0_scaling.png")
+    save_tight(fig, "figures/terrain_h2_r0_scaling.png")
 
 
 if __name__ == "__main__":

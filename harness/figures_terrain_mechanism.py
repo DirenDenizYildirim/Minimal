@@ -64,7 +64,7 @@ def hold_ratio(row, lam, amp):
             for x in rough if x["run_index"] in flat and flat[x["run_index"]]]
 
 
-fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.4), sharey=True)
+fig, axes = plt.subplots(1, 2, figsize=(13.2, 6.6), sharey=True)
 POOLED = {}
 
 for ax, row in zip(axes, ROWS):
@@ -107,12 +107,18 @@ fig.suptitle(
     "the mechanism was speed heterogeneity.  It has NO peak and is flat within [0.96, 1.01] across the whole grid.",
     fontsize=9, y=0.995, va="top",
 )
-fig.subplots_adjust(top=0.72, bottom=0.13, left=0.10, right=0.985, wspace=0.08)
-fig.text(0.5, 0.02,
+fig.subplots_adjust(top=0.805, bottom=0.175, left=0.115, right=0.985, wspace=0.07)
+fig.text(0.5, 0.05,
          "Reported without explanation, per the rule: the scalar row sits slightly BELOW 1.0 — pooled "
-         f"{POOLED['scalar-centre'][0]:.3f} [{POOLED['scalar-centre'][1]:.3f}, {POOLED['scalar-centre'][2]:.3f}], an interval "
-         "excluding 1.0.  A pure scalar speed field appears to aggregate ~2% better than flat ground.  "
-         "Not in H1's direction, at the edge of what this design resolves, and never chased.",
-         ha="center", fontsize=7.5, style="italic", color="0.35")
+         f"{POOLED['scalar-centre'][0]:.3f} [{POOLED['scalar-centre'][1]:.3f}, {POOLED['scalar-centre'][2]:.3f}], an interval excluding 1.0.\n"
+         "A pure scalar speed field appears to aggregate ~2% better than flat ground.  Not in H1's direction, "
+         "at the edge of what this design resolves, and never chased.",
+         ha="center", va="bottom", fontsize=7.5, style="italic", color="0.35")
+# Both rows are Gauci's enumerated constants: what varies here is the environment
+# model, not the controller, so neither provenance stamp belongs on this figure.
+fig.text(0.5, 0.012,
+         "Both rows use Gauci's enumerated controller — a TIGHT minimum, not an upper bound.  No †, no ‡.  "
+         "What varies is the traction model, not the capability.",
+         ha="center", va="bottom", fontsize=7.5, style="italic", color="0.45")
 fig.savefig("figures/terrain_mechanism.png", dpi=160)
 print("wrote figures/terrain_mechanism.png")
