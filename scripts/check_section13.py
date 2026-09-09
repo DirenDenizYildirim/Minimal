@@ -41,6 +41,8 @@ RETIRED = {
     28: "D0: §7 hold ratios, ratio of medians -> paired",
     29: "D0: §7 hold ratios, ratio of medians -> paired",
     30: "D0: §7 hold ratios, ratio of medians -> paired",
+    10: "D0: n = 2 hold, '~10% still touching at tau' -> 0.15 still touching; "
+        "0.10 is the SHARE OF TIME.  §13 row 10 still carries the pre-correction value",
     34: "D0: survival, median run-level -> mean per-robot with Wilson",
     35: "D0: survival, median run-level -> mean per-robot with Wilson",
     36: "D0: survival, median run-level -> mean per-robot with Wilson",
@@ -54,35 +56,63 @@ RETIRED = {
 # the check can confirm the crossing rather than merely tolerate a mismatch.
 CROSSED = {71: 72, 72: 71}
 
-_NUM = re.compile(r"-?\d+(?:\.\d+)?")
+# A number, but not one that is part of an identifier: the "2" in "S2-rough" and
+# in "n=2" is not a quantity, and treating it as one turns a match into a miss.
+_NUM = re.compile(r"(?<![A-Za-z0-9.=])-?\d+(?:\.\d+)?")
+# Bootstrap intervals are re-seeded on a re-run, so their endpoints move a little
+# even when the point estimate is bit-identical (paper-source §12.1 records §6's
+# 1.178 against the published 1.175 for exactly this reason).
+CI_TOLERANCE = 0.02
 
 
-def numbers(text: str) -> list[float]:
-    """Every number in a cell, in order, so formatting differences do not matter."""
-    return [float(m) for m in _NUM.findall(text.replace("−", "-").replace(",", " "))]
+def numbers(text: str) -> list[tuple[float, float]]:
+    """Numbers in a cell, each with the tolerance its own quoted precision earns.
 
-
-def matches(claimed: str, recomputed: str, tol: float = 0.02) -> bool:
-    """Do the §13 value's numbers all appear, in order, in the recomputed cell?
-
-    §13 quotes point estimates to a stated number of digits and often omits the
-    interval that the recomputation prints, so this checks that §13's numbers are
-    a prefix-matched subsequence of the recomputed ones within a relative
-    tolerance -- 2%, which is wider than bootstrap re-seeding noise and narrower
-    than any disagreement worth reporting.
+    §13 quotes to a stated number of digits and the task is to match it *to those
+    digits*, so "1.43" is satisfied by 1.427 and "1.401" is not satisfied by
+    1.3875. A leading "~" means the source itself is approximate and buys 10%.
     """
-    want, got = numbers(claimed), numbers(recomputed)
-    if not want:
-        return False
+    text = text.replace("−", "-").replace(",", " ")
+    out = []
+    for m in _NUM.finditer(text):
+        token = m.group()
+        approx = text[max(0, m.start() - 2):m.start()].strip().endswith("~")
+        value = float(token)
+        decimals = len(token.partition(".")[2])
+        tol = 0.1 * abs(value) if approx else 0.5 * 10.0 ** (-decimals)
+        out.append((value, tol))
+    return out
+
+
+def _subsequence(want, got, percent: bool) -> bool:
+    """Does every wanted number appear, in order, among the recomputed ones?"""
     j = 0
-    for w in want:
+    for w, tol in want:
         while j < len(got):
             g = got[j]
             j += 1
-            if abs(g - w) <= tol * max(1e-9, abs(w)):
+            scales = (1.0, 0.01, 100.0) if percent else (1.0,)
+            if any(abs(g * s - w) <= tol for s in scales):
                 break
         else:
             return False
+    return True
+
+
+def matches(value: str, ci: str, recomputed: str) -> bool:
+    """§13's point estimate must reproduce to its stated digits.
+
+    The interval is checked only when the recomputation printed one; several
+    items report a point estimate alone, and demanding an interval they never
+    computed would fail them for the wrong reason.
+    """
+    got = [v for v, _ in numbers(recomputed)]
+    percent = "%" in recomputed or "%" in value
+    if not numbers(value) or not _subsequence(numbers(value), got, percent):
+        return False
+    if ci and "[" in recomputed:
+        want_ci = [(v, max(t, CI_TOLERANCE * abs(v))) for v, t in numbers(ci)]
+        return _subsequence(want_ci, got, percent)
     return True
 
 
@@ -104,10 +134,11 @@ def main() -> int:
             verdict = "ERROR"
         elif row is None:
             verdict = "NOT IN §13"
-        elif matches(want, got):
+        elif matches(row["value"], row.get("ci") or "", got):
             verdict = "MATCH"
         elif r["id"] in CROSSED and matches(
-                f"{section13[CROSSED[r['id']]]['value']}", got):
+                section13[CROSSED[r["id"]]]["value"],
+                section13[CROSSED[r["id"]]].get("ci") or "", got):
             verdict = "MATCH (crossed id)"
         elif r["id"] in RETIRED:
             verdict = "RETIRED-STATISTIC"

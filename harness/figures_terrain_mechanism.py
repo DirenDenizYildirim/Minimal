@@ -18,10 +18,11 @@ relative speed heterogeneity and the curvature explanation was to be retired. It
 does not reproduce — the scalar row has no peak at all and sits flat in
 [0.96, 1.01] across the whole grid — so the curvature explanation stands.
 
-Two panels, because the claim is about both the peak's location and its absence.
-The surface is what the CLI drew; the paired line panel underneath it is where a
-reader can see that one curve has a peak at λ/R₀ ≈ 0.69 and the other is a
-straight line through 1.0.
+One panel per row, on a shared y axis, rather than a colour surface: the claim is
+that one row HAS a peak at λ/R₀ ≈ 0.69 and the other has none, and an absence is
+much easier to read as a flat line through 1.0 than as an evenly coloured patch.
+The y axis has to be shared or the scalar row's ±2% band would be stretched to
+fill its own panel and look like structure.
 
 Both rows are Gauci's enumerated constants, so neither carries † nor ‡: what
 varies is the environment model, not the controller.
@@ -30,6 +31,7 @@ varies is the environment model, not the controller.
 import matplotlib
 
 matplotlib.use("Agg")
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -72,7 +74,7 @@ for ax, row in zip(axes, ROWS):
             m, l, h = median_ci(hold_ratio(row, lam, amp))
             med.append(m); lo.append(l); hi.append(h)
         shade = 0.75 - 0.55 * (amp / max(AMPS))
-        colour = plt.matplotlib.colors.to_rgb(COLOURS[row])
+        colour = mcolors.to_rgb(COLOURS[row])
         colour = tuple(c * (1 - shade) + shade for c in colour)
         ax.plot([l / R0_GAUCI for l in LAMS], med, marker="o", ms=4.5,
                 color=colour, label=f"θ_m = {amp:g}")

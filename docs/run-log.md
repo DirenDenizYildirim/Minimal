@@ -47,3 +47,14 @@ core-second (800 trials of `terrain_warm_s4` in 33.6 s wall / 132.5 core-s).
 
 | phase | commit | command | when (UTC) | output | wall / size |
 |---|---|---|---|---|---|
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/gauci_scaling.toml --out results/gauci_scaling.jsonl` | 2026-09-09T11:57Z | `results/gauci_scaling.jsonl` | 190 s / 472K |
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/link_distance_sensitivity.toml --out results/link_distance.jsonl` | 2026-09-09T11:58Z | `results/link_distance.jsonl` | 9 s / 172K |
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/occlusion_shakedown.toml --out results/occlusion_shakedown.jsonl` | 2026-09-09T12:00Z | `results/occlusion_shakedown.jsonl` | 153 s / 3.4M |
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/small_n_noise_probe.toml --out results/small_n_noise_probe.jsonl` | 2026-09-09T12:00Z | `results/small_n_noise_probe.jsonl` | 14 s / 732K |
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/small_n_start_radius_probe.toml --out results/small_n_start_radius_probe.jsonl` | 2026-09-09T12:00Z | `results/small_n_start_radius_probe.jsonl` | 2 s / 960K |
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/small_n_time_gate.toml --out results/small_n_time_gate.jsonl` | 2026-09-09T12:03Z | `results/small_n_time_gate.jsonl` | 140 s / 1.6M |
+| 0.2 validation | `d382f85` | `./target/release/swarm sweep --config configs/sweeps/sensor_fov_gate.toml --out results/sensor_fov_gate.jsonl` | 2026-09-09T12:03Z | `results/sensor_fov_gate.jsonl` | 23 s / 1016K |
+| 0.2 validation | `b485750` | `./target/release/swarm sweep --config configs/sweeps/timestep_convergence.toml --out results/timestep_convergence.jsonl` | 2026-09-09T12:06Z | `results/timestep_convergence.jsonl` | 170 s / 2.0M |
+| 0.2 validation | `b485750` | `./target/release/swarm sweep --config configs/sweeps/timestep_fov_gate.toml --out results/timestep_fov_gate.jsonl` | 2026-09-09T12:07Z | `results/timestep_fov_gate.jsonl` | 73 s / 1.2M |
+| 0.2 terrain | `b485750` | `./target/release/swarm sweep --config configs/sweeps/terrain_idea_a.toml --out results/terrain_idea_a.jsonl` | 2026-09-09T12:09Z | `results/terrain_idea_a.jsonl` | 136 s / 2.5M |
+| 0.2 terrain | `b485750` | `./target/release/swarm sweep --config configs/sweeps/terrain_h1_fine.toml --out results/terrain_h1_fine.jsonl` | 2026-09-09T12:14Z | `results/terrain_h1_fine.jsonl` | 277 s / 4.0M |
