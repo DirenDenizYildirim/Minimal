@@ -110,10 +110,50 @@ impl Default for PursuerConfig {
     }
 }
 
+/// The attempt window `p_lock` is defined against, in seconds.
+///
+/// `p_lock` is a probability, and a probability of what has to be said. Until
+/// freeze lift 1 it was implicitly "per control step", which made the pursuer's
+/// lethality a function of `sim.dt`: an acquisition attempt happened once per
+/// step, so the probability of acquiring within a second was
+/// `1 - (1 - p_lock)^(1/dt)` and halving the timestep doubled the attempts.
+/// Experiment 4 found that empirically — five of five models drawn at
+/// `dt = 0.05` flipped an ordering that no `dt = 0.10` model flipped.
+///
+/// It is now defined **per 0.1 s attempt window**, which is the value every
+/// number in the record was measured at, and converted to a per-step
+/// probability by `lock_probability_per_step`. At `dt = 0.1` the conversion is
+/// the identity and every existing run is bit-identical; at any other `dt` the
+/// per-second acquisition rate is now invariant, which it was not before.
+pub const REFERENCE_ATTEMPT_WINDOW: f64 = 0.1;
+
 impl PursuerConfig {
     /// `p_lock` given the number of robots inside the pursuer's confusion radius.
+    ///
+    /// This is the probability of acquiring within one **`REFERENCE_ATTEMPT_WINDOW`**,
+    /// not within one control step. See `lock_probability_per_step`.
     pub fn lock_probability(&self, n_local: usize) -> f64 {
         1.0 / (1.0 + self.confusion * n_local as f64)
+    }
+
+    /// `p_lock` rescaled from its 0.1 s attempt window to one control step.
+    ///
+    /// A per-window probability `p` becomes a per-step probability
+    /// `1 - (1 - p)^(dt / 0.1)`, which is the unique rescaling that leaves the
+    /// probability of *not* acquiring over any fixed span of time unchanged as
+    /// `dt` varies.
+    ///
+    /// `dt == REFERENCE_ATTEMPT_WINDOW` returns `p` **exactly**, by an explicit
+    /// branch rather than by trusting `powf(x, 1.0) == x`. Every published
+    /// pursuit run is at `dt = 0.1`, so that branch is what makes this change
+    /// bit-neutral for the record, and it should not be replaced by anything
+    /// that merely ought to be exact.
+    pub fn lock_probability_per_step(&self, n_local: usize, dt: f64) -> f64 {
+        let p = self.lock_probability(n_local);
+        if dt == REFERENCE_ATTEMPT_WINDOW {
+            return p;
+        }
+        1.0 - (1.0 - p).powf(dt / REFERENCE_ATTEMPT_WINDOW)
     }
 }
 
@@ -245,7 +285,13 @@ impl Pursuer {
             if let Some(candidate) = self.choose(robots, rng) {
                 // Confusion is re-rolled on every acquisition attempt, so a dense
                 // neighbourhood costs the pursuer time rather than accuracy.
-                let p_lock = self.cfg.lock_probability(self.local_count(robots));
+                // The roll is per control step, so the per-window probability is
+                // rescaled to this step's length; at dt = 0.1 that is the
+                // identity. One draw is consumed either way, so the RNG stream is
+                // unchanged as well as the comparison.
+                let p_lock = self
+                    .cfg
+                    .lock_probability_per_step(self.local_count(robots), dt);
                 if rng.gen::<f64>() < p_lock {
                     self.locked = Some(candidate);
                 }
@@ -320,6 +366,128 @@ impl Pursuer {
 mod tests {
     use super::*;
     use crate::rng::rng_from;
+
+    // ---- p_lock's attempt window (freeze lift 1, phase 5b) -------------------
+
+    #[test]
+    fn reference_timestep_returns_p_lock_bit_exactly() {
+        // This is what makes the change bit-neutral for every published pursuit
+        // run. Not "close to" -- the same bits, so the same comparison against
+        // the same RNG draw, so the same trajectory.
+        let cfg = PursuerConfig {
+            confusion: 2.5,
+            ..Default::default()
+        };
+        for n in 0..40 {
+            let want = cfg.lock_probability(n);
+            let got = cfg.lock_probability_per_step(n, REFERENCE_ATTEMPT_WINDOW);
+            assert_eq!(
+                got.to_bits(),
+                want.to_bits(),
+                "n_local = {n}: {got} != {want} bit-for-bit"
+            );
+        }
+    }
+
+    #[test]
+    fn per_second_acquisition_rate_is_timestep_invariant() {
+        // The property the rescaling exists for: the chance of NOT acquiring
+        // over a fixed span of time must not depend on how finely that span is
+        // chopped. Before the fix this failed by a factor of two at dt = 0.05.
+        let cfg = PursuerConfig {
+            confusion: 2.5,
+            ..Default::default()
+        };
+        for &n in &[0usize, 1, 3, 7, 20] {
+            let reference = {
+                let p = cfg.lock_probability_per_step(n, 0.1);
+                (1.0 - p).powi(10) // ten steps of 0.1 s = 1 s
+            };
+            for &dt in &[0.05, 0.02, 0.01, 0.2] {
+                let p = cfg.lock_probability_per_step(n, dt);
+                let miss = (1.0 - p).powf(1.0 / dt); // one second's worth
+                assert!(
+                    (miss - reference).abs() < 1e-12,
+                    "n = {n}, dt = {dt}: P(miss over 1 s) = {miss} against {reference}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn certain_and_impossible_acquisition_survive_rescaling() {
+        // kappa = 0 gives p_lock = 1 and is the corner most of the record runs
+        // in; it must stay exactly 1 at every timestep, not 0.9999999999999999.
+        let certain = PursuerConfig {
+            confusion: 0.0,
+            ..Default::default()
+        };
+        for &dt in &[0.1, 0.05, 0.01, 0.5] {
+            assert_eq!(certain.lock_probability_per_step(9, dt), 1.0);
+        }
+        // And a per-window probability of zero cannot become positive by being
+        // chopped finer.
+        let p = 0.0f64;
+        for &dt in &[0.1, 0.05, 0.01] {
+            assert_eq!(1.0 - (1.0 - p).powf(dt / REFERENCE_ATTEMPT_WINDOW), 0.0);
+        }
+    }
+
+    #[test]
+    fn finer_timesteps_lower_the_per_step_probability() {
+        let cfg = PursuerConfig {
+            confusion: 1.0,
+            ..Default::default()
+        };
+        let coarse = cfg.lock_probability_per_step(5, 0.2);
+        let reference = cfg.lock_probability_per_step(5, 0.1);
+        let fine = cfg.lock_probability_per_step(5, 0.05);
+        assert!(
+            fine < reference && reference < coarse,
+            "expected {fine} < {reference} < {coarse}"
+        );
+    }
+
+    #[test]
+    fn a_pursuer_acquires_at_the_same_rate_at_two_timesteps() {
+        // End-to-end rather than on the formula: run the acquisition path itself
+        // at both timesteps and count how long it takes to lock, in SECONDS.
+        // This is the behaviour experiment 4 measured, at the scale it measured.
+        fn seconds_to_lock(dt: f64, seed: u64) -> f64 {
+            let cfg = PursuerConfig {
+                confusion: 2.5,
+                range: Some(1.0),
+                handling_time: 0.0,
+                ..Default::default()
+            };
+            // Nine robots inside the confusion radius: p_lock = 1/(1+2.5*9).
+            let robots = robots_at(&[
+                (0.10, 0.0), (0.15, 0.0), (0.20, 0.0), (0.10, 0.1), (0.15, 0.1),
+                (0.20, 0.1), (0.10, -0.1), (0.15, -0.1), (0.20, -0.1),
+            ]);
+            let mut p = pursuer_at(0.0, 0.0, cfg);
+            let mut rng = rng_from(seed);
+            for step in 0..200_000 {
+                p.step(&robots, dt, 0.051, 0.128, &mut rng);
+                if p.locked.is_some() {
+                    return (step + 1) as f64 * dt;
+                }
+            }
+            f64::INFINITY
+        }
+        let mean = |dt: f64| {
+            let n = 400;
+            (0..n).map(|s| seconds_to_lock(dt, s as u64)).sum::<f64>() / n as f64
+        };
+        let coarse = mean(0.1);
+        let fine = mean(0.05);
+        // Two independent samples of the same waiting time; 15% is loose enough
+        // for 400 draws and far tighter than the ~2x the unfixed code gave.
+        assert!(
+            (fine - coarse).abs() / coarse < 0.15,
+            "mean time to lock: {fine} s at dt = 0.05 against {coarse} s at dt = 0.1"
+        );
+    }
 
     #[test]
     fn zero_confusion_always_locks() {

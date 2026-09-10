@@ -246,3 +246,48 @@ confusion buys survival or it does not — and "disjoint" means the κ = 5 and �
 Wilson intervals do not overlap. For the differences in comparisons 1, 2, 4 and 5
 the sign is the sign of the difference and "disjoint" means the two sides'
 intervals do not overlap.
+**D8 — amendment: the diagnosed cause is fixed and comparisons 3–5 are re-run on
+the five `dt = 0.05` models.** Written after the registered rule had fired and
+been recorded, and it does not touch that result: **§25 keeps the original
+verdicts, unedited** — comparison 5 FRAGILE under the registered model family, on
+the model the experiment was registered against. What follows is a second,
+clearly separated question.
+
+*Why.* The rule's flip table separated exactly on the timestep — 5 of 5 flips at
+`dt = 0.05`, 0 of 5 at `dt = 0.10`. The cause is in the code, not in ten data
+points: `pursuer.rs::step` rolled `p_lock` once per **control step**, so the
+probability of acquiring within a second was `1 − (1 − p_lock)^(1/dt)` and the
+pursuer's lethality was a function of `sim.dt`. A reviewer reads that as a
+modelling error rather than a calibration, and they are right to.
+
+*The fix, and why it changes no published number.* `p_lock` is now defined as the
+acquisition probability per **0.1 s attempt window** — the value every number in
+the record was measured at — and converted to a per-step probability by
+`1 − (1 − p_lock)^(dt / 0.1)`. At `dt = 0.1` the exponent is one and the function
+returns `p_lock` bit-for-bit, by an explicit branch rather than by trusting
+`powf(x, 1.0) == x`. One RNG draw is consumed per attempt either way, so the
+stream is unchanged as well as the comparison. **The only runs in the whole record
+with both a pursuer and `dt ≠ 0.1` are the five `dt = 0.05` pseudo-reality pursuit
+sweeps**, which is why the re-run is those five and nothing else.
+
+*What is re-run.* Comparisons 3, 4 and 5 — the pursuit comparisons — on models
+02, 03, 04, 05 and 10 only. Comparisons 1 and 2 are aggregation and contain no
+pursuer, so they are untouched. Under 1 core-hour.
+
+*How it is reported.* Three statements, in this order and never collapsed into
+one: (a) the registered rule fired FRAGILE on comparison 5 under the registered
+family; (b) the cause was diagnosed as a per-step Bernoulli standing in for a
+per-second rate; (c) under the corrected pursuit the same five models give
+whatever they give. **Whether comparison 5 becomes robust or not, that sequence is
+the result** — a fixed model that still flips is as publishable as one that does
+not, and reporting only (c) would be presenting a re-run as if it were the
+pre-registered test.
+
+*Scope, stated because the fix is narrower than the finding.* The audit of every
+per-step quantity in `pursuer.rs` is in the run log. One further `dt` dependence
+is found and **not** fixed, because fixing it would not be bit-neutral: the
+handling-time debt is paid in whole control steps, so `h = 1.93 s` is really
+2.000 s of idle at `dt = 0.1` and 1.950 s at `dt = 0.05`, a **2.5%** difference in
+the same direction as the `p_lock` error. It is a quantisation of a correctly
+per-second quantity, it is two orders smaller than the effect it sits beside, and
+it is disclosed rather than corrected.
