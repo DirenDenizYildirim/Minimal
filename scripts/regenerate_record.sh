@@ -189,16 +189,7 @@ job_eval_s3() {
   sweep "2 eval"  pursuer_searched_s3_rescore pursuer_searched_s3_rescore
 }
 
-# ------------------------------------------------------- freeze lift 1, phase 2
-job_eval_s3() {
-  # The three evaluation sweeps are regenerated from the six search results
-  # first, so a stale config can never be the thing that was run.
-  $PY scripts/build_pursuer_searched_s3_configs.py --check
-  sweep "2 eval" pursuer_searched_s3         pursuer_searched_s3
-  sweep "2 eval" pursuer_searched_s3_pareto  pursuer_searched_s3_pareto
-  sweep "2 eval" pursuer_searched_s3_rescore pursuer_searched_s3_rescore
-}
-
+# ------------------------------------------------------- freeze lift 1, phase 3
 # ------------------------------------------------------- freeze lift 1, phase 3
 job_capability_n() {
   # Pre-registered at docs/preregistration/capability-flatness-n.md (0dd7ae1).
@@ -211,7 +202,8 @@ job_diagnostics() {
 }
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
-     searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3)
+     searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
+     capability_n)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"
