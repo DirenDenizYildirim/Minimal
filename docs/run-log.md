@@ -454,6 +454,148 @@ is the baseline, per §21's branch (b), and in the event **S2-searched beat all
 three class-flat seeds at both n**, so the best S = 2 row is S2-searched rather
 than the class baseline in every cell the rule looked at.
 
+## Freeze lift 1 — Phase 4: the tuning control at a second and third λ
+
+Pre-registered at `docs/preregistration/lambda-tuning-control.md`, commit
+**`d6c40c8`**; the config was committed at **`9cc4aee`** before the sweep started.
+Nothing was searched: the three rows of `terrain_tuning_control.toml`, byte-identical
+down to the constants, evaluated at λ = 0.05 m and 0.20 m.
+`scripts/experiment3_decision.py` applies the rule.
+
+**Budget.** 4 800 trials, 576 Mrts, **0.46 corrected core-hours** estimated; the
+sweep took **241 s wall on 4 cores = 0.27 core-hours actual**, so the ×2.1
+correction was conservative here by about a factor of 1.7. Inside the 10
+core-hour per-experiment threshold either way.
+
+### The pairing the design rests on is exact, and there is a free control
+
+Run *i* is the same placement at every λ: across all three rows and both new λ,
+**100 of 100 run indices agree with the λ = 0.10 m file on both the seed and the
+initial dispersion, with 0 disagreements**. And because θ_m = 0 has no traction
+field for λ to correlate, the θ_m = 0 row of the terrain-term table is the *same
+run* at every λ — it comes back as **−0.0596 [−0.0763, −0.0371] at all three**,
+to four decimals. That is a control the design got for free, and it says the λ
+axis is reaching the terrain generator and nothing else.
+
+### The rule fired against its own prediction: A3 fails at both new λ
+
+| λ | terrain term at θ_m = 0.9, D(S2-flat) − D(S2-rough) | verdict |
+|---|---|---|
+| 0.05 m | **+0.0951 [+0.0456, +0.1366]** | **A3 fails — excludes zero ABOVE** |
+| 0.10 m *(existing record)* | +0.0818 [−0.0008, +0.1331] | A3 holds |
+| 0.20 m | **+0.0368 [+0.0165, +0.0667]** | **A3 fails — excludes zero ABOVE** |
+
+H1 predicted the interval would include zero at both new λ. It does not, at
+either. Both failures are in the direction the pre-registration named as
+**narrowing A3 rather than overturning it**: terrain-tuning buys something real,
+and the finding must be written that way and not as a null that collapsed.
+
+**Why λ = 0.10 m is the one that holds is not that the effect is smaller there.**
+Its point estimate (+0.0818) is more than twice λ = 0.20 m's (+0.0368), which
+fails. What separates them is interval width: 0.1339 at λ = 0.10 m against 0.0502
+at λ = 0.20 m. **A3 holds at λ = 0.10 m by 0.0008** — the lower bound sits eight
+ten-thousandths below zero. Two seed-free checks on how thin that is:
+
+* Re-running the same bootstrap at 200 different resampling seeds (the harness
+  fixes it at 0, so the published verdict is reproducible and *stands*), the
+  λ = 0.10 m lower bound lands above zero for **7 of 200** seeds and below for
+  193. At λ = 0.05 m and 0.20 m it is above zero for **200 of 200**.
+* A distribution-free sign test on the 100 paired runs: **68/100** favour
+  S2-rough at λ = 0.05 m (0.68 [0.58, 0.76]) and **67/100** at 0.20 m
+  (0.67 [0.57, 0.75]) — both disjoint from a coin flip — against **59/100** at
+  λ = 0.10 m (0.59 [0.49, 0.68]), which is not.
+
+So the honest reading is not "A3 held at one λ and broke at two". It is that
+**λ = 0.10 m is the least favourable of the three cells for detecting this effect,
+and it is the only cell the paper had measured.** A null result from a single
+correlation length was never strong evidence for a null.
+
+### What survives unchanged is the sentence A3 is actually for
+
+The *level* decomposition barely moves:
+
+| λ | objective-tuning | terrain-tuning | gap |
+|---|---|---|---|
+| 0.05 m | 95.0 % | 5.0 % | 1.5886 |
+| 0.10 m | 96.9 % | 3.1 % | 1.7662 |
+| 0.20 m | 94.4 % | 5.6 % | 0.8351 |
+
+A3's sentence — "almost none of the re-tuned controller's advantage is terrain
+adaptation" — is **better supported by three λ than it was by one**: the terrain
+share is 3–6% everywhere. What fails is the *null test* on the paired term, not
+the magnitude claim. Those are two different statements and the register entry
+has to carry both: the share is small and stable, and it is not zero.
+
+### The crossing is claimed, and its location moves with λ
+
+The pre-registration claims the θ_m = 0.6 crossing only if it is disjoint from
+zero at more than one λ. It is disjoint at **2 of 3** — +0.0659 [+0.0296,
++0.0918] at 0.05 m and +0.0421 [+0.0107, +0.0659] at 0.10 m — so it is claimed.
+H3 predicted it would not reappear; it did.
+
+But the binary answer undersells what the three curves show. **The θ_m at which
+terrain-tuning starts to pay rises monotonically with λ**: the sign flip sits
+between θ_m = 0.2 and 0.45 at λ = 0.05 m, between 0.2 and 0.6 at 0.10 m, and
+between 0.45 and 0.9 at 0.20 m. Reported as an observation, with **no mechanism
+offered**: the obvious one — "shorter λ is a rougher problem at the same θ_m" —
+is contradicted by the anchor's own tax below, which is *lower* at λ = 0.05 m
+(2.0719) than at 0.10 m (2.1492) because §15 puts the difficulty peak at 7.46 cm,
+between them. The crossing location moves monotonically in λ while the difficulty
+does not, so the two are not the same phenomenon and nothing here identifies what
+the first one is.
+
+### The matched-controller cost widens rather than narrows
+
+| λ | S2-flat † | S2-rough † |
+|---|---|---|
+| 0.05 m | +21.4 % | +9.0 % |
+| 0.10 m | +20.0 % | +9.9 % |
+| 0.20 m | +9.6 % | **+1.2 %** (hold ratio 1.0116 [0.9911, 1.0826] — includes 1) |
+
+Range across the three λ and both tuned rows: **+1.2 % to +21.4 %**, against the
+**10–20 %** A2 states from λ = 0.10 m alone. H2 predicted it would narrow; it
+widened, and the driver is λ = 0.20 m, where a terrain-tuned controller's cost at
+θ_m = 0.9 is not distinguishable from zero. A2's number becomes this range and
+must say it is a range over λ.
+
+**One definitional wrinkle that is not a λ effect.** A2's "10–20 %" is computed
+from §13's *retired* ratio-of-medians hold ratios (1.195, 1.104). Everything here
+uses §12.1 D1's *paired* ratios, which on the very same 100 runs give 1.2004 and
+1.0988 → 20.0 % and 9.9 %. The λ = 0.10 m column therefore will not match A2's
+digits exactly, and the difference is the change of statistic D1 already settled.
+It agrees with §14's paired values to four decimals.
+
+### The anchor's own tax is strongly λ-dependent
+
+S2-gauci's hold ratio at θ_m = 0.9 is 2.0719 / 2.1492 / **1.5186** at λ = 0.05 /
+0.10 / 0.20 m. The enumerated row loses about half its terrain penalty by
+λ = 0.20 m, which is consistent with §15's λ sweep peaking near 0.075 m and is
+the reason the gap being decomposed shrinks from 1.77 to 0.84. The shares are
+percentages *of that shrinking gap*, which is why 5.6 % at λ = 0.20 m is a
+smaller absolute quantity than 3.1 % at λ = 0.10 m — a point the findings section
+must make explicitly, because the percentage table alone reads the other way.
+
+### The limitation the design cannot remove
+
+Both tuned rows were **trained at λ = 0.10 m**. At 0.05 and 0.20 m this measures
+the *transfer* of a λ = 0.10-tuned controller, not the decomposition a λ-matched
+controller would show. A terrain term that grows at the new λ is consistent with
+"the term is real everywhere" and with "the term is partly a mismatch penalty the
+λ = 0.10-trained row pays away from its own λ", and this experiment cannot
+separate them. Answering that needs a search at each λ, which is a different and
+much more expensive experiment. This was stated in the pre-registration before
+the numbers existed and is repeated here so the finding cannot be quoted without
+it.
+
+### Outputs
+
+`results/terrain_tuning_control_lambda.jsonl` (4 800 records),
+`figures/terrain_tuning_control_lambda.png` from
+`harness/figures_tuning_control_lambda.py`.
+`scripts/recompute_paired_and_survival.py` gained the two new λ columns
+additively — with the new results file absent its JSON output is byte-identical
+to before the change, which is how that was checked.
+
 ### Invocations
 
 | phase | commit | command | when (UTC) | output | wall / size |
@@ -548,3 +690,4 @@ than the class baseline in every cell the rule looked at.
 | 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_rescore.toml --out results/pursuer_searched_s3_rescore.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_rescore.jsonl` | 19 s / 5.1M |
 | 3 eval | `1582175` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n.toml --out results/terrain_capability_n.jsonl` | 2026-09-10T13:42Z | `results/terrain_capability_n.jsonl` | 466 s / 2.4M |
 | 3 eval | `493ec46` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n_tau.toml --out results/terrain_capability_n_tau.jsonl` | 2026-09-10T13:45Z | `results/terrain_capability_n_tau.jsonl` | 97 s / 1.3M |
+| 4 eval | `9cc4aee` | `./target/release/swarm sweep --config configs/sweeps/terrain_tuning_control_lambda.toml --out results/terrain_tuning_control_lambda.jsonl` | 2026-09-10T14:22Z | `results/terrain_tuning_control_lambda.jsonl` | 241 s / 4.2M |

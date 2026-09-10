@@ -39,6 +39,8 @@ SCRIPTS=(
   figures_class_search.py             # §19
   figures_class_tau.py                # §20
   figures_seed_reproducibility.py     # §21
+  # freeze lift 1
+  figures_tuning_control_lambda.py    # §24  (experiment 3)
 )
 
 TMP=$(mktemp -d)
