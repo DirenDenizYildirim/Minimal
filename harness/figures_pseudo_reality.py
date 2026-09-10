@@ -34,6 +34,7 @@ none exists.
 """
 
 import importlib.util
+import os
 import pathlib
 
 import matplotlib
@@ -49,6 +50,14 @@ _spec = importlib.util.spec_from_file_location(
     "e4", REPO / "scripts" / "experiment4_decision.py")
 e4 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(e4)
+
+# Amendment D8: with PSEUDO_REALITY_FIXED=1 the pursuit comparisons are read
+# from the sweeps re-run with the dt-aware p_lock and the figure goes to a
+# SECOND path. The registered figure is not overwritten -- §25 reports the rule
+# as it fired, and a reader must be able to see the panel it fired on.
+e4.USE_FIXED = os.environ.get("PSEUDO_REALITY_FIXED") == "1"
+OUT = ("figures/pseudo_reality_corrected.png" if e4.USE_FIXED
+       else "figures/pseudo_reality.png")
 
 MODELS, SAMPLED = e4.MODELS, e4.SAMPLED
 COL = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -231,9 +240,13 @@ fig.suptitle(
     "so a robust panel says nothing about whether the model is right. This is not a reality-gap study: "
     "no hardware, no ARGoS, no second simulator (§12.3).\n"
     "Model numbers in PURPLE BOLD are the five drawn at dt = 0.05 s; the rest, and the reference, "
-    "run at dt = 0.10 s. Marked because the family separates on it, not as a claim about why.",
+    "run at dt = 0.10 s. Marked because the family separates on it, not as a claim about why."
+    + ("\nAMENDMENT D8: the PURSUIT panels (C3, C4, C5) are re-read from the five dt = 0.05 models "
+       "re-run with the dt-aware p_lock. This is NOT the pre-registered test — that verdict stands "
+       "on the other figure.\nC1 and C2 are aggregation and contain no pursuer, so they are "
+       "unchanged by construction." if e4.USE_FIXED else ""),
     fontsize=8.6, y=0.996, va="top")
 fig.subplots_adjust(top=0.915, bottom=0.045, left=0.075, right=0.985, hspace=0.32, wspace=0.20)
 fig.text(0.5, 0.010, UPPER_BOUND_NOTE, ha="center", fontsize=7.5, style="italic", color="#8a3b00")
-fig.savefig("figures/pseudo_reality.png", dpi=160, bbox_inches="tight")
-print("wrote figures/pseudo_reality.png")
+fig.savefig(OUT, dpi=160, bbox_inches="tight")
+print(f"wrote {OUT}")

@@ -745,6 +745,154 @@ paper must not let the narrower answer stand in for the wider one.
 from `harness/figures_pursuer_searched_s3_pareto.py` — experiment 1's own Pareto
 figure with all four kinds of row, which is deviation D2 of this pre-registration.
 
+## Freeze lift 1 — Phase 5b: the timestep defect, fixed and re-tested
+
+Amendment **D8**, appended to `docs/preregistration/pseudo-reality.md` before
+anything was re-run. **§25 keeps Phase 5's verdicts unedited** — the registered
+rule fired on the registered family and that is the pre-registered result. What
+follows is a second, separately labelled question, reported in the order the
+Phase 5 review fixed: the rule fired, the cause was diagnosed, the corrected
+model gives what it gives.
+
+**Budget.** 5 sweeps, 18 000 trials, **156 s wall on 4 cores = 0.17 core-hours**.
+The 60 core-hour plan ceiling did not need raising; the running total is about
+49.2.
+
+### The audit: every per-step quantity in `pursuer.rs`
+
+Asked for in the Phase 5 review. Each row is a quantity the pursuer evaluates
+once per control step; the question is whether its effect per unit *time* is
+invariant to `sim.dt`.
+
+| quantity | where | dt-invariant? | note |
+|---|---|---|---|
+| **`p_lock` acquisition roll** | `step`, unlocked branch | **NO — this was the defect** | one Bernoulli trial per *step*, so `P(acquire in 1 s) = 1 − (1 − p_lock)^(1/dt)`. Halving `dt` doubled the attempts. **Fixed**: `p_lock` is now per 0.1 s window, converted by `1 − (1 − p_lock)^(dt/0.1)`, identity at `dt = 0.1`. |
+| **handling-time countdown** | `step`, `self.handling -= dt` | **almost — quantisation only** | the debt is in seconds and decremented in seconds, which is right; but it is paid in *whole steps*, so `h = 1.93 s` is 20 steps = **2.000 s** at `dt = 0.1` and 39 steps = **1.950 s** at `dt = 0.05` — **2.5%**, same direction as the `p_lock` error, two orders smaller. **Not fixed**: rounding it exactly would change `dt = 0.1` behaviour and is therefore not bit-neutral. Disclosed. `h = 0.39` and `h = 5.0` divide evenly at both and are unaffected. |
+| **`local_count`** (confusion radius) | `step` → `local_count` | **yes** | a count of live robots within 0.5 m *at this instant*. A state query, not a hazard: same value however finely time is chopped. |
+| **lock-loss test** (`!alive \|\| !in_range`) | `step` | **yes** | a predicate on the current state. Finer `dt` only tests it more often; the truth value at any instant is the same. A target that leaves and re-enters range *between* two samples is missed at coarse `dt`, which is discrete-time sampling and inherent to the model, not a rate error. |
+| **capture test** (`≤ 0.08 m`) | `step`, locked branch | **yes, with margin** | a threshold on distance, not a per-step chance. The pursuer travels `ρ·v_max·dt` = **0.0192 m** per step at `dt = 0.1` and 0.0096 m at 0.05 — 0.24 and 0.12 of the 0.08 m capture radius, so it cannot tunnel through the capture disc at either. |
+| **`choose`** (targeting) | `step` → `choose` | **yes** | `Nearest` and `FewestNeighbours` are deterministic state queries. `RandomVisible` draws once per *attempt*, and the attempt rate is the `p_lock` issue, not a second one. Every published config uses the default `Nearest`. |
+| **`drive_towards`** heading control | `step` → `drive_towards` | **yes, to within one step** | `ω = clamp(bearing/dt, ±ω_max)` with `ω_max = 2ρv/axle = 7.53 rad/s`. The gain is `1/dt` — "correct the whole bearing this step" — so the clamp bites above 43.1° at `dt = 0.1` and 21.6° at 0.05, but the **physical** turn rate is 7.53 rad/s = 431°/s at both, and over any fixed span the same turn is completed. Forward speed `v = ρv_max·cos(bearing)` differs second-order while misaligned. |
+| **random-walk search** | `search` | **yes — and correctly so** | `σ = search_turn_noise · √dt` is the Brownian scaling: heading diffusion per unit time is invariant. Somebody got this right, which is evidence the per-step/per-time distinction was understood in this file and the `p_lock` roll was an oversight rather than a convention. |
+| **spiral search** | `search` | **yes** | `search_angle += speed·dt/(pitch·(1+angle))` — a rate times `dt`. Not used by any published config; the default is `RandomWalk`. |
+| **`begin_search`** | `step` | **yes** | a state reset with no time in it. |
+
+**One defect, one disclosed quantisation, seven clean.** The defect is fixed
+bit-neutrally; the quantisation cannot be fixed bit-neutrally and is disclosed.
+
+### The fix, and the proof it moved nothing
+
+`p_lock` is now the acquisition probability **per 0.1 s attempt window** — the
+value every number in the record was measured at — converted to a per-step
+probability by `1 − (1 − p_lock)^(dt / 0.1)`. At `dt = 0.1` the exponent is one
+and the function returns `p_lock` **bit-for-bit**, by an explicit branch rather
+than by trusting `powf(x, 1.0) == x`; one RNG draw is consumed per attempt either
+way, so the stream is unchanged as well as the comparison.
+
+Five new tests (`swarm-core` 96 → **101**, total Rust 119 → **124**): bit-exactness
+at the reference timestep over forty values of `n_local`; per-second rate
+invariance at `dt ∈ {0.05, 0.02, 0.01, 0.2}`; the `κ = 0` corner staying exactly
+`1.0` rather than `0.9999999999999999`; monotonicity in `dt`; and an end-to-end
+check that the acquisition path itself takes the same number of **seconds** to
+lock at `dt = 0.1` and `dt = 0.05`, which is the behaviour experiment 4 measured
+at the scale it measured.
+
+`verify_determinism.py`: IDENTICAL. And every pursuit results file in the record
+regenerated and compared byte for byte:
+
+| file | records | sha256 (first 16) | |
+|---|---|---|---|
+| `pursuer_dispersive` | 15 000 | `ac0702123617db57` | IDENTICAL |
+| `pursuer_idea_b` | 10 000 | `323084fcfbccbc73` | IDENTICAL |
+| `pursuer_pareto` | 3 000 | `06a342d3be3ee412` | IDENTICAL |
+| `pursuer_searched_s3` | 45 000 | `d1e5cc9c2256b3ef` | IDENTICAL |
+| `pursuer_searched_s3_pareto` | 5 400 | `0bf1f7e558fd9ffe` | IDENTICAL |
+| `pursuer_searched_s3_rescore` | 5 400 | `7775fd58489601f3` | IDENTICAL |
+| `pseudo_reality_pursuit_model_00/01/06/07/08/09` | 3 600 each | `b8d5da84…`, `7f826d6c…`, `ac1b3a25…`, `dfe71c28…`, `b36127a2…`, `5bcb45d3…` | IDENTICAL |
+
+**Twelve of twelve, 105 800 records.** `pursuer_dispersive_h1.93` is a filter of
+`pursuer_dispersive` and was checked by re-deriving it from the identical file.
+The **only** runs in the whole record with both a pursuer and `dt ≠ 0.1` are the
+five `dt = 0.05` pseudo-reality pursuit sweeps, which is why the re-run is those
+five and nothing else.
+
+### Under the corrected pursuit: every comparison-level verdict is unchanged
+
+| ordering | registered | corrected |
+|---|---|---|
+| C1 hold-ratio difference | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C2 hold-ratio difference | 9/4/1 not established | 9/4/1 not established |
+| C3 κ-response — B0-blind | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C3 κ-response — B1-ternary ‡ | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C3 κ-response — D-dispersive ‡ | 10/**7**/0 ROBUST | 10/**10**/0 ROBUST |
+| C4 B1 − D, r_p = 0.1 m | 10/3/0 not established | 10/3/0 not established |
+| C4 B1 − D, r_p = 0.35 m | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C4 B1 − D, r_p = 1 m | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C5 S3 † − B0, r_p = 0.1 m | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C5 S3 † − B0, r_p = 0.35 m | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| C5 S3 † − B0, r_p = 1 m | 10/6/0 not established | 10/6/0 not established |
+| C5 S3 † − B1, r_p = 0.1 m | 10/9/0 ROBUST | 10/9/0 ROBUST |
+| C5 S3 † − B1, r_p = 0.35 m | 10/10/0 ROBUST | 10/10/0 ROBUST |
+| **C5 S3 † − B1, r_p = 1 m** | **5/7/5 FRAGILE** | **5/7/5 FRAGILE** |
+
+*(counts are same-sign / disjoint / flips, out of ten)*
+
+**Comparison 5 is still FRAGILE, and the same five models still flip.** One
+ordering moved at all: C3's D-dispersive row went from a thin 7/10 disjoint to a
+clean 10/10, because the `dt = 0.05` models' κ-response ratios rose from
+1.02–1.09 to 1.13–1.19. Its verdict was ROBUST either way. The five `dt = 0.10`
+models are unchanged to the last bit, as the byte-diff requires.
+
+### What the fix did and did not account for
+
+The flip magnitudes fell by roughly half but did not cross zero:
+
+| model | registered | corrected | shrunk |
+|---|---|---|---|
+| 02 | +0.0790 | +0.0260 | 67% |
+| 03 | +0.0583 | +0.0308 | 47% |
+| 04 | +0.0805 | +0.0435 | 46% |
+| 05 | +0.0380 | +0.0170 | 55% |
+| 10 | +0.0872 | +0.0682 | 22% |
+
+The mechanism is visible in the survival numbers at r_p = 1 m, which is where the
+per-step Bernoulli did its damage:
+
+| row | dt = 0.10 | dt = 0.05 | ratio, corrected | *(was)* |
+|---|---|---|---|---|
+| B0-blind | 0.0422 | 0.0294 | **0.70×** | *0.01×* |
+| B1-ternary ‡ | 0.0702 | 0.0675 | **0.96×** | *0.34×* |
+| D-dispersive ‡ | 0.3579 | 0.3741 | **1.05×** | *1.00×* |
+| S3-survival_task-s2 † | 0.0492 | 0.1032 | **2.10×** | *1.85×* |
+
+**The defect explained the aggregating rows and not the searched one.** B1 was
+0.34× and is now 0.96× — essentially timestep-invariant. B0 was 0.01× and is now
+0.70×, its residual plausibly the aggregation-side timestep effect the reach
+diagnostic shows, since B0 cannot see the pursuer at all and its survival at
+r_p = 1 m is whatever aggregation buys it. But the searched two-axis row was
+1.85× and is now **2.10×**: it survives roughly twice as well at the finer
+timestep, and the fix did not touch that.
+
+So the FRAGILE verdict now describes a property of the **controller** rather than
+an artefact of the pursuer model, and that is a better result than a clean pass
+would have been. `sim.dt` is the **robots'** control period: a robot at
+`dt = 0.05` re-decides twice as often, which is a capability difference and a
+legitimate model parameter, not a simulator artefact the way the pursuer's
+acquisition rate was. Whether the searched row's evasion exploits the faster loop
+in a way B1's does not is **untested here** and is offered as a lead. What can be
+said is bounded and worth saying: **at the perfect-perception corner the searched
+S = 3 row's advantage over B1 depends on the control period, and B1's own
+survival there no longer does.**
+
+### Outputs
+
+`results/pseudo_reality_pursuit_fixed_model_{02,03,04,05,10}.jsonl` (18 000
+records; the originals are **not** overwritten — the registered result stands on
+them), `figures/pseudo_reality_corrected.png` from the same figure script under
+`PSEUDO_REALITY_FIXED=1`, and `scripts/experiment4_decision.py --fixed`, which
+re-reads only the pursuit half of those five models and leaves everything else on
+the original files.
+
 ### Invocations
 
 | phase | commit | command | when (UTC) | output | wall / size |
@@ -869,3 +1017,7 @@ figure with all four kinds of row, which is deviation D2 of this pre-registratio
 | 5b eval | `79e2fa0` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_02.toml --out results/pseudo_reality_pursuit_fixed_model_02.jsonl` | 2026-09-10T19:07Z | `results/pseudo_reality_pursuit_fixed_model_02.jsonl` | 28 s / 3.5M |
 | 5b eval | `79e2fa0` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_03.toml --out results/pseudo_reality_pursuit_fixed_model_03.jsonl` | 2026-09-10T19:07Z | `results/pseudo_reality_pursuit_fixed_model_03.jsonl` | 27 s / 3.5M |
 | 5b eval | `0c196e0` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_04.toml --out results/pseudo_reality_pursuit_fixed_model_04.jsonl` | 2026-09-10T19:08Z | `results/pseudo_reality_pursuit_fixed_model_04.jsonl` | 28 s / 3.5M |
+| 5b eval | `b3beda3` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_05.toml --out results/pseudo_reality_pursuit_fixed_model_05.jsonl` | 2026-09-10T19:08Z | `results/pseudo_reality_pursuit_fixed_model_05.jsonl` | 26 s / 3.5M |
+| 5b eval | `b3beda3` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_10.toml --out results/pseudo_reality_pursuit_fixed_model_10.jsonl` | 2026-09-10T19:09Z | `results/pseudo_reality_pursuit_fixed_model_10.jsonl` | 47 s / 3.5M |
+| 5b figures | `b3beda3` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T19:12Z` | `figures/pseudo_reality_corrected.png`  | 7 s |
+| 5 figures | `b3beda3` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T19:12Z` | `figures/pseudo_reality.png`  | 7 s |
