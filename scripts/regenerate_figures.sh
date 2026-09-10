@@ -45,6 +45,8 @@ SCRIPTS=(
   figures_seed_reproducibility.py     # §21
   # freeze lift 1
   figures_tuning_control_lambda.py    # §24  (experiment 3)
+  figures_pursuer_searched_s3_pareto.py  # §22  (experiment 1, four kinds of row)
+  figures_pseudo_reality.py           # §25  (experiment 4)
 )
 
 TMP=$(mktemp -d)
