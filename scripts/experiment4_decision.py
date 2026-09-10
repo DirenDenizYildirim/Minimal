@@ -229,6 +229,23 @@ def apply_rule(name: str, per_model: dict[int, dict], out: dict) -> dict:
           f"flips {len(flips)}/10 (fragile at >= {FLIPS_FRAGILE})")
     print(f"    >>> {verdict}")
 
+    # Best-of-three is chosen PER MODEL, so which row won is part of the result:
+    # a selection that jumps between seeds from model to model is a weaker
+    # ordering than one where the same row wins everywhere, and the reader
+    # cannot see that from the counts alone. Per the Phase 2 review, the
+    # per-seed values travel with every best-of-three number.
+    for key, label in (("best_class_flat", "best S2-class-flat"),
+                       ("best_searched", "best searched S = 3")):
+        if key in ref:
+            picks = [per_model[m][key].split("-")[-1] for m in MODELS]
+            uniq = sorted(set(picks))
+            print(f"    {label} per model (00 first): " + " ".join(picks)
+                  + f"   [{len(uniq)} distinct: {', '.join(uniq)}]")
+    if "per_seed" in ref:
+        for seed in sorted(ref["per_seed"]):
+            vals = " ".join(f"{per_model[m]['per_seed'][seed]:.3f}" for m in MODELS)
+            print(f"      per seed {seed.split('-')[-1]}: {vals}")
+
     entry = dict(reference={k: v for k, v in ref.items() if k in
                             ("value", "lo", "hi", "sign", "disjoint")},
                  per_model={str(m): {k: v for k, v in per_model[m].items()
@@ -236,6 +253,11 @@ def apply_rule(name: str, per_model: dict[int, dict], out: dict) -> dict:
                             for m in SAMPLED},
                  same_sign=len(same), disjoint=len(dj), flips=len(flips),
                  flipping_models=flips, verdict=verdict)
+    for key in ("best_class_flat", "best_searched"):
+        if key in ref:
+            entry[key] = {str(m): per_model[m][key] for m in MODELS}
+    if "per_seed" in ref:
+        entry["per_seed"] = {str(m): per_model[m]["per_seed"] for m in MODELS}
     out["orderings"][name] = entry
     return entry
 
