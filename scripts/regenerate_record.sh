@@ -178,13 +178,24 @@ job_search_s3() {
   done
 }
 
+job_eval_s3() {
+  # The three held-out evaluations for experiment 1. The configs are GENERATED
+  # from the six search JSONs by scripts/build_pursuer_searched_s3_configs.py and
+  # committed; --check here fails the job rather than silently evaluating a stale
+  # set of constants.
+  $PY scripts/build_pursuer_searched_s3_configs.py --check
+  sweep "2 eval"  pursuer_searched_s3         pursuer_searched_s3
+  sweep "2 eval"  pursuer_searched_s3_pareto  pursuer_searched_s3_pareto
+  sweep "2 eval"  pursuer_searched_s3_rescore pursuer_searched_s3_rescore
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
 }
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
-     searches_class class_eval phase0_seeds diagnostics search_s3)
+     searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"
