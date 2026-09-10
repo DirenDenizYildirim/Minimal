@@ -384,6 +384,76 @@ a search can stall in, and this is a measured instance of it in a second objecti
 and a second dial. §20 found the same shape at θ_m = 0.9 on the dispersion
 objective.
 
+---
+
+## Freeze lift 1 — Phase 3: capability flatness at n ∈ {10, 50}
+
+Pre-registered at `docs/preregistration/capability-flatness-n.md`, commit
+**`0dd7ae1`**. Nothing was searched: seven existing rows, constants copied
+verbatim, evaluated at two swarm sizes. `scripts/experiment2_decision.py` applies
+the rule.
+
+**Budget.** 2 800 trials, 504 Mrts, **0.41 corrected core-hours**; the τ
+contingency added 1 400 trials and another 0.41. Both inside the 10 core-hour
+per-experiment threshold.
+
+### The τ contingency fired, and the whole n = 10 block re-ran
+
+The trigger was fixed before any data existed: any row below 0.8 reach at
+n = 10, θ_m = 0.9, τ = 600 s. **S2-gauci came in at 0.71 [0.61, 0.79]** while every
+other row sat at 0.99–1.00 — the truncation is specific to the enumerated row,
+which is the row the hold ratios are read against. At τ = 3600 s its reach is
+**1.00 [0.96, 1.00]**.
+
+### Verdicts, per n, not pooled
+
+| n | τ | best S = 2 row | S4-terrain † | S4-warm † | verdict |
+|---|---|---|---|---|---|
+| 50 | 600 s | S2-searched **1.0412** [0.9640, 1.1155] | 1.1277 [1.0841, 1.2507] | 1.1175 [1.0673, 1.1814] | **A1 HOLDS** |
+| 10 | 600 s *(truncated)* | S2-searched **1.1671** [1.1262, 1.1978] | 1.0549 [1.0348, 1.0927] | 1.0760 [1.0541, 1.1149] | *A1 fails* |
+| 10 | **3600 s** *(the rule is evaluated here)* | S2-searched **1.1449** [1.1055, 1.1748] | 1.0490 [1.0275, 1.1124] | 1.1158 [1.0699, 1.1479] | **A1 HOLDS** |
+
+**A1 holds at both n.** But the n = 10 verdict is on a knife-edge and saying so is
+part of reporting it. The point estimates barely move between the two trial
+lengths — S4-terrain 1.0549 → 1.0490, S2-searched 1.1671 → 1.1449 — and what
+flips the verdict is the intervals closing on each other by about 0.02 each. At
+τ = 3600 s they overlap by **0.0069 in hold-ratio units, about 0.6% of the
+statistic**. This is not "truncation produced the wrong answer"; it is "at n = 10
+the two rows are within a hair of each other and the disjointness test lands
+whichever side a small change in interval width puts it". The findings section
+must say that, and must not report n = 10 as a clean hold.
+
+### The trend in n is the real result here
+
+At λ = 0.10 m, θ_m = 0.9, S4-terrain † against the best S = 2 row:
+
+| n | S4-terrain † | best S = 2 | standing |
+|---|---|---|---|
+| 10 | 1.0490 [1.0275, 1.1124] | 1.1449 [1.1055, 1.1748] | nominally better, **overlapping by 0.0069** |
+| 20 | 1.2116 [1.1577, 1.2513] | 1.0988 [1.0437, 1.1446] | **disjointly worse** (the existing record) |
+| 50 | 1.1277 [1.0841, 1.2507] | 1.0412 [0.9640, 1.1155] | overlapping |
+
+The terrain bit's standing improves monotonically as the swarm shrinks: disjointly
+worse at n = 20, overlapping at n = 50, nominally ahead at n = 10. A1 survives at
+every n under its own rule, but "a terrain bit never helps" is not what this
+shows — what it shows is that no S = 4 row was found that is disjointly better,
+and that the margin is smallest at the smallest swarm. That is a lead for the
+next paper, not a result in this one, and the register entry should carry it as a
+limitation rather than as a finding.
+
+The mechanism is at least plausible: at n = 10 the start radius is 0.523 m and a
+swarm has fewer neighbours to use as landmarks, so a bit of exogenous information
+about the ground may be worth more. Nothing here tests that, and it is recorded
+as an observation.
+
+### The three class-flat seeds scatter again
+
+At n = 10, τ = 3600 s: 1.3153 / 1.4239 / 1.3649. At n = 50: 1.2952 / 1.3383 /
+1.4509 (s3's interval is the widest at [1.2429, 1.6744]). Best-of-three per cell
+is the baseline, per §21's branch (b), and in the event **S2-searched beat all
+three class-flat seeds at both n**, so the best S = 2 row is S2-searched rather
+than the class baseline in every cell the rule looked at.
+
 ### Invocations
 
 | phase | commit | command | when (UTC) | output | wall / size |
@@ -477,3 +547,4 @@ objective.
 | 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_pareto.toml --out results/pursuer_searched_s3_pareto.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_pareto.jsonl` | 19 s / 5.1M |
 | 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_rescore.toml --out results/pursuer_searched_s3_rescore.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_rescore.jsonl` | 19 s / 5.1M |
 | 3 eval | `1582175` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n.toml --out results/terrain_capability_n.jsonl` | 2026-09-10T13:42Z | `results/terrain_capability_n.jsonl` | 466 s / 2.4M |
+| 3 eval | `493ec46` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n_tau.toml --out results/terrain_capability_n_tau.jsonl` | 2026-09-10T13:45Z | `results/terrain_capability_n_tau.jsonl` | 97 s / 1.3M |
