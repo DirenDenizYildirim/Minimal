@@ -55,9 +55,15 @@ _spec.loader.exec_module(e4)
 # from the sweeps re-run with the dt-aware p_lock and the figure goes to a
 # SECOND path. The registered figure is not overwritten -- §25 reports the rule
 # as it fired, and a reader must be able to see the panel it fired on.
-e4.USE_FIXED = os.environ.get("PSEUDO_REALITY_FIXED") == "1"
-OUT = ("figures/pseudo_reality_corrected.png" if e4.USE_FIXED
-       else "figures/pseudo_reality.png")
+# PSEUDO_REALITY_FIXED=1 is D8 (pursuit only); =2 is D8+D9 (both halves). Each
+# writes its own path: §25 reports the rule as it fired and a reader must be able
+# to see the panels it fired on.
+_mode = os.environ.get("PSEUDO_REALITY_FIXED", "")
+e4.USE_FIXED = _mode == "1"
+e4.USE_FIXED2 = _mode == "2"
+OUT = {"1": "figures/pseudo_reality_corrected.png",
+       "2": "figures/pseudo_reality_corrected_both.png"}.get(
+    _mode, "figures/pseudo_reality.png")
 
 MODELS, SAMPLED = e4.MODELS, e4.SAMPLED
 COL = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -244,7 +250,11 @@ fig.suptitle(
     + ("\nAMENDMENT D8: the PURSUIT panels (C3, C4, C5) are re-read from the five dt = 0.05 models "
        "re-run with the dt-aware p_lock. This is NOT the pre-registered test — that verdict stands "
        "on the other figure.\nC1 and C2 are aggregation and contain no pursuer, so they are "
-       "unchanged by construction." if e4.USE_FIXED else ""),
+       "unchanged by construction." if e4.USE_FIXED else
+       "\nAMENDMENTS D8 + D9: ALL panels are re-read from the five dt = 0.05 models re-run with the "
+       "dt-aware p_lock AND the control-period-scaled wheel_noise. wheel_noise acts on the robots, "
+       "so C1 and C2 move too.\nThis is NOT the pre-registered test — that verdict stands on the "
+       "registered figure." if e4.USE_FIXED2 else ""),
     fontsize=8.6, y=0.996, va="top")
 fig.subplots_adjust(top=0.915, bottom=0.045, left=0.075, right=0.985, hspace=0.32, wspace=0.20)
 fig.text(0.5, 0.010, UPPER_BOUND_NOTE, ha="center", fontsize=7.5, style="italic", color="#8a3b00")

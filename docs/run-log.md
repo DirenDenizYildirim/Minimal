@@ -893,6 +893,290 @@ them), `figures/pseudo_reality_corrected.png` from the same figure script under
 re-reads only the pursuit half of those five models and leaves everything else on
 the original files.
 
+## Freeze lift 1 — Phase 5c: the robot side, and what the timestep really did
+
+Amendments **D9** and **D10**, both appended to
+`docs/preregistration/pseudo-reality.md` before the re-run. **§25 keeps Phase 5's
+verdicts unedited**; D8's corrected-pursuit numbers stay in the Phase 5b section
+as the intermediate step they were.
+
+### Decision 3 first, because it was blocking: the 0.86 is the record's own number
+
+The reference model's S2-gauci reach of **0.86** at θ_m = 0.9 does not contradict
+§13. It **is** §13 — row 31, *"H3: reach at the worst cell, S2-gauci | 0.86"* —
+and §7 says it in words: *"Reach is 1.00 across almost the whole grid and moves
+only in the worst cell and only for the un-searched row: 0.86 for S2-gauci against
+1.00 and 0.99 for the searched rows."*
+
+`pseudo_reality_aggregation_model_00` returns **0.86 [0.78, 0.91]** ever-single-
+cluster and **0.18 [0.12, 0.27]** single-cluster-at-τ, reproducing
+`terrain_tuning_control`, `terrain_h3_capability`, `terrain_retune_cost`,
+`terrain_regime_robustness` and `terrain_class_eval` **to the digit**. The 1.00 is
+the *flat-ground* cell and the *searched* rows — §7 states both in the same
+sentence. The reach ≥ 0.8 validity window (row 94) is cleared at 0.86. No reach
+definition was switched: `ever_single_cluster` is what every one of those files
+reports and the two definitions differ hugely here (0.86 against 0.18), which is
+worth knowing but is not what happened.
+
+**One real inconsistency did surface.** §13 row 31 gives the interval as
+**[0.79, 0.93]** — a normal approximation — while §7's prose gives
+**[0.78, 0.91]** — Wilson — for the same 100 runs and the same point estimate.
+§12.1 D0 settled on Wilson for proportions. Queued for Phase 6 as a **statistic
+change, not a value correction**.
+
+### Decision 2: the existing timestep sweep already showed this, and its write-up quotes only half of it
+
+`configs/sweeps/timestep_convergence.toml` measured **both** reach and dispersion,
+at **n = 2 and n = 5**, dt ∈ {0.002 … 0.1}, τ ∈ {600, 6000}, **noise-free and on
+flat ground**. `validation.md` §H-E reports **only the n = 2 dispersion column**
+and concludes *"the timestep is neither wrong nor load-bearing."*
+
+The n = 5 reach column, which the write-up does not quote:
+
+| dt | reach, τ = 600 | reach, τ = 6000 |
+|---|---|---|
+| 0.100 | **0.98** [0.93, 0.99] | **1.00** [0.96, 1.00] |
+| 0.050 | **0.82** [0.73, 0.88] | **0.92** [0.85, 0.96] |
+| 0.020 | 0.90 [0.83, 0.94] | 0.98 [0.93, 0.99] |
+| 0.010 | 0.92 [0.85, 0.96] | 0.98 [0.93, 0.99] |
+| 0.005 | 0.88 [0.80, 0.93] | 0.96 [0.90, 0.98] |
+| 0.002 | 0.89 [0.81, 0.94] | 0.97 [0.92, 0.99] |
+
+**dt = 0.05 is the worst timestep in the sweep**, and its interval is disjoint
+from dt = 0.1 at both trial lengths — noise-free, flat ground, n = 5. It is not a
+convergence trend: 0.1 is the best and the finer values sit between. So the
+record's own data already contained a timestep sensitivity in the aggregation
+dynamics, at a different n and a different terrain, and the write-up did not
+report it because it quoted the dispersion column only.
+
+That is the **second** of the two branches decision 2 named, and it makes the
+Methods 4.1 scoping more than a wording tidy: §2.2's *"the result is independent
+of the timestep"* is true of the **exact-arc integration** it is about, and is not
+true of the aggregation dynamics built on top of it.
+
+### The 2×2 that settles it at the cell that matters
+
+`configs/diagnostics/dt_noise_interaction.toml` — a diagnostic; nothing in the
+record rests on it. S2-gauci and S2-searched, `wheel_noise` ∈ {0, 0.037657}
+(model 05's draw, the highest among the `dt = 0.05` models), dt ∈ {0.1, 0.05}, at
+experiment 4's own cell: λ = 0.10 m, n = 20, R = 0.74 m, τ = 600 s, 100 runs.
+
+Reach at θ_m = 0.9:
+
+| | dt = 0.10 | dt = 0.05 | drop |
+|---|---|---|---|
+| S2-gauci, `wheel_noise = 0` | 0.86 [0.78, 0.91] | **0.70** [0.60, 0.78] | **−0.16** |
+| S2-gauci, `wheel_noise = 0.0377` | 0.87 [0.79, 0.92] | **0.63** [0.53, 0.72] | **−0.24** |
+| S2-searched, either noise | 1.00 [0.96, 1.00] | **1.00** [0.96, 1.00] | 0.00 |
+
+**The drop is there with the noise dial at zero.** It is mostly a timestep effect
+on the aggregation dynamics, not a noise × dt interaction — decision 1's
+hypothesis is not what is happening, though the defect it predicted is real and is
+fixed below. Noise compounds it: at dt = 0.10 turning noise on does nothing
+(0.86 → 0.87), at dt = 0.05 it costs another 0.07.
+
+**And it is specific to the enumerated row.** S2-searched is at 1.00 in all four
+cells. Whatever the timestep does, it does it to Gauci's constants and not to the
+aggregation dynamics in general — which is consistent with the sweep above, where
+the effect at n = 5 is also on Gauci's constants, the only controller that sweep
+ran.
+
+The hold ratio moves with it: S2-gauci noise-free **2.1492 → 3.1523**, a 47% larger
+terrain tax at the finer control period, while S2-searched goes 1.0988 → 1.0587.
+**That is a caveat on comparison 1**, whose ROBUST verdict is a difference between
+those two rows: in the five `dt = 0.05` models part of the gap is the enumerated
+row's timestep sensitivity rather than the terrain tax C1 is about.
+
+At 100 runs the noise-free pair's intervals **overlap by 0.0024**, so it was
+replicated independently rather than argued: `dt_reach_noisefree.toml`, 400 runs a
+cell on seed base **20260911**, deliberately disjoint from the evaluation seed
+20260904 so that it is a fresh sample rather than an extension of the first one
+after seeing it. Both numbers are reported.
+
+**The independent replication settles it.** 400 runs a cell, seed base 20260911,
+`wheel_noise = 0`:
+
+| row | dt = 0.10 | dt = 0.05 | |
+|---|---|---|---|
+| S2-gauci reach | **0.9050** [0.8723, 0.9300] | **0.6150** [0.5664, 0.6614] | **DISJOINT**, −0.29 |
+| S2-gauci hold ratio | **2.0739** [1.9538, 2.2019] | **2.9747** [2.7337, 3.2093] | **DISJOINT**, +43% |
+| S2-searched reach | 0.9950 [0.9820, 0.9986] | 0.9825 [0.9643, 0.9915] | overlapping, −0.01 |
+| S2-searched hold ratio | 1.1548 [1.1362, 1.1807] | 1.0936 [1.0678, 1.1225] | disjoint, and *better* |
+
+**The aggregation dynamics are timestep-sensitive at n = 20 under terrain, with
+the noise dial at zero, and the sensitivity is specific to the enumerated row.**
+That is decision 2's second branch: not a noise × dt interaction, and a bigger
+disclosure for Methods 4.1 than a wording tidy.
+
+### The robot-side audit: `world.rs`, `robot.rs`, `sensor.rs`, `occlusion.rs`, `terrain.rs`
+
+Same format as the pursuer audit. The question for each is whether its effect
+**per unit time** is invariant to `sim.dt`.
+
+| quantity | where | dt-invariant? | note |
+|---|---|---|---|
+| **`noise.wheel_noise`** | `world.rs:282-284`, `Normal::new(0.0, wheel_noise)` | **NO — a defect of the same class** | an independent Gaussian of **fixed σ** added to each wheel speed every step. Because it is noise on a **velocity** that is then integrated over `dt`, the displacement increment is ~σ·dt and the accumulated variance over a span `T` is `(T/dt)·(σ·dt)² = T·σ²·dt` — **proportional to `dt`**, not invariant. |
+| **`terrain.slip_noise`** | `terrain.rs:202-206` | **same class, inert in the record** | identical construction, gated on `slope_angle ≠ 0`. Every config in the record sets `slope_angle = 0`, so σ = 0 and the branch is never taken. The `else` arm deliberately burns one RNG draw to keep the stream aligned. |
+| **`occlusion.fn_rate` / `fp_rate`** | `occlusion.rs::corrupt` | **yes in time-average; no in spectrum** | a Bernoulli **per reading**, and a reading is one control step. The *fraction* of readings corrupted is `fn_rate` at any `dt`, so the time-average corruption is invariant — this is **not** the `p_lock` defect, where a per-step hazard stood in for a per-second rate. What does change is the corruption's correlation time: at `dt = 0.05` the dropout sequence is whiter. That is inherent to sampling faster and is a property of the control period, not an error. |
+| sensor `cast` | `world.rs`, step 1-3 | **yes — this *is* the control period** | one reading per control step is what `dt` means for a robot. Gauci's own model has a control cycle; changing it changes the robot, deliberately. |
+| controller `act`, memory update | `world.rs`, step 1-3 | **yes — same** | one decision per control step. |
+| `integrate` (exact arc) | `robot.rs:43-64` | **yes, exactly** | `dt` enters only as the swept angle `ω·dt` and the arc is integrated in closed form. This is the invariant §2.2 states and it is true as stated. |
+| terrain `traction` / `gravity_term` | `terrain.rs::apply` | **yes** | a function of position and heading at this instant; no time in it. |
+| `resolve_contacts` | `world.rs:381-410` | **yes** | a **constraint projection**, not an integrated rate: it pushes bodies apart until the worst overlap is under tolerance, and it converges to the same non-overlapping configuration however often it runs. Robots also move less per step at finer `dt`, so there is less to resolve. |
+| broadcast (`rx`/`tx`) | `world.rs` | **yes** | inert at `K = 0`; every row in the record has `K = 0`. |
+
+**One defect (`wheel_noise`), one inert twin (`slip_noise`), one that looks like a
+defect and is not (`occlusion`), six clean.**
+
+**The direction, and a correction to the review's hypothesis.** The review
+expected the `dt = 0.05` models to carry "roughly √2 **more** effective actuation
+noise". It is the other way round, and the sign matters for how the reach drop is
+read. The Brownian scaling σ ∝ √dt is correct for a **direct increment to a state
+variable** — which is what the pursuer's random-walk search does to its *heading*,
+and why that one is already right. `wheel_noise` is noise on a **velocity**, and a
+velocity is multiplied by `dt` before it reaches the state. For a velocity noise
+the invariant scaling is **σ ∝ 1/√dt**: `σ_step = σ_ref·√(0.1/dt)`. As the code
+stands, halving `dt` **halves** the accumulated diffusion per unit time, so a
+`dt = 0.05` model carries **1/√2 ≈ 0.71× the effective actuation noise its
+parameter names**, not 1.41×.
+
+That still makes every `dt = 0.05` model a different-noise model, which is the
+review's point and it stands. But it changes what the reach drop would mean: ADR
+0004 measured small noise as **helping** (it breaks the deterministic closure of
+the state-0 orbit), so *less* effective noise predicts *worse* reach — which is
+the direction observed.
+
+**A distinction the diagnostic then forced, and it matters.** The scaling argument
+above is a statement about the **code**, provable by construction and pinned by a
+test that checks accumulated variance is invariant across four timesteps. It is
+**not** an explanation of anything observed: the 2×2 diagnostic puts the reach
+drop at `dt = 0.05` squarely in the noise-free cell, and the noise term makes
+things *worse* at the fine timestep rather than better, which the σ-scaling alone
+does not predict either way. So the defect is real, it is fixed, and it does not
+account for the effect that led to finding it. Both halves of that go in the
+findings; presenting the fix as the explanation would be the artefact reading the
+Phase 5b review warned about, one level up.
+
+### The fix, and the proof it moved nothing
+
+`NoiseConfig::wheel_sigma_per_step(max_wheel_speed, dt)`; at `dt = 0.1` it returns
+σ exactly, by an explicit branch. Four new tests (`swarm-core` 101 → **105**, total
+Rust **128**): bit-exactness at the reference period over six dial values;
+accumulated-variance invariance across four timesteps; the **reciprocal**
+direction, asserting `σ(0.05)/σ(0.1) = √2` rather than `1/√2`; and a zero dial
+staying exactly zero at every `dt`.
+
+`verify_determinism.py`: IDENTICAL. Eleven files regenerated and compared byte for
+byte, chosen to cover the two cases this fix could touch:
+
+| file | why it is the test |
+|---|---|
+| `small_n_noise_probe` | **`wheel_noise` > 0** at `dt = 0.1` — the identity branch |
+| `timestep_convergence` | **`dt` from 0.002 to 0.1**, noise-free — the zero dial at every timestep |
+| `timestep_fov_gate` | same |
+| `terrain_tuning_control`, `terrain_h3_capability`, `terrain_capability_n`, `terrain_tuning_control_lambda` | the aggregation record |
+| `pseudo_reality_aggregation_model_08/09`, `pseudo_reality_pursuit_model_09` | perturbed models at `dt = 0.1` |
+| `pursuer_dispersive` | the pursuit record, re-checked after a second binary change |
+
+**Eleven of eleven IDENTICAL.**
+
+### Re-running all five comparisons with both fixes in
+
+**Budget.** 10 sweeps, 24 000 trials, **777 s wall on 4 cores = 0.86 core-hours**.
+The running total is about **51 core-hours**; the ceiling did not need to go to 64.
+
+Every comparison-level verdict is **unchanged again**. Three ordering-level counts
+moved:
+
+| ordering | registered | D8 (pursuer) | D8+D9 (both) |
+|---|---|---|---|
+| C2 — capability flatness | 9/**4**/1 | 9/4/1 | 9/**6**/1 |
+| C3 — κ-response, D-dispersive ‡ | 10/**7**/0 | 10/**10**/0 | 10/**10**/0 |
+| C4 — B1 − D at r_p = 0.1 m | **10**/3/**0** | 10/3/0 | **9**/5/**1** |
+| C5 — S3 † − B1 at r_p = 1 m | 5/7/**5** FRAGILE | 5/7/**5** FRAGILE | 5/7/**5** FRAGILE |
+
+*(same-sign / disjoint / flips, out of ten)*
+
+C4's new flip at r_p = 0.1 m is model 02 at **+0.0010** — a sign change on a
+quantity whose whole range across the family is −0.003 to −0.040. It is a
+coin-flip, not a finding, and the ordering was already "not established either
+way" for lack of disjointness.
+
+**The two fixes partly cancel, which is worth stating plainly.** On the fragile
+ordering the D8 pursuer fix roughly halved the flip magnitudes and D9 restored
+them:
+
+| model | registered | D8 | D8+D9 |
+|---|---|---|---|
+| 02 | +0.0790 | +0.0260 | +0.0815 |
+| 03 | +0.0583 | +0.0308 | +0.0325 |
+| 04 | +0.0805 | +0.0435 | +0.0488 |
+| 05 | +0.0380 | +0.0170 | +0.0277 |
+| 10 | +0.0872 | +0.0682 | +0.0515 |
+
+That is expected in direction: D9 **raises** the per-step σ at `dt = 0.05` by √2 to
+restore the diffusion the dial names, so it moves the dynamics again rather than
+undoing D8. **Five flips at every stage.** Neither fix, nor both, changed a single
+comparison-level verdict.
+
+**And C1's caveat got stronger, not weaker.** The mean C1 difference over the
+`dt = 0.05` models against the `dt = 0.10` models was **1.75×** as registered and
+is **2.03×** with both fixes. Part of comparison 1's ROBUST verdict in those five
+models is the enumerated row's timestep sensitivity — measured directly in the
+diagnostic above as a hold ratio of 2.07 → 2.97 — rather than the terrain tax C1
+is about. §25 says so beside the verdict.
+
+### D10 — the same orderings, split by perturbation class
+
+`sim.dt` is the **robots' control period**: a perturbation of the robot, not of
+the world, and not what a Ligot-style pseudo-reality family is for. It was
+registered, drawn and run, so it cannot be removed; it can be reported separately.
+Counts out of five, **with no threshold attached** — the rule's 9-of-10 and 7-of-10
+were set for ten models and rescaling them after the fact would be inventing a
+rule. With both fixes in:
+
+| ordering | model-only (dt = 0.10) | + control period (dt = 0.05) |
+|---|---|---|
+| C1 terrain tax | 5/5 sign, 5/5 disjoint | 5/5, 5/5 |
+| C2 capability flatness | **4/5**, 2/5 | 5/5, 4/5 |
+| C3 κ-response, B0 / B1 ‡ / D ‡ | 5/5, 5/5 each | 5/5, 5/5 each |
+| C4 r_p = 0.1 m | 5/5, 1/5 | **4/5**, 4/5 |
+| C4 r_p = 0.35 m / 1 m | 5/5, 5/5 | 5/5, 5/5 |
+| C5 vs B0 at 0.1 / 0.35 m | 5/5, 5/5 | 5/5, 5/5 |
+| C5 vs B0 at r_p = 1 m | 5/5, 1/5 | 5/5, 5/5 |
+| C5 vs B1 at 0.1 / 0.35 m | 5/5, 4–5/5 | 5/5, 5/5 |
+| **C5 vs B1 at r_p = 1 m** | **5/5**, 2/5 | **0/5**, 5/5 |
+
+**In the model-only sub-family — the one that is actually a pseudo-reality — there
+is exactly one sign flip in fourteen orderings, and it is comparison 2's model
+09.** Every flip of the fragile ordering is in the control-period sub-family, 0/5
+against 5/5. The registered ten-model verdicts stand as the pre-registered result;
+this is what they are made of.
+
+### What this does to the Phase 5b reading
+
+**The "the searched row's evasion exploits a faster control loop" lead is
+withdrawn.** Decision 7 made it conditional on the robot side being clean and it
+was not: `wheel_noise` carried a defect of the same class as `p_lock`. It is not
+in the open-questions list.
+
+What replaces it is smaller and better supported: at the perfect-perception corner
+the searched S = 3 row's ordering against B1 depends on the **robots' control
+period**, and that dependence survives both fixes. Whether that is the controller,
+the residual timestep sensitivity of the aggregation dynamics that the diagnostic
+found in the enumerated row, or something else, **this design cannot say** — and
+the honest place for it is a limitation on comparison 5, not a mechanism.
+
+### Outputs
+
+`results/pseudo_reality_{aggregation,pursuit}_fixed2_model_{02,03,04,05,10}.jsonl`
+(24 000 records), `results/dt_noise_interaction.jsonl` (1 600),
+`results/dt_reach_noisefree.jsonl` (3 200),
+`figures/pseudo_reality_corrected_both.png`, and
+`scripts/experiment4_decision.py --fixed2`, which also prints the D10 split. The
+registered files and the D8 files are untouched; all three stages are reproducible
+side by side.
+
 ### Invocations
 
 | phase | commit | command | when (UTC) | output | wall / size |
@@ -1023,3 +1307,15 @@ the original files.
 | 5 figures | `b3beda3` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T19:12Z` | `figures/pseudo_reality.png`  | 7 s |
 | 0.3 diagnostic | `95fd72a` | `./target/release/swarm sweep --config configs/diagnostics/f3_seed1_rerun_sanity.toml --out results/f3_seed1_rerun_sanity.jsonl` | 2026-09-10T19:43Z | `results/f3_seed1_rerun_sanity.jsonl` | 22 s / 336K |
 | 5c diagnostic | `95fd72a` | `./target/release/swarm sweep --config configs/diagnostics/dt_noise_interaction.toml --out results/dt_noise_interaction.jsonl` | 2026-09-10T19:45Z | `results/dt_noise_interaction.jsonl` | 125 s / 1.4M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_02.toml --out results/pseudo_reality_aggregation_fixed2_model_02.jsonl` | 2026-09-10T20:23Z | `results/pseudo_reality_aggregation_fixed2_model_02.jsonl` | 121 s / 1.1M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_02.toml --out results/pseudo_reality_pursuit_fixed2_model_02.jsonl` | 2026-09-10T20:24Z | `results/pseudo_reality_pursuit_fixed2_model_02.jsonl` | 38 s / 3.5M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_03.toml --out results/pseudo_reality_aggregation_fixed2_model_03.jsonl` | 2026-09-10T20:26Z | `results/pseudo_reality_aggregation_fixed2_model_03.jsonl` | 122 s / 1.1M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_03.toml --out results/pseudo_reality_pursuit_fixed2_model_03.jsonl` | 2026-09-10T20:26Z | `results/pseudo_reality_pursuit_fixed2_model_03.jsonl` | 38 s / 3.5M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_04.toml --out results/pseudo_reality_aggregation_fixed2_model_04.jsonl` | 2026-09-10T20:28Z | `results/pseudo_reality_aggregation_fixed2_model_04.jsonl` | 124 s / 1.1M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_04.toml --out results/pseudo_reality_pursuit_fixed2_model_04.jsonl` | 2026-09-10T20:29Z | `results/pseudo_reality_pursuit_fixed2_model_04.jsonl` | 37 s / 3.5M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_05.toml --out results/pseudo_reality_aggregation_fixed2_model_05.jsonl` | 2026-09-10T20:31Z | `results/pseudo_reality_aggregation_fixed2_model_05.jsonl` | 117 s / 1.1M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_05.toml --out results/pseudo_reality_pursuit_fixed2_model_05.jsonl` | 2026-09-10T20:32Z | `results/pseudo_reality_pursuit_fixed2_model_05.jsonl` | 35 s / 3.5M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_10.toml --out results/pseudo_reality_aggregation_fixed2_model_10.jsonl` | 2026-09-10T20:33Z | `results/pseudo_reality_aggregation_fixed2_model_10.jsonl` | 110 s / 1.1M |
+| 5c eval | `3eca32c` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_10.toml --out results/pseudo_reality_pursuit_fixed2_model_10.jsonl` | 2026-09-10T20:34Z | `results/pseudo_reality_pursuit_fixed2_model_10.jsonl` | 35 s / 3.5M |
+| 5c figures | `3eca32c` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T20:38Z` | `figures/pseudo_reality_corrected_both.png`  | 12 s |
+| 5 figures | `3eca32c` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T20:38Z` | `figures/pseudo_reality.png`  | 10 s |
