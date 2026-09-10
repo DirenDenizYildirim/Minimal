@@ -158,13 +158,33 @@ job_phase0_seeds() {
   sweep "0.2 seeds"      phase0_seeds_objective_probe phase0_seeds_objective_probe
 }
 
+# ------------------------------------------------------- freeze lift 1, phase 2
+job_search_s3() {
+  # Pre-registered at docs/preregistration/searched-s3-pursuer.md (577f15a).
+  # Six searches: two objectives x three optimiser seeds. --seed varies and the
+  # training base is held at 930000, which is how section 21's seed study
+  # separated optimiser variability from a different draw of training arenas.
+  local CLASS=(--class 'pursuer.range=0.2,0.35,0.6' --class 'pursuer.confusion=0.5,2.5')
+  # B1-ternary, verbatim from configs/sweeps/pursuer_dispersive.toml: the search
+  # starts AT the hand-designed row and can only be asked "is there better?".
+  local INIT='[-0.7,-1.0,1.0,-1.0,-1.0,-1.0]'
+  for objective in survival survival_task; do
+    for seed in 1 2 3; do
+      search "2 search" "search_s3_pursuer_${objective}_seed${seed}" \
+        --config "configs/search/train_s3_pursuer_${objective}.toml" \
+        --objective "$objective" --budget 1200 --runs-per-eval 12 \
+        --seed "$seed" --training-seed 930000 --init "$INIT" "${CLASS[@]}"
+    done
+  done
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
 }
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
-     searches_class class_eval phase0_seeds diagnostics)
+     searches_class class_eval phase0_seeds diagnostics search_s3)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"
