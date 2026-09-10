@@ -192,6 +192,110 @@ impl SepCmaEs {
 }
 
 /// What a search run produces, written next to the results so a row's upper
+/// What the search optimises.
+///
+/// `Dispersion` is the objective sections 9, 13 and 19-21 were searched against
+/// and is the **default**, so every recorded search reproduces unchanged. The two
+/// survival objectives were added for freeze lift 1 experiment 1, whose
+/// pre-registration (`docs/preregistration/searched-s3-pursuer.md`) fixes their
+/// definitions, their zero guard and the sign convention below before they
+/// existed.
+///
+/// # Sign
+///
+/// sep-CMA-ES minimises. A survival objective is better when larger, so the
+/// optimiser is handed `-score` and every number that leaves this module — the
+/// reported best, the per-generation history, the progress line — is converted
+/// back to its natural orientation. `SearchResult::objective` says which way is
+/// better, in words, so a reader of the JSON never has to infer it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Objective {
+    /// Median `final_dispersion` over the trials of a condition. Lower is better.
+    Dispersion,
+    /// Mean per-robot survival at tau, captured robots counting as 0. Higher is
+    /// better.
+    Survival,
+    /// Geometric mean of survival and `1 / dispersion_among_survivors`, so
+    /// survival cannot be bought by abandoning the task. Higher is better.
+    SurvivalTask,
+}
+
+impl Objective {
+    pub fn parse(name: &str) -> Result<Self> {
+        Ok(match name {
+            "dispersion" => Objective::Dispersion,
+            "survival" => Objective::Survival,
+            "survival_task" => Objective::SurvivalTask,
+            other => anyhow::bail!(
+                "unknown --objective {other:?}; expected dispersion, survival or survival_task"
+            ),
+        })
+    }
+
+    pub fn higher_is_better(self) -> bool {
+        !matches!(self, Objective::Dispersion)
+    }
+
+    /// The value sep-CMA-ES compares. Negated for a maximising objective, so the
+    /// box-repair penalty always makes a candidate worse whichever way is better.
+    fn to_minimise(self, score: f64) -> f64 {
+        if self.higher_is_better() {
+            -score
+        } else {
+            score
+        }
+    }
+
+    /// Back to the natural orientation, for everything a human or a figure reads.
+    fn to_report(self, minimised: f64) -> f64 {
+        if self.higher_is_better() {
+            -minimised
+        } else {
+            minimised
+        }
+    }
+}
+
+/// FNV-1a over the resolved base config, so a later edit to the config cannot
+/// silently invalidate a recorded row.
+///
+/// Written out rather than pulled in: a cryptographic hash would be a new
+/// dependency for a job that only has to answer "is this the same config", and
+/// `DefaultHasher` is explicitly not stable across Rust releases, which is the
+/// one property a provenance field needs.
+fn config_hash(base: &Value) -> String {
+    let text = serde_json::to_string(base).unwrap_or_default();
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in text.as_bytes() {
+        h ^= *b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("fnv1a64:{h:016x}")
+}
+
+/// The commit the working tree was at, with `-dirty` when it was not clean.
+///
+/// Best effort: `None` if git is not available or this is not a repository. A
+/// missing hash is recorded as missing rather than as something else, because
+/// finding F3 was exactly a row whose provenance looked complete and was not.
+fn git_hash() -> Option<String> {
+    let rev = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .ok()?;
+    if !rev.status.success() {
+        return None;
+    }
+    let hash = String::from_utf8(rev.stdout).ok()?.trim().to_string();
+    let dirty = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .ok()
+        .map(|o| !o.stdout.is_empty())
+        .unwrap_or(false);
+    Some(if dirty { format!("{hash}-dirty") } else { hash })
+}
+
 /// bound can be quoted with the budget that produced it.
 #[derive(Debug, Serialize)]
 pub struct SearchResult {
@@ -226,6 +330,12 @@ pub struct SearchResult {
     pub training_conditions: usize,
     pub objective: String,
     pub optimiser: String,
+    /// Provenance, required since freeze lift 1 finding F3: four searches in the
+    /// record cannot be regenerated because no document states the optimiser
+    /// seed they ran at. `seed`, `training_seed_base` and `budget_evaluations`
+    /// above are the rest of it.
+    pub git_hash: Option<String>,
+    pub config_hash: String,
 }
 
 /// One training condition: config-path overrides applied on top of the base.
@@ -260,6 +370,88 @@ fn median(mut xs: Vec<f64>) -> f64 {
     xs[xs.len() / 2]
 }
 
+/// Below this many survivors, "the dispersion of the survivors" is degenerate:
+/// one or zero robots score 0, which is a perfect aggregation score for a swarm
+/// that has been wiped out.
+const MIN_SURVIVORS_FOR_TASK: usize = 3;
+
+/// What one trial contributes. Kept as a struct rather than three parallel
+/// vectors so a condition cannot be scored on survivors from one run and
+/// dispersion from another.
+#[derive(Clone, Copy)]
+struct Trial {
+    final_dispersion: f64,
+    survivors: usize,
+    n: usize,
+}
+
+/// Score one training condition, in its natural orientation.
+///
+/// Survival is **pooled per robot** — total survivors over total robots — not a
+/// mean of per-run fractions. They agree when `n` is constant across a
+/// condition, which it is here, and the pooled form is the one
+/// `scripts/recompute_paired_and_survival.py` and §12.1 D0 put the record on.
+fn score_condition(objective: Objective, trials: &[Trial]) -> f64 {
+    match objective {
+        Objective::Dispersion => median(trials.iter().map(|t| t.final_dispersion).collect()),
+        Objective::Survival => pooled_survival(trials),
+        Objective::SurvivalTask => {
+            let survival = pooled_survival(trials);
+            // The guard is per trial: a run that ends with fewer than three
+            // robots has no meaningful "dispersion among survivors", so it
+            // contributes survival and nothing else. A condition in which NO run
+            // clears the bar has no task term at all and scores 0 -- which is
+            // the honest score for a candidate that wipes out there, and is why
+            // this is not written as a floor.
+            let usable: Vec<f64> = trials
+                .iter()
+                .filter(|t| t.survivors >= MIN_SURVIVORS_FOR_TASK)
+                .map(|t| t.final_dispersion)
+                .collect();
+            if usable.is_empty() || survival <= 0.0 {
+                return 0.0;
+            }
+            let dispersion = median(usable);
+            if dispersion <= 0.0 {
+                return 0.0;
+            }
+            (survival * (1.0 / dispersion)).sqrt()
+        }
+    }
+}
+
+fn pooled_survival(trials: &[Trial]) -> f64 {
+    let robots: usize = trials.iter().map(|t| t.n).sum();
+    if robots == 0 {
+        return 0.0;
+    }
+    trials.iter().map(|t| t.survivors).sum::<usize>() as f64 / robots as f64
+}
+
+/// Combine per-condition scores into the class objective: the geometric mean.
+///
+/// The dispersion path keeps its exact original arithmetic, `1e-6` floor
+/// included, so every search in the record reproduces bit-for-bit. The survival
+/// path deliberately does **not** floor: a proportion of 0 is a real value, a
+/// candidate that wipes out in any one condition should score 0 for the class,
+/// and a floor would quietly turn that into "very slightly better than wiped
+/// out" and let the optimiser trade one dead condition for five good ones.
+fn combine_conditions(objective: Objective, per_condition: &[f64]) -> f64 {
+    match objective {
+        Objective::Dispersion => {
+            let logs: Vec<f64> = per_condition.iter().map(|v| v.max(1e-6).ln()).collect();
+            (logs.iter().sum::<f64>() / logs.len() as f64).exp()
+        }
+        _ => {
+            if per_condition.iter().any(|v| *v <= 0.0) {
+                return 0.0;
+            }
+            let logs: Vec<f64> = per_condition.iter().map(|v| v.ln()).collect();
+            (logs.iter().sum::<f64>() / logs.len() as f64).exp()
+        }
+    }
+}
+
 /// The training objective.
 ///
 /// With a single condition this is the median final dispersion over `runs`
@@ -287,6 +479,7 @@ fn evaluate(
     runs: usize,
     seed_base: u64,
     class: &[Condition],
+    objective: Objective,
 ) -> Result<f64> {
     let entries: Vec<Value> = constants
         .chunks(2)
@@ -320,16 +513,20 @@ fn evaluate(
     let jobs: Vec<(usize, u64)> = (0..class.len())
         .flat_map(|k| (0..per_condition as u64).map(move |i| (k, i)))
         .collect();
-    let scores: Vec<(usize, f64)> = jobs
+    let scores: Vec<(usize, Trial)> = jobs
         .par_iter()
-        .map(|&(k, i)| -> Result<(usize, f64)> {
+        .map(|&(k, i)| -> Result<(usize, Trial)> {
             let offset = (k * per_condition) as u64;
+            let record = World::new(configs[k].clone(), offset + i)
+                .map_err(|e| anyhow::anyhow!("{e}"))?
+                .run();
             Ok((
                 k,
-                World::new(configs[k].clone(), offset + i)
-                    .map_err(|e| anyhow::anyhow!("{e}"))?
-                    .run()
-                    .final_dispersion,
+                Trial {
+                    final_dispersion: record.final_dispersion,
+                    survivors: record.survivors,
+                    n: configs[k].swarm.n,
+                },
             ))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -338,14 +535,11 @@ fn evaluate(
     for (k, v) in scores {
         by_condition[k].push(v);
     }
-    // A swarm that ends exactly on top of itself scores 0 and has no log, so the
-    // floor is the smallest dispersion the metric can resolve rather than an
-    // arbitrary epsilon.
-    let logs: Vec<f64> = by_condition
-        .into_iter()
-        .map(|xs| median(xs).max(1e-6).ln())
+    let per_condition_scores: Vec<f64> = by_condition
+        .iter()
+        .map(|trials| score_condition(objective, trials))
         .collect();
-    Ok((logs.iter().sum::<f64>() / logs.len() as f64).exp())
+    Ok(combine_conditions(objective, &per_condition_scores))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -360,6 +554,7 @@ pub fn run_search(
     init: Option<Vec<f64>>,
     class_axes: &[(String, Vec<Value>)],
     class_points: &[Condition],
+    objective: Objective,
 ) -> Result<SearchResult> {
     let dims = 2 * states;
     if !class_axes.is_empty() && !class_points.is_empty() {
@@ -407,15 +602,29 @@ pub fn run_search(
         let candidates = es.ask();
         let mut fitness = Vec::with_capacity(candidates.len());
         for (x, penalty) in &candidates {
-            let f = evaluate(base, x, runs_per_eval, training_seed_base, &class)? + 10.0 * penalty;
+            let score = evaluate(
+                base,
+                x,
+                runs_per_eval,
+                training_seed_base,
+                &class,
+                objective,
+            )?;
+            // The penalty is added AFTER the sign flip, so leaving the box costs
+            // a candidate the same whichever direction is better.
+            let f = objective.to_minimise(score) + 10.0 * penalty;
             if f < best.0 {
                 best = (f, x.clone());
             }
             fitness.push(f);
         }
         es.tell(&candidates, &fitness);
-        history.push(best.0);
-        eprint!("\r  generation {}/{generations}  best {:.4}", g + 1, best.0);
+        history.push(objective.to_report(best.0));
+        eprint!(
+            "\r  generation {}/{generations}  best {:.4}",
+            g + 1,
+            objective.to_report(best.0)
+        );
     }
     eprintln!();
 
@@ -432,7 +641,7 @@ pub fn run_search(
         initial_mean: seed_point,
         warm_started,
         best_constants: best.1,
-        best_training_objective: best.0,
+        best_training_objective: objective.to_report(best.0),
         history,
         training_class: class_axes
             .iter()
@@ -440,21 +649,46 @@ pub fn run_search(
             .collect(),
         training_condition_points: class.clone(),
         training_conditions: class.len(),
-        objective: if class.len() == 1 {
-            "median final_dispersion over runs_per_evaluation trials, \
-             lower is better; +10x squared box-repair penalty"
-                .into()
-        } else {
-            format!(
-                "geometric mean over {} training conditions of the median \
-                 final_dispersion in each ({} trials per condition), lower is \
-                 better; +10x squared box-repair penalty",
-                class.len(),
-                runs_per_eval / class.len()
-            )
-        },
+        objective: describe_objective(objective, class.len(), runs_per_eval),
         optimiser: "sep-CMA-ES (Ros & Hansen 2008), diagonal covariance".into(),
+        git_hash: git_hash(),
+        config_hash: config_hash(base),
     })
+}
+
+/// The `objective` string in the output JSON: the definition in words, so the
+/// file is readable without this source.
+///
+/// The dispersion wording is unchanged from before freeze lift 1, because the
+/// recorded searches' JSON carries it and a re-run must reproduce the file.
+fn describe_objective(objective: Objective, conditions: usize, runs_per_eval: usize) -> String {
+    let per = runs_per_eval / conditions.max(1);
+    match objective {
+        Objective::Dispersion if conditions == 1 => "median final_dispersion over \
+             runs_per_evaluation trials, lower is better; +10x squared box-repair penalty"
+            .into(),
+        Objective::Dispersion => format!(
+            "geometric mean over {conditions} training conditions of the median \
+             final_dispersion in each ({per} trials per condition), lower is \
+             better; +10x squared box-repair penalty"
+        ),
+        Objective::Survival => format!(
+            "geometric mean over {conditions} training conditions of the mean \
+             per-robot survival at tau in each ({per} trials per condition, \
+             pooled over robots, captured robots counting as 0), HIGHER is \
+             better; a condition scoring 0 makes the class objective 0; \
+             +10x squared box-repair penalty"
+        ),
+        Objective::SurvivalTask => format!(
+            "geometric mean over {conditions} training conditions of the \
+             geometric mean of (mean per-robot survival at tau) and \
+             (1 / median dispersion among survivors) in each ({per} trials per \
+             condition); trials with fewer than {MIN_SURVIVORS_FOR_TASK} \
+             survivors contribute no task term and a condition with no such \
+             trial scores 0, as does the class objective then; HIGHER is \
+             better; +10x squared box-repair penalty"
+        ),
+    }
 }
 
 pub fn write_result(path: &std::path::Path, result: &SearchResult) -> Result<()> {
@@ -471,6 +705,140 @@ pub fn write_result(path: &std::path::Path, result: &SearchResult) -> Result<()>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn trial(dispersion: f64, survivors: usize) -> Trial {
+        Trial {
+            final_dispersion: dispersion,
+            survivors,
+            n: 20,
+        }
+    }
+
+    #[test]
+    fn the_default_objective_is_the_one_the_record_was_searched_against() {
+        // Bit-neutrality, as a test rather than as a promise: the dispersion
+        // path must still be the median, and `--objective` must default to it.
+        assert_eq!(
+            Objective::parse("dispersion").unwrap(),
+            Objective::Dispersion
+        );
+        let trials = [trial(1.0, 20), trial(3.0, 20), trial(2.0, 20)];
+        assert_eq!(score_condition(Objective::Dispersion, &trials), 2.0);
+        assert!(!Objective::Dispersion.higher_is_better());
+    }
+
+    #[test]
+    fn an_unknown_objective_is_refused_rather_than_defaulted() {
+        // Silently falling back to dispersion would search the wrong thing and
+        // record a JSON that says so only in a field nobody reads.
+        let err = Objective::parse("survivial").unwrap_err().to_string();
+        assert!(err.contains("survivial"), "{err}");
+        assert!(err.contains("survival_task"), "{err}");
+    }
+
+    #[test]
+    fn survival_is_pooled_over_robots_not_averaged_over_runs() {
+        // 15 + 5 survivors out of 40 robots is 0.5. It agrees with the mean of
+        // the per-run fractions only because n is constant, which is the case
+        // this search creates and the reason the pooled form is safe here.
+        let trials = [trial(1.4, 15), trial(1.4, 5)];
+        assert!((score_condition(Objective::Survival, &trials) - 0.5).abs() < 1e-12);
+        assert!(Objective::Survival.higher_is_better());
+    }
+
+    #[test]
+    fn a_wiped_out_condition_scores_zero_and_takes_the_class_with_it() {
+        // The point of the guard. A candidate that survives beautifully in five
+        // conditions and dies in the sixth must not be able to average its way
+        // to a good class score.
+        let dead = [trial(0.0, 0), trial(0.0, 0)];
+        assert_eq!(score_condition(Objective::Survival, &dead), 0.0);
+        assert_eq!(
+            combine_conditions(Objective::Survival, &[0.9, 0.9, 0.9, 0.9, 0.9, 0.0]),
+            0.0
+        );
+        // and the same for the two-axis objective
+        assert_eq!(score_condition(Objective::SurvivalTask, &dead), 0.0);
+        assert_eq!(
+            combine_conditions(Objective::SurvivalTask, &[0.5, 0.0]),
+            0.0
+        );
+    }
+
+    #[test]
+    fn a_run_with_too_few_survivors_contributes_no_task_term() {
+        // Two survivors sitting on top of each other score a dispersion near 0,
+        // which is a PERFECT aggregation score for a swarm that has been all but
+        // wiped out. Such a run must not set the task term.
+        let mixed = [trial(0.01, 2), trial(4.0, 18)];
+        let s = score_condition(Objective::SurvivalTask, &mixed);
+        // survival = 20/40 = 0.5; the only usable run has dispersion 4.0
+        assert!((s - (0.5f64 * 0.25).sqrt()).abs() < 1e-12, "{s}");
+        // With no usable run at all the condition scores 0 rather than taking
+        // the degenerate dispersion.
+        let all_tiny = [trial(0.01, 2), trial(0.02, 1)];
+        assert_eq!(score_condition(Objective::SurvivalTask, &all_tiny), 0.0);
+    }
+
+    #[test]
+    fn survival_task_refuses_to_buy_survival_by_abandoning_the_task() {
+        // The whole reason the second objective exists. A dispersive row that
+        // keeps everyone alive at dispersion 400 must score BELOW an aggregating
+        // row that loses a third of the swarm and holds a cluster at 1.5.
+        let dispersive = [trial(400.0, 20), trial(400.0, 20)];
+        let aggregating = [trial(1.5, 13), trial(1.5, 14)];
+        assert!(
+            score_condition(Objective::Survival, &dispersive)
+                > score_condition(Objective::Survival, &aggregating)
+        );
+        assert!(
+            score_condition(Objective::SurvivalTask, &dispersive)
+                < score_condition(Objective::SurvivalTask, &aggregating)
+        );
+    }
+
+    #[test]
+    fn the_class_objective_reduces_to_one_condition() {
+        // A class search and a fixed-condition search must be one procedure at
+        // two class sizes, for every objective.
+        for o in [
+            Objective::Dispersion,
+            Objective::Survival,
+            Objective::SurvivalTask,
+        ] {
+            let v = combine_conditions(o, &[0.42]);
+            assert!((v - 0.42).abs() < 1e-12, "{o:?} gave {v}");
+        }
+    }
+
+    #[test]
+    fn the_sign_flip_round_trips_and_the_penalty_always_hurts() {
+        for o in [
+            Objective::Dispersion,
+            Objective::Survival,
+            Objective::SurvivalTask,
+        ] {
+            assert!(
+                (o.to_report(o.to_minimise(0.73)) - 0.73).abs() < 1e-12,
+                "{o:?}"
+            );
+            // A repaired candidate must compare worse than the same score unrepaired,
+            // whichever direction is better.
+            assert!(
+                o.to_minimise(0.73) + 10.0 * 0.5 > o.to_minimise(0.73),
+                "{o:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_config_hash_is_stable_and_notices_an_edit() {
+        let a = serde_json::json!({"sim": {"duration": 600.0}, "swarm": {"n": 20}});
+        let b = serde_json::json!({"sim": {"duration": 600.0}, "swarm": {"n": 50}});
+        assert_eq!(config_hash(&a), config_hash(&a));
+        assert_ne!(config_hash(&a), config_hash(&b));
+        assert!(config_hash(&a).starts_with("fnv1a64:"));
+    }
 
     #[test]
     fn a_class_is_the_cartesian_product_of_its_axes() {
