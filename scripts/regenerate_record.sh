@@ -38,6 +38,10 @@ sweep()  { run "$1" "results/$2.jsonl" $SWARM sweep  --config "configs/sweeps/$3
 # Diagnostics live outside configs/sweeps/ so that "every config in sweeps/ is an
 # experiment" stays true; nothing in the record rests on one.
 sweep_dx() { run "$1" "results/$2.jsonl" $SWARM sweep --config "configs/diagnostics/$3.toml" --out "results/$2.jsonl"; }
+# Experiment 4's twenty-two sweep configs are GENERATED (one per model per
+# comparison group), so they live outside configs/sweeps/ rather than swamping a
+# directory where every file is a hand-written experiment.
+sweep_pr() { run "$1" "results/$2.jsonl" $SWARM sweep --config "configs/pseudo_reality/$3.toml" --out "results/$2.jsonl"; }
 search() { local phase="$1" name="$2"; shift 2
            run "$phase" "results/$name.json" $SWARM search --out "results/$name.json" "$@"; }
 
@@ -210,6 +214,19 @@ job_tuning_lambda() {
   sweep "4 eval" terrain_tuning_control_lambda terrain_tuning_control_lambda
 }
 
+# ------------------------------------------------------- freeze lift 1, phase 5
+job_pseudo_reality() {
+  # Pre-registered at docs/preregistration/pseudo-reality.md (367ee93).
+  # Eleven models: 00 is the unperturbed reference, 01-10 are drawn from the
+  # pre-registered sampling seed 20260910. --check fails the job rather than
+  # silently evaluating a stale draw.
+  $PY scripts/build_pseudo_reality_configs.py --check
+  for i in 00 01 02 03 04 05 06 07 08 09 10; do
+    sweep_pr "5 eval" "pseudo_reality_aggregation_model_$i" "aggregation_model_$i"
+    sweep_pr "5 eval" "pseudo_reality_pursuit_model_$i"     "pursuit_model_$i"
+  done
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
@@ -217,7 +234,7 @@ job_diagnostics() {
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
      searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
-     capability_n capability_n_tau tuning_lambda)
+     capability_n capability_n_tau tuning_lambda pseudo_reality)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"
