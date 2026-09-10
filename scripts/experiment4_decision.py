@@ -317,6 +317,41 @@ def flip_table(out: dict) -> None:
                           for i in range(1, 11)}
 
 
+def reach_diagnostic(out: dict) -> None:
+    """Does every model still aggregate at all? REPORTED, NOT THRESHOLDED.
+
+    Written before any Phase 5 number was read, and deliberately not turned into
+    a rule: the pre-registration fixed no reach contingency for this experiment
+    and inventing one after the fact is exactly what a pre-registration is for
+    preventing. But a hold ratio measured on a swarm that never aggregated is a
+    measurement of the clock rather than of terrain — that is how §20's diagnosis
+    went wrong and why experiment 2 carried a τ contingency — and several of these
+    models drop up to 9% of neighbour sightings. So the reach of every row in
+    every model is printed, and any comparison drawn from a model whose reach has
+    collapsed must be read with that in front of it.
+    """
+    print(f"\n{'='*78}\nREACH DIAGNOSTIC — reported, NOT thresholded, and not part of the rule"
+          f"\n{'='*78}")
+    print("  fraction of runs that ever formed a single cluster, at θ_m = 0.9, τ = 600 s\n")
+    rows = ["S2-gauci"] + CLASS_FLAT + ["S2-searched", "S4-terrain"]
+    print("  model  " + "".join(f"{r.replace('S2-class-flat-', 'cf-'):>13s}" for r in rows))
+    table = {}
+    for m in MODELS:
+        vals = []
+        for row in rows:
+            c = rec("aggregation", m).filter(
+                row=row, **{"terrain.friction_amplitude": ROUGH})
+            p_, _lo, _hi = wilson_ci([1.0 if x else 0.0
+                                      for x in c.column("ever_single_cluster")])
+            vals.append(p_)
+        table[str(m)] = dict(zip(rows, vals))
+        tag = " (ref)" if m == 0 else "      "
+        print(f"  {m:02d}{tag} " + "".join(f"{v:13.2f}" for v in vals))
+    lowest = min((v, m, r) for m, d in table.items() for r, v in d.items())
+    print(f"\n  lowest reach anywhere: {lowest[0]:.2f} ({lowest[2]} in model {lowest[1]})")
+    out["reach_diagnostic"] = table
+
+
 def main() -> int:
     missing = [f"pseudo_reality_{g}_model_{m:02d}.jsonl"
                for m in MODELS for g in ("aggregation", "pursuit")
@@ -334,6 +369,8 @@ def main() -> int:
     print("Signs are counted against the REFERENCE model's sign. `*` marks a model")
     print("whose intervals are disjoint; FLIP marks one whose sign runs the other way.")
     print("=" * 78)
+
+    reach_diagnostic(out)
 
     print(f"\n{'='*78}\nCOMPARISON 1 — terrain tax: S2-gauci vs best-of-three S2-class-flat\n{'='*78}")
     n1 = "C1 — hold-ratio difference at θ_m = 0.9"
