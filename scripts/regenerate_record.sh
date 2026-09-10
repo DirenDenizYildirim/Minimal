@@ -227,6 +227,23 @@ job_pseudo_reality() {
   done
 }
 
+# ------------------------------------------------------ freeze lift 1, phase 5b
+job_pseudo_reality_fixed() {
+  # Amendment D8. p_lock is now per 0.1 s attempt window rather than per control
+  # step, so the pursuer's lethality no longer depends on sim.dt. At dt = 0.1 the
+  # conversion is the identity and every published pursuit run is bit-identical
+  # (proved by byte-diff, see the run log), so ONLY the five dt = 0.05 models are
+  # re-run, and only their pursuit half -- comparisons 1 and 2 are aggregation and
+  # contain no pursuer.
+  #
+  # Output goes to NEW filenames. The registered result stands on the original
+  # files and they are not overwritten: section 25 reports the rule as it fired.
+  $PY scripts/build_pseudo_reality_configs.py --check
+  for i in 02 03 04 05 10; do
+    sweep_pr "5b eval" "pseudo_reality_pursuit_fixed_model_$i" "pursuit_model_$i"
+  done
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
@@ -234,7 +251,8 @@ job_diagnostics() {
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
      searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
-     capability_n capability_n_tau tuning_lambda pseudo_reality)
+     capability_n capability_n_tau tuning_lambda pseudo_reality
+     pseudo_reality_fixed)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"

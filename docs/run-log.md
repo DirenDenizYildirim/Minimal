@@ -866,3 +866,5 @@ figure with all four kinds of row, which is deviation D2 of this pre-registratio
 | 5 figures | `5b5bdae` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T16:35Z` | `figures/pseudo_reality.png`  | 7 s |
 | 5 figures | `5b5bdae` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T16:36Z` | `figures/pseudo_reality.png`  | 8 s |
 | 5 figures | `5b5bdae` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pursuer_searched_s3_pareto.py` | `2026-09-10T16:37Z` | `figures/pursuer_searched_s3_pareto.png`  | 3 s |
+| 5b eval | `79e2fa0` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_02.toml --out results/pseudo_reality_pursuit_fixed_model_02.jsonl` | 2026-09-10T19:07Z | `results/pseudo_reality_pursuit_fixed_model_02.jsonl` | 28 s / 3.5M |
+| 5b eval | `79e2fa0` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_03.toml --out results/pseudo_reality_pursuit_fixed_model_03.jsonl` | 2026-09-10T19:07Z | `results/pseudo_reality_pursuit_fixed_model_03.jsonl` | 27 s / 3.5M |

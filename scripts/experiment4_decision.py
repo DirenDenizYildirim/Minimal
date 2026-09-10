@@ -73,9 +73,22 @@ ROUGH, FLAT = 0.9, 0.0
 
 _CACHE: dict[str, Records] = {}
 
+# ---- amendment D8: the corrected pursuit ------------------------------------
+# `--fixed` re-reads the PURSUIT half of the five dt = 0.05 models from the
+# sweeps re-run with the dt-aware p_lock, and everything else from the original
+# files. That is not a convenience: the six dt = 0.10 models are bit-identical
+# under the fix, which is proved by byte-diff in the run log rather than assumed,
+# so re-running them would burn compute to reproduce files that already exist.
+# Comparisons 1 and 2 are aggregation and contain no pursuer, so `--fixed` cannot
+# and does not change them.
+FIXED_DT05 = (2, 3, 4, 5, 10)
+USE_FIXED = False
+
 
 def rec(group: str, model: int) -> Records:
-    key = f"pseudo_reality_{group}_model_{model:02d}"
+    fixed = USE_FIXED and group == "pursuit" and model in FIXED_DT05
+    key = (f"pseudo_reality_pursuit_fixed_model_{model:02d}" if fixed
+           else f"pseudo_reality_{group}_model_{model:02d}")
     if key not in _CACHE:
         _CACHE[key] = load_jsonl(REPO / "results" / f"{key}.jsonl")
     return _CACHE[key]
@@ -353,17 +366,34 @@ def reach_diagnostic(out: dict) -> None:
 
 
 def main() -> int:
+    global USE_FIXED
+    USE_FIXED = "--fixed" in sys.argv
+
     missing = [f"pseudo_reality_{g}_model_{m:02d}.jsonl"
                for m in MODELS for g in ("aggregation", "pursuit")
                if not (REPO / "results" / f"pseudo_reality_{g}_model_{m:02d}.jsonl").exists()]
+    if USE_FIXED:
+        missing += [f"pseudo_reality_pursuit_fixed_model_{m:02d}.jsonl" for m in FIXED_DT05
+                    if not (REPO / "results"
+                            / f"pseudo_reality_pursuit_fixed_model_{m:02d}.jsonl").exists()]
     if missing:
         print(f"missing {len(missing)} results files, first: {missing[0]}", file=sys.stderr)
         return 1
 
-    out: dict = {"rule_source": "docs/preregistration/pseudo-reality.md @ 367ee93 (+D1-D7)",
+    out: dict = {"rule_source": "docs/preregistration/pseudo-reality.md @ 367ee93 (+D1-D8)",
+                 "corrected_pursuit": bool(USE_FIXED),
                  "orderings": {}, "comparisons": {}}
 
     print("=" * 78)
+    if USE_FIXED:
+        print("AMENDMENT D8 RUN — the PURSUIT comparisons re-read from the sweeps re-run")
+        print(f"with the dt-aware p_lock, for models {', '.join(f'{m:02d}' for m in FIXED_DT05)}"
+              " (the dt = 0.05 ones).")
+        print("This is NOT the pre-registered test. The registered rule fired on the")
+        print("original family and that verdict stands in §25, unedited. Comparisons 1")
+        print("and 2 are aggregation and are unchanged by construction.")
+        print("=" * 78)
+        print("=" * 78)
     print("EXPERIMENT 4 — pseudo-reality robustness.  11 models (00 = unperturbed")
     print("reference), 100 runs/cell, paired within a model and never across models.")
     print("Signs are counted against the REFERENCE model's sign. `*` marks a model")

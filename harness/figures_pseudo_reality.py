@@ -111,7 +111,78 @@ def draw(ax, series, baseline, ylabel, title, errorbars):
                 fontsize=7, color="0.35")
 
 
-fig, axes = plt.subplots(3, 2, figsize=(14.6, 12.4))
+fig, axes = plt.subplots(4, 2, figsize=(14.6, 16.0))
+
+# ---- the reach diagnostic, as its own row of panels --------------------------
+# Reported, NOT thresholded, and not part of the rule: the pre-registration fixed
+# no reach contingency for this experiment and inventing one after the numbers
+# were read is what a pre-registration prevents. It is on the figure because C1's
+# ROBUST verdict partly rests on the enumerated row FAILING TO AGGREGATE in the
+# noisier models rather than aggregating and being taxed, and a reader cannot
+# check that from the C1 panel alone.
+AGG_ROWS = ["S2-gauci"] + e4.CLASS_FLAT + ["S2-searched", "S4-terrain"]
+
+ax = axes[0][0]
+for i, row in enumerate(AGG_ROWS):
+    vals, los, his = [], [], []
+    for m in MODELS:
+        c = e4.rec("aggregation", m).filter(
+            row=row, **{"terrain.friction_amplitude": e4.ROUGH})
+        pr, lo, hi = e4.wilson_ci([1.0 if x else 0.0 for x in c.column("ever_single_cluster")])
+        vals.append(pr); los.append(lo); his.append(hi)
+    heavy = row == "S2-gauci"
+    ax.plot(MODELS, vals, marker="D" if heavy else "o", ms=6.5 if heavy else 4,
+            lw=2.0 if heavy else 1.0, color="black" if heavy else COL[i % len(COL)],
+            label=row + ("  (enumerated)" if heavy else ""), zorder=4 if heavy else 3)
+    if heavy:
+        ax.fill_between(MODELS, los, his, alpha=0.15, color="black", lw=0)
+ax.axvline(0.5, color="0.75", lw=1.0, zorder=0)
+ax.set_xticks(MODELS)
+ax.set_xticklabels([f"{m:02d}" for m in MODELS], fontsize=7.5)
+for m, lbl in zip(MODELS, ax.get_xticklabels()):
+    if DT[m] == 0.05:
+        lbl.set_color(FINE); lbl.set_fontweight("bold")
+ax.set_xlim(-0.6, 10.6)
+ax.set_ylim(0.55, 1.03)
+ax.set_ylabel("reach at θ_m = 0.9\nfraction of runs ever a single cluster", fontsize=8.2)
+ax.set_title("Reach diagnostic — reported, NOT thresholded, not part of the rule", fontsize=9.2)
+ax.grid(alpha=0.22, lw=0.6)
+ax.legend(fontsize=7.2, frameon=False, loc="lower right", ncol=2)
+ax.annotate("ref", xy=(0, 1.0), xycoords=("data", "axes fraction"), xytext=(0, -3),
+            textcoords="offset points", ha="center", va="top", fontsize=7, color="0.35")
+
+ax = axes[0][1]
+groups = {"reference\n(dt = 0.10,\nunperturbed)": [0],
+          "sampled,\ndt = 0.10": [m for m in SAMPLED if DT[m] == 0.10],
+          "sampled,\ndt = 0.05": [m for m in SAMPLED if DT[m] == 0.05]}
+for gx, (label, ms) in enumerate(groups.items()):
+    # Spread within the group: the dt = 0.10 models land within 0.03 of each
+    # other and stack into an unreadable column at a single x.
+    xs = ([gx] if len(ms) == 1
+          else [gx + o for o in np.linspace(-0.16, 0.16, len(ms))])
+    for x, m in zip(xs, sorted(ms)):
+        c = e4.rec("aggregation", m).filter(
+            row="S2-gauci", **{"terrain.friction_amplitude": e4.ROUGH})
+        pr, _lo, _hi = e4.wilson_ci([1.0 if x else 0.0 for x in c.column("ever_single_cluster")])
+        colour = "black" if m == 0 else (FINE if DT[m] == 0.05 else COL[0])
+        ax.plot([x], [pr], "D" if m == 0 else "o", ms=8 if m == 0 else 6, color=colour)
+        ax.annotate(f"{m:02d}", (x, pr), xytext=(0, 8), textcoords="offset points",
+                    ha="center", fontsize=7.5, color=colour)
+ax.set_xticks(range(len(groups)))
+ax.set_xticklabels(list(groups), fontsize=7.8)
+ax.set_xlim(-0.5, len(groups) - 0.3)
+ax.set_ylim(0.55, 1.03)
+ax.set_ylabel("S2-gauci reach at θ_m = 0.9", fontsize=8.2)
+ax.set_title("The same numbers, grouped by timestep", fontsize=9.2)
+ax.grid(alpha=0.22, lw=0.6, axis="y")
+ax.annotate("NOT the noise dials: model 01 draws the HIGHEST dropout of all\n"
+            "(fn_rate 0.091) and reaches 0.97; model 08 draws the HIGHEST wheel\n"
+            "noise (0.042) and reaches 0.97. Every perturbed dt = 0.10 model beats\n"
+            "the noise-free reference, which is ADR 0004's own argument.\n"
+            "Descriptive only — ten models, no model fitted.",
+            xy=(0.03, 0.03), xycoords="axes fraction", fontsize=7.2, color="0.3", va="bottom")
+
+axes = axes[1:]
 
 draw(axes[0][0],
      [("S2-gauci − best-of-three S2-class-flat", COL[0], {m: e4.comparison_1(m) for m in MODELS})],
@@ -146,6 +217,7 @@ for ax in axes[2]:
     ax.set_xlabel("pseudo-reality model  (00 = unperturbed reference)", fontsize=8.5)
 for ax in axes.ravel():
     ax.legend(fontsize=7.6, frameon=False, loc="best")
+axes = fig.axes  # restore, so nothing below indexes the trimmed view
 
 fig.suptitle(
     "Experiment 4: pseudo-reality robustness.  Eleven models — 00 unperturbed, 01–10 drawn from the "
@@ -161,7 +233,7 @@ fig.suptitle(
     "Model numbers in PURPLE BOLD are the five drawn at dt = 0.05 s; the rest, and the reference, "
     "run at dt = 0.10 s. Marked because the family separates on it, not as a claim about why.",
     fontsize=8.6, y=0.996, va="top")
-fig.subplots_adjust(top=0.895, bottom=0.055, left=0.075, right=0.985, hspace=0.30, wspace=0.20)
+fig.subplots_adjust(top=0.915, bottom=0.045, left=0.075, right=0.985, hspace=0.32, wspace=0.20)
 fig.text(0.5, 0.010, UPPER_BOUND_NOTE, ha="center", fontsize=7.5, style="italic", color="#8a3b00")
 fig.savefig("figures/pseudo_reality.png", dpi=160, bbox_inches="tight")
 print("wrote figures/pseudo_reality.png")
