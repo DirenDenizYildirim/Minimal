@@ -187,3 +187,40 @@ two-axis (`survival_task` †) and searched survival-only (`survival` †) — w
 last labelled as survival-only searches. The two-axis story is only complete with
 all four: it is the searched survival-only rows that show the trade-off is not an
 artefact of one hand-designed corner.
+**D3 — comparison 4's κ grid is {0, 5}, not `pursuer_dispersive.toml`'s five
+values.** The registration fixed comparison 3 at κ ∈ {0, 5} and said comparison 4
+was "pooled over κ" without naming the grid. It is pooled over the two values
+comparison 3 already requires. That keeps the pursuit sweep at 36 cells per model
+rather than 90 — 3 686 Mrts total instead of about 7 400 — and it pools the two
+extremes of the confusion dial rather than a middle that would dilute them, which
+is if anything a harder test of an ordering than the full grid. Recorded here
+rather than taken silently, because "pooled over κ" could have been read as all
+five and a reader must not have to guess which.
+
+**D4 — the file-valued axis does not exist, so the registered fallback runs.** A
+sweep's `base` is a single path resolved once (`swarm-cli/src/main.rs`,
+`base_path`) and an axis carries values for one config path, so a whole model
+cannot be an axis value. Per the registration's own "otherwise" clause, the
+family is generated as one config per model by
+`scripts/build_pseudo_reality_configs.py`: ten model base configs
+(`configs/pseudo_reality/model_01.toml` … `model_10.toml`, each
+`gauci_baseline.toml` with exactly the six sampled parameters substituted and
+every substituted line marked) plus one aggregation and one pursuit sweep config
+per model, eleven of each including the unperturbed reference. **Model 00 has no
+base file of its own** and points at `gauci_baseline.toml` directly: a copy of the
+baseline that could drift from the baseline is worse than no copy. The generator
+has a `--check` mode that fails if any generated file is stale, and the driver
+runs it before the sweeps.
+
+**D5 — comparison 2 stays at n = 20**, on review after experiment 2. That is the
+only n at which A1 is graded SUPPORTED; at n ∈ {10, 50} the S = 4 candidates are
+transferred rather than searched, so a robustness check there would be testing the
+robustness of a claim the record does not make. No other comparison changes.
+
+**D6 — the RNG stream is consumed model-major.** "Each parameter drawn uniformly
+and independently … in the order the table lists" admits two readings: six draws
+per model for ten models, or ten draws per parameter. The generator takes the
+first, which is the more natural reading of "in the order the table lists" and is
+now fixed in code, so the family is reproducible from the seed under either
+reading of the sentence. The draw is tabulated in the findings section with all
+sixty values.
