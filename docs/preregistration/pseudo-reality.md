@@ -291,3 +291,65 @@ handling-time debt is paid in whole control steps, so `h = 1.93 s` is really
 the same direction as the `p_lock` error. It is a quantisation of a correctly
 per-second quantity, it is two orders smaller than the effect it sits beside, and
 it is disclosed rather than corrected.
+**D9 — amendment: `wheel_noise` is rescaled to the control period, and all five
+comparisons are re-run on the five `dt = 0.05` models.** Written before the re-run
+and after a diagnostic whose result is stated here so this amendment cannot be
+read as expecting more than it can deliver.
+
+*The defect.* `noise.wheel_noise` was an independent Gaussian of **fixed σ** added
+to each wheel speed every control step. It is noise on a **velocity**, integrated
+over `dt`, so the accumulated displacement variance over a span `T` is
+`(T/dt)·(σ·dt)² = T·σ²·dt` — proportional to `dt`. Same class as the `p_lock`
+defect: a per-step quantity standing in for a per-unit-time one.
+
+*The direction, which is the reciprocal of the one the review named.* The
+Phase 5b review expected `dt = 0.05` models to carry "roughly √2 **more**
+effective actuation noise". They carry **1/√2 ≈ 0.71×**, i.e. less. `σ ∝ √dt` is
+correct for a **direct increment to a state variable** — which is what the
+pursuer's random-walk adds to its *heading*, and why that one already scales that
+way — but a **velocity** noise is multiplied by `dt` before it reaches the state,
+so its invariant scaling is `σ ∝ 1/√dt`: `σ_step = σ_ref·√(0.1/dt)`. Getting this
+backwards would have put the correction on the wrong side.
+
+*The fix.* `NoiseConfig::wheel_sigma_per_step(max_wheel_speed, dt)`. At
+`dt = 0.1` it returns σ **exactly**, by an explicit branch. The only configs with
+both `wheel_noise > 0` and `dt ≠ 0.1` are the five `dt = 0.05` pseudo-reality
+models; `timestep_convergence` and `timestep_fov_gate` vary `dt` but are
+noise-free, and the zero dial returns exactly zero at every `dt`.
+
+*What is re-run.* **All five comparisons** on models 02, 03, 04, 05 and 10 — both
+the aggregation and the pursuit halves, since `wheel_noise` acts on the robots and
+therefore on comparisons 1 and 2 as well. The corrected-pursuit files from D8 are
+superseded by files carrying both fixes; D8's numbers stay in the run log as the
+intermediate step they were.
+
+*What this will not fix, measured before the re-run rather than discovered after.*
+`configs/diagnostics/dt_noise_interaction.toml` puts S2-gauci's reach at
+θ_m = 0.9 at **0.86 at `dt = 0.1` and 0.70 at `dt = 0.05` with the noise dial at
+zero** (intervals overlapping by 0.0024 at 100 runs; an independent 400-run
+replication on a disjoint seed base settles it). With noise at model 05's 0.0377
+the same pair is 0.87 → 0.63. **So the reach drop is mostly a timestep effect on
+the aggregation dynamics and not a noise × `dt` interaction**, and rescaling the
+noise will not remove it. S2-searched is unmoved — 1.00 at both timesteps, with
+and without noise — so the effect is specific to the enumerated row's constants.
+The re-run is still right: it removes a real confound so the family means what its
+parameter table says. It is not expected to restore the `dt = 0.05` models to the
+`dt = 0.10` family, and **D10 is what handles that.**
+
+**D10 — the family is split for interpretation, and the registered counts stand.**
+`sim.dt` is the **robots' control period**: a perturbation of the *robot*, not of
+the *world*, which is not what a Ligot-style pseudo-reality family is for. It
+cannot be removed retroactively — it was registered, drawn and run. So §25 reports
+both:
+
+* **(a) the registered ten-model counts, unchanged**, which is the pre-registered
+  test and the result of record;
+* **(b) the split** — the five `dt = 0.10` models as the **model-only** family and
+  the five `dt = 0.05` models as the **model-plus-control-period** family, with
+  the sign and disjointness counts given for each out of five.
+
+The registered verdicts stand. The split is **interpretation**: it says which
+perturbation class drives which fragility. No threshold is attached to the
+five-model counts — the rule's 9-of-10 and 7-of-10 were set for ten models and
+rescaling them to five after the fact would be inventing a rule — so the split is
+reported as counts and named rows, never as a verdict.

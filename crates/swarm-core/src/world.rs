@@ -279,7 +279,9 @@ impl World {
         }
 
         // 4-5: terrain, actuation noise, then motion.
-        let wheel_noise = self.cfg.noise.wheel_noise * vmax;
+        // Rescaled from the 0.1 s reference control period, so the accumulated
+        // diffusion per unit time does not depend on dt. Identity at dt = 0.1.
+        let wheel_noise = self.cfg.noise.wheel_sigma_per_step(vmax, dt);
         let slip = (wheel_noise > 0.0)
             .then(|| Normal::new(0.0, wheel_noise).expect("sigma is finite and positive"));
         for i in 0..n {

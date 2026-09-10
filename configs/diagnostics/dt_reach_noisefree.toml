@@ -1,0 +1,53 @@
+# FREEZE LIFT 1, PHASE 5c — independent replication of the noise-free half.
+#
+# `dt_noise_interaction.toml` put the noise-free reach drop at 0.86 -> 0.70 over
+# 100 runs a cell, with intervals that OVERLAP BY 0.0024. That is a large point
+# estimate on an interval that does not separate, and the question it answers —
+# are the aggregation dynamics themselves timestep-sensitive, or is the drop a
+# noise x dt interaction? — decides how big a disclosure Methods 4.1 needs. So it
+# gets settled rather than argued.
+#
+# FOUR HUNDRED RUNS, AND A DIFFERENT SEED BASE. Re-running the same cell with
+# more runs off the same seed base would extend the first sample after seeing it,
+# which is optional stopping however innocent the motive. `sim.seed = 20260911`
+# is disjoint from the evaluation seed 20260904, so this is an INDEPENDENT
+# REPLICATION and both numbers are reported. It is a diagnostic: nothing in the
+# record rests on it, no threshold is attached to it, and the evaluation seed for
+# every experiment is unchanged.
+#
+# Noise-free only, and S2-searched alongside as the control: in the 100-run pass
+# it sat at 1.00 at both timesteps, so if it moves here the effect is in the
+# dynamics generally rather than in Gauci's particular constants.
+
+name = "dt-reach-noisefree"
+base = "../gauci_baseline.toml"
+runs_per_cell = 400
+
+[[axis]]
+path = "sim.dt"
+values = [0.1, 0.05]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[rows]]
+label = "S2-gauci"
+[rows.overrides]
+"sim.seed" = 20260911
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+"noise.wheel_noise" = 0.0
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-searched"
+[rows.overrides]
+"sim.seed" = 20260911
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+"noise.wheel_noise" = 0.0
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }

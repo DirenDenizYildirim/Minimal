@@ -247,6 +247,13 @@ job_pseudo_reality_fixed() {
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
+  # Phase 5c: is the dt = 0.05 reach drop a noise x dt interaction or a pure
+  # timestep effect? Nothing in the record rests on the answer, but the reading
+  # of experiment 4 does.
+  sweep_dx "5c diagnostic" dt_noise_interaction dt_noise_interaction
+  # Independent replication of the noise-free half at 400 runs on a disjoint
+  # seed base, because the 100-run intervals overlapped by 0.0024.
+  sweep_dx "5c diagnostic" dt_reach_noisefree dt_reach_noisefree
 }
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda

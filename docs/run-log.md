@@ -1021,3 +1021,5 @@ the original files.
 | 5b eval | `b3beda3` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_10.toml --out results/pseudo_reality_pursuit_fixed_model_10.jsonl` | 2026-09-10T19:09Z | `results/pseudo_reality_pursuit_fixed_model_10.jsonl` | 47 s / 3.5M |
 | 5b figures | `b3beda3` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T19:12Z` | `figures/pseudo_reality_corrected.png`  | 7 s |
 | 5 figures | `b3beda3` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T19:12Z` | `figures/pseudo_reality.png`  | 7 s |
+| 0.3 diagnostic | `95fd72a` | `./target/release/swarm sweep --config configs/diagnostics/f3_seed1_rerun_sanity.toml --out results/f3_seed1_rerun_sanity.jsonl` | 2026-09-10T19:43Z | `results/f3_seed1_rerun_sanity.jsonl` | 22 s / 336K |
+| 5c diagnostic | `95fd72a` | `./target/release/swarm sweep --config configs/diagnostics/dt_noise_interaction.toml --out results/dt_noise_interaction.jsonl` | 2026-09-10T19:45Z | `results/dt_noise_interaction.jsonl` | 125 s / 1.4M |
