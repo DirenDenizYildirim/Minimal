@@ -224,3 +224,25 @@ first, which is the more natural reading of "in the order the table lists" and i
 now fixed in code, so the family is reproducible from the seed under either
 reading of the sentence. The draw is tabulated in the findings section with all
 sixty values.
+**D7 — how the rule applies to a comparison that names several cells.** Written
+before any Phase 5 result was computed. Comparisons 3, 4 and 5 each name more
+than one ordering: comparison 3 has a κ-response ratio for each of three rows,
+comparison 4 a B1-versus-D difference at each of three r_p, and comparison 5 the
+searched row against two references at each of three r_p. The registration says
+"per comparison, no pooling", which fixes that models are never pooled but does
+not say what to do with several orderings inside one comparison.
+
+The rule is applied to **each named ordering separately** — the atomic unit that
+has a sign — and every one is reported with both counts. A comparison is called
+robust only if **every** ordering in it is robust, and fragile if **any** is
+fragile; anything else is "not established either way" for the comparison, with
+the per-ordering verdicts given so the reader can see which cell carried it. This
+is the conservative reading: taking the best ordering in a comparison, or
+averaging them, would let a robust cell hide a fragile one, and H3 predicts
+exactly such a split for comparison 4 at r_p = 0.35 m.
+
+For comparison 3 the "sign" of a κ-response *ratio* is whether it exceeds 1 —
+confusion buys survival or it does not — and "disjoint" means the κ = 5 and κ = 0
+Wilson intervals do not overlap. For the differences in comparisons 1, 2, 4 and 5
+the sign is the sign of the difference and "disjoint" means the two sides'
+intervals do not overlap.
