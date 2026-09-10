@@ -81,17 +81,63 @@ _CACHE: dict[str, Records] = {}
 # so re-running them would burn compute to reproduce files that already exist.
 # Comparisons 1 and 2 are aggregation and contain no pursuer, so `--fixed` cannot
 # and does not change them.
+#
+# `--fixed2` (amendment D9) additionally re-reads the AGGREGATION half, because
+# `wheel_noise` acts on the robots and therefore moves comparisons 1 and 2 too.
+# It supersedes `--fixed`, which is kept so the intermediate step stays runnable.
 FIXED_DT05 = (2, 3, 4, 5, 10)
-USE_FIXED = False
+DT05 = FIXED_DT05                    # the same five: dt is the split, D10
+DT10 = (1, 6, 7, 8, 9)
+USE_FIXED = False                    # D8: the pursuit half only
+USE_FIXED2 = False                   # D9: both halves
 
 
 def rec(group: str, model: int) -> Records:
-    fixed = USE_FIXED and group == "pursuit" and model in FIXED_DT05
-    key = (f"pseudo_reality_pursuit_fixed_model_{model:02d}" if fixed
-           else f"pseudo_reality_{group}_model_{model:02d}")
+    if USE_FIXED2 and model in FIXED_DT05:
+        key = f"pseudo_reality_{group}_fixed2_model_{model:02d}"
+    elif USE_FIXED and group == "pursuit" and model in FIXED_DT05:
+        key = f"pseudo_reality_pursuit_fixed_model_{model:02d}"
+    else:
+        key = f"pseudo_reality_{group}_model_{model:02d}"
     if key not in _CACHE:
         _CACHE[key] = load_jsonl(REPO / "results" / f"{key}.jsonl")
     return _CACHE[key]
+
+
+def split_report(out: dict) -> None:
+    """D10: the same orderings, reported for the two perturbation classes.
+
+    `sim.dt` is the ROBOTS' CONTROL PERIOD — a perturbation of the robot, not of
+    the world — which is not what a Ligot-style pseudo-reality family is for. It
+    was registered, drawn and run, and cannot be removed retroactively. So the
+    ten-model counts above stand as the pre-registered result and this is the
+    interpretation beside them: which perturbation class drives which fragility.
+
+    NO THRESHOLD IS ATTACHED. The rule's 9-of-10 and 7-of-10 were set for ten
+    models; rescaling them to five after the fact would be inventing a rule. The
+    split is counts and named models, never a verdict.
+    """
+    print(f"\n{'='*78}\nD10 — THE SAME ORDERINGS, SPLIT BY PERTURBATION CLASS\n{'='*78}")
+    print("  model-only            : models " + ", ".join(f"{m:02d}" for m in DT10)
+          + "   (dt = 0.10, the reference's own control period)")
+    print("  model + control period: models " + ", ".join(f"{m:02d}" for m in DT05)
+          + "   (dt = 0.05)")
+    print("  Counts only — the rule's thresholds were set for ten models and are")
+    print("  NOT rescaled to five. This is interpretation, not a verdict.\n")
+    print(f"  {'ordering':44s} {'model-only':>18s} {'+ control period':>18s}")
+    for name, e in out["orderings"].items():
+        row = []
+        for group in (DT10, DT05):
+            same = sum(1 for m in group if str(m) in e["per_model"]
+                       and e["per_model"][str(m)]["sign"] == e["reference"]["sign"])
+            dj = sum(1 for m in group if e["per_model"][str(m)]["disjoint"])
+            row.append(f"{same}/5 sign, {dj}/5 dj")
+        flags = " <-- all flips here" if (
+            e["flips"] and set(e["flipping_models"]) <= set(DT05)) else ""
+        print(f"  {name:44s} {row[0]:>18s} {row[1]:>18s}{flags}")
+        out.setdefault("d10_split", {})[name] = dict(
+            model_only=row[0], model_plus_control_period=row[1],
+            flips_all_in_dt05=bool(e["flips"] and set(e["flipping_models"]) <= set(DT05)))
 
 
 # ------------------------------------------------------------------ statistics
@@ -366,8 +412,9 @@ def reach_diagnostic(out: dict) -> None:
 
 
 def main() -> int:
-    global USE_FIXED
-    USE_FIXED = "--fixed" in sys.argv
+    global USE_FIXED, USE_FIXED2
+    USE_FIXED2 = "--fixed2" in sys.argv
+    USE_FIXED = "--fixed" in sys.argv and not USE_FIXED2
 
     missing = [f"pseudo_reality_{g}_model_{m:02d}.jsonl"
                for m in MODELS for g in ("aggregation", "pursuit")
@@ -376,16 +423,30 @@ def main() -> int:
         missing += [f"pseudo_reality_pursuit_fixed_model_{m:02d}.jsonl" for m in FIXED_DT05
                     if not (REPO / "results"
                             / f"pseudo_reality_pursuit_fixed_model_{m:02d}.jsonl").exists()]
+    if USE_FIXED2:
+        missing += [f"pseudo_reality_{g}_fixed2_model_{m:02d}.jsonl"
+                    for m in FIXED_DT05 for g in ("aggregation", "pursuit")
+                    if not (REPO / "results"
+                            / f"pseudo_reality_{g}_fixed2_model_{m:02d}.jsonl").exists()]
     if missing:
         print(f"missing {len(missing)} results files, first: {missing[0]}", file=sys.stderr)
         return 1
 
     out: dict = {"rule_source": "docs/preregistration/pseudo-reality.md @ 367ee93 (+D1-D8)",
-                 "corrected_pursuit": bool(USE_FIXED),
+                 "corrected_pursuit": bool(USE_FIXED or USE_FIXED2),
+                 "corrected_both_halves": bool(USE_FIXED2),
                  "orderings": {}, "comparisons": {}}
 
     print("=" * 78)
-    if USE_FIXED:
+    if USE_FIXED2:
+        print("AMENDMENT D9 RUN — BOTH halves re-read for the five dt = 0.05 models, from")
+        print("sweeps re-run with the dt-aware p_lock AND the control-period-scaled")
+        print("wheel_noise. wheel_noise acts on the robots, so comparisons 1 and 2 move too.")
+        print("This is NOT the pre-registered test. The registered rule fired on the")
+        print("original family and that verdict stands in §25, unedited.")
+        print("=" * 78)
+        print("=" * 78)
+    elif USE_FIXED:
         print("AMENDMENT D8 RUN — the PURSUIT comparisons re-read from the sweeps re-run")
         print(f"with the dt-aware p_lock, for models {', '.join(f'{m:02d}' for m in FIXED_DT05)}"
               " (the dt = 0.05 ones).")
@@ -438,6 +499,7 @@ def main() -> int:
     summarise("comparison 5 (searched S = 3 ordering)", names5, out)
 
     flip_table(out)
+    split_report(out)
 
     print(f"\n{'='*78}\nVERDICTS — per comparison, never pooled across comparisons\n{'='*78}")
     for k, v in out["comparisons"].items():
