@@ -220,4 +220,37 @@ ceiling, stop and report rather than reducing runs per cell.
 
 Anything that changed after registration, and why. Append; do not edit above.
 
-*(none yet)*
+**D1 — how `survival_task`'s three-survivor guard was operationalised**, recorded
+before the searches ran. The registration says "if fewer than 3 survive, the task
+term is undefined and the condition scores 0", which reads per *run* while the
+objective is defined per *condition*. Implemented as: a run with fewer than three
+survivors contributes no task term, the condition's task term is the median over
+the runs that do clear the bar, and a condition in which **no** run clears it
+scores 0. That preserves the guard's purpose exactly — a swarm reduced to two
+robots sitting on each other must not score a perfect dispersion — without
+discarding a condition because one of its two training runs went badly.
+`crates/swarm-cli/src/search.rs` carries the same wording, and
+`a_run_with_too_few_survivors_contributes_no_task_term` pins it.
+
+**D2 — what the searches measured, recorded after they ran and before the
+evaluation was read.** All six searches recorded a clean git hash and config
+hash, so the F3 requirement above was live for its first use. Optimiser seeds 1,
+2 and 3 with the training base held at 930000, as registered.
+
+**D3 — G4 is split in two, on review, after the rule fired.** The rule itself is
+NOT changed and was not re-run: `S3-survival_task-s2` beat B1-ternary ‡ in 13 of
+25 cells against a threshold of 12, and that is reported as a pass. What changed
+is which claim the result feeds. The rule compared against B1 because B1 was the
+best S = 3 row in existence; now that a searched row exists, the *capability*
+question — S = 3 against S = 2 — is properly asked against **B0-blind**, and that
+comparison is a different and much stronger one (18 of 25, 0 losses). So:
+
+* **G4**, the capability claim, is stated against B0 and graded on the B0
+  comparison.
+* **G4′**, secondary and regime-specific, is stated against B1 and carries the
+  13-of-25, one-seed-of-three margin as an explicit hedge.
+
+This is a re-attribution of an unchanged measurement, not a re-run against a
+moved bar, and it is recorded here so that distinction is on the record rather
+than in a reviewer's inference. Both comparisons come from the same sweep and
+the same seeds; no new simulation was run for either.

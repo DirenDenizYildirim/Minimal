@@ -74,6 +74,13 @@ whole-plan ceiling is **60 core-hours**, and because the dry-run throughput mode
 proved about 2× optimistic here, every Phase 2–5 estimate is reported as the
 dry-run figure **× 2.1**.
 
+**Revised again on review of Phase 2.** The robot-timestep line had no bite on
+this simulator — one 100-run cell at n = 20, τ = 600 s is already 12 × 10⁶, so any
+experiment with ≥ 17 such cells crossed it, and Phase 2 crossed it at 4.6% of the
+plan ceiling. It is replaced by a **per-experiment blocking threshold of 10
+corrected core-hours**; the 60 core-hour plan ceiling stands. Both are reported
+before each experiment runs, at the ×2.1 correction.
+
 ### Findings
 
 Three groups of §13 rows do not reproduce. Each is diagnosed to a commit, and
@@ -305,6 +312,77 @@ overlapping interval — while holding the base task at **1.39** against D's
 **379.90**. It very nearly matches the task-abandoning row's survival at 273× the
 task quality, which is a stronger version of §12's two-axis point than any
 hand-designed row could make.
+
+### G4 is split, on review: the capability claim is against B0, not B1
+
+The rule compared against B1-ternary ‡ because B1 was the best S = 3 row in
+existence. Now that a searched row exists, the *capability* question — what one
+extra sensor state buys — is properly asked against the S = 2 row, **B0-blind**.
+Same sweep, same seeds, no new simulation. `searched-s3-pursuer.md` D3 records the
+split; the rule itself was neither changed nor re-run.
+
+**G4, the capability claim.** Best-of-three searched S = 3 † beats B0-blind on
+mean per-robot survival with disjoint Wilson intervals in **18 of 25** held-out
+cells at h = 1.93 s, **0 worse**, 7 overlapping, while holding dispersion among
+survivors at **1.41 [1.40, 1.42]** against B0's **1.45 [1.45, 1.47]** — at or
+better than the S = 2 row's own task quality. Per seed the counts are 18 / 17 / 14
+(0 / 1 / 5 losses), so this does not depend on which seed is picked. Pooled at
+h = 1.93 s the three seeds are 0.4802 / 0.5125 / 0.4413 against B0's **0.3655
+[0.3613, 0.3697]**, every interval disjoint and above.
+
+The margin over B0 is far wider than the 13-of-25 margin over B1, which is what
+should be expected: B1 already beats B0 in 19 of 25. The point of the searched row
+is not that it beats B1 by more, but that the *capability* claim now rests on a
+row that was **searched** (†) rather than guessed (‡). That is the whole upgrade,
+and it is worth saying plainly that B1's 19 of 25 was never weak evidence about
+the capability — it was evidence about a guess.
+
+Best-of-three per cell is §21's branch (b) convention and carries a selection
+effect: picking the largest of three noisy estimates and then testing it biases
+toward "better". The per-seed counts above are given precisely so a reader can see
+the conclusion does not depend on the selection.
+
+**G4′, secondary and regime-specific.** A searched S = 3 row beats the
+hand-designed B1 ‡ in the low-κ, mid-range regime — 13 of 25 cells, **one seed of
+three**, rows converging at κ ≥ 2.5 and B1 edging ahead at the perfect-perception
+corner. Its job in the paper is the sentence "the hand-designed rows are close to
+what a class search finds", which is itself worth having.
+
+### The survival rows' dispersion is not a near-wipeout artefact
+
+Checked, because a dispersion of 14 492 quoted on a handful of survivors would be
+meaningless. It is the opposite:
+
+| row | usable runs (≥ 3 survivors) | survivors: min / p5 / median | runs with ≤ 5 survivors |
+|---|---|---|---|
+| S3-survival-s1 † | **2500 / 2500** | 10 / 14 / 17 | **0** |
+| S3-survival-s2 † | **2500 / 2500** | 9 / 14 / 17 | **0** |
+| S3-survival-s3 † | **2500 / 2500** | 9 / 13 / 16 | **0** |
+| D-dispersive ‡ | 2476 / 2500 | 3 / 5 / 13 | 200 (8.1%), median dispersion 1068 |
+| B1-ternary ‡ | 1479 / 2500 | 3 / 4 / 17 | 173 (11.7%), median dispersion 11 |
+
+The survival rows' dispersions are computed on nearly-full swarms — every run
+usable, never fewer than nine survivors. They are not almost-dead swarms with two
+robots far apart; they are nearly-intact swarms spread over hundreds of metres.
+The caveat belongs instead on **D-dispersive and B1**, whose dispersions do rest
+partly on low-survivor runs, and the figure caption says so.
+
+### Seed 3 and the noise floor, for the methods companion
+
+`survival_task` seed 3 returned **0.4581** against seeds 1 and 2 at 0.6804 and
+0.6608 — a third of the way down, from the same start, the same budget and the
+same training base. Its winner's-curse gap is the *smallest* of the three
+(**+0.0142** against +0.1687 and +0.1007), which is the signature of a search that
+stalled early rather than one that overfitted: it found a poor point and stopped
+improving, so its reported objective was close to honest. Seeds 1 and 2 also
+converged on nearly the same controller — state 0 ≈ (−0.4, −0.91), state 1 ≈
+(+0.62, −0.84), state 2 ≈ (−0.855, −0.813) — so the distribution is not smooth but
+bimodal: two seeds finding the same basin and one stalling.
+
+Flagged for **C4/C5** in the methods companion: `survival_task` has a noise floor
+a search can stall in, and this is a measured instance of it in a second objective
+and a second dial. §20 found the same shape at θ_m = 0.9 on the dispersion
+objective.
 
 ### Invocations
 

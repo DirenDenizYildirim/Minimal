@@ -161,4 +161,29 @@ reduce runs per cell if the revised **60 core-hour** plan ceiling is threatened.
 
 Anything that changed after registration, and why. Append; do not edit above.
 
-*(none yet)*
+**D1 — comparison 5 is now defined**, since experiment 1's rule (a) fired. It was
+registered conditionally ("if Phase 2's rule (a) fired: that row vs B1 at the same
+cells") and is now:
+
+> **best-of-three searched S = 3 †** against **B0-blind** *and* against
+> **B1-ternary ‡**, at comparison 4's cells: r_p ∈ {0.1, 0.35, 1.0} m, pooled over
+> κ, h = 1.93 s. Statistic and rule as comparison 4 — sign and disjointness of the
+> mean per-robot survival difference at each r_p.
+
+Two references rather than one because experiment 1 split G4 in two (see
+`searched-s3-pursuer.md` D3): the comparison against B0 is the capability claim
+that goes in the abstract, and the comparison against B1 is the regime-specific
+one. A robustness check on the first without the second would leave the weaker
+claim untested and the stronger one looking like the only claim made.
+
+Best-of-three is **per cell**, per §21's branch (b), which experiment 1's seed
+spread (166%) put firmly in force.
+
+**D2 — the Pareto figure gains the survival-only rows.** `figures_pareto.py`
+draws §12's figure from `pursuer_pareto.jsonl` and is left alone; experiment 1's
+own Pareto figure shows **all four kinds of row** on one pair of axes —
+hand-designed aggregating (B0, B1 ‡), hand-designed dispersive (D ‡), searched
+two-axis (`survival_task` †) and searched survival-only (`survival` †) — with the
+last labelled as survival-only searches. The two-axis story is only complete with
+all four: it is the searched survival-only rows that show the trade-off is not an
+artefact of one hand-designed corner.
