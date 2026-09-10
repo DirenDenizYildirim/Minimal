@@ -596,6 +596,155 @@ it.
 additively — with the new results file absent its JSON output is byte-identical
 to before the change, which is how that was checked.
 
+## Freeze lift 1 — Phase 5: the pseudo-reality robustness check
+
+Pre-registered at `docs/preregistration/pseudo-reality.md`, commit **`367ee93`**,
+with deviations D1–D7 appended there — D3–D7 all **before** anything ran.
+Following Ligot & Birattari (2020), eleven models: 00 unperturbed, 01–10 drawn
+from the pre-registered sampling seed `20260910` by
+`scripts/build_pseudo_reality_configs.py`, which executes the draw so the family
+is reproducible from the seed rather than transcribed.
+`scripts/experiment4_decision.py` applies the rule; `harness/figures_pseudo_reality.py`
+draws it, importing every statistic from that script so the figure cannot disagree
+with the rule.
+
+**Budget.** 52 800 trials over 22 sweeps, **3 686 Mrts**, **2.97 corrected
+core-hours** — the largest of the four experiments and still well inside the 10
+core-hour per-experiment threshold. Running total across the whole freeze lift is
+about **49 core-hours** against the 60 core-hour plan ceiling, of which Phase 0's
+regeneration is 44.6.
+
+### Verdicts, per comparison, never pooled
+
+| # | comparison | verdict | counts |
+|---|---|---|---|
+| 1 | terrain tax: S2-gauci vs best-of-three S2-class-flat | **ROBUST** | 10/10 same sign, 10/10 disjoint |
+| 2 | capability flatness: S4-terrain † vs S2-searched † | *not established either way* | 9/10 same sign, **4/10 disjoint** (needs 7) |
+| 3 | confusion through aggregation (three rows) | **ROBUST** | 10/10 sign for all three; disjoint 10, 10, **7** |
+| 4 | matched pair B1 ‡ vs D ‡ (three r_p) | *not established either way* | robust at 0.35 m and 1 m; at **r_p = 0.1 m** 10/10 sign but **3/10 disjoint** |
+| 5 | searched S = 3 † vs B0 and vs B1 (six orderings) | **FRAGILE** | five of six fine; **S3 † vs B1 at r_p = 1 m flips in 5 of 10** |
+
+Two of the three predictions were wrong, and the way they were wrong is the
+result. H1 said comparisons 1 **and 2** would both be robust: 1 is, 2 is not — its
+signs hold but its intervals overlap in six of ten models, which is the branch the
+pre-registration named "not established either way" and said must not be written
+as robustness. H3 said comparison 4 would be at risk **at r_p = 0.35 m**, where
+§8's crossing sits: 0.35 m turns out to be its most robust cell (10/10 disjoint),
+and the weak one is r_p = 0.1 m, where the effect is real in sign but only −0.003
+to −0.040 in size — too small for 2 000 robots to separate. H2 was right:
+comparison 3 is robust in sign, everywhere, for all three rows.
+
+### The fragility is located, and it is not in the abstract's claim
+
+Comparison 5 is fragile because of **one ordering out of six**: best-of-three
+searched S = 3 † against **B1-ternary ‡** at **r_p = 1 m**, which is the
+perfect-perception corner (1.35 R — the pursuer sees the whole starting swarm from
+anywhere in it). The same row against **B0-blind** is ROBUST at r_p = 0.1 and
+0.35 m and merely *not established* at 1 m, with **no flips at all**.
+
+That distinction matters because of how the Phase 2 review split G4:
+
+* **G4, the capability claim that goes in the abstract**, is against **B0**. Its
+  orderings do not flip in any model.
+* **G4′, the regime-specific claim**, is against **B1**. That is the one that
+  flips, and only at the perfect-perception corner.
+
+Per the pre-registration, a fragile result **does not retract** the claim — it
+bounds it. G4′ holds at the design model, which is where it was measured, and the
+register entry gains the qualifier that its ordering at r_p = 1 m does not survive
+this neighbourhood.
+
+### The flip separates perfectly on the timestep, and the reason is in the code
+
+| | models | flip C5 † vs B1 at r_p = 1 m |
+|---|---|---|
+| dt = 0.05 s | 02, 03, 04, 05, 10 | **5 of 5** |
+| dt = 0.10 s | 01, 06, 07, 08, 09 | **0 of 5** |
+
+The pre-registration forbids a regression, a significance test or a claim of
+mechanism from the flip table, and none is made: ten models over six parameters
+cannot support one. But the table separates exactly, and **one fact about the code
+is not an inference from ten models**. `pursuer.rs::step` re-rolls
+`p_lock = 1/(1 + κ·n_local)` on **every acquisition attempt**, and an attempt
+happens once per *control step* while the pursuer is unlocked. So the probability
+of acquiring within a second is `1 − (1 − p_lock)^(1/dt)`: **a per-step Bernoulli
+standing in for a per-second rate.** Halving the timestep doubles the pursuer's
+acquisition attempts per second. Handling time is not affected — `self.handling -= dt`
+is in seconds and is correct.
+
+§2.2's "the result is independent of the timestep" is about **exact-arc
+integration of the motion**, and it is true of the motion. It was never a
+statement about the pursuit, and this experiment is where the difference shows.
+Mean per-robot survival at r_p = 1 m, pooled over κ, by timestep:
+
+| row | dt = 0.10 (6 models) | dt = 0.05 (5 models) | ratio |
+|---|---|---|---|
+| B0-blind | 0.0422 | **0.0004** | 0.01× |
+| B1-ternary ‡ | 0.0702 | 0.0238 | 0.34× |
+| D-dispersive ‡ | 0.3579 | 0.3586 | **1.00×** |
+| S3-survival_task-s1 † | 0.0498 | 0.0798 | 1.60× |
+| S3-survival_task-s2 † | 0.0492 | 0.0913 | 1.85× |
+| S3-survival_task-s3 † | 0.0203 | 0.0185 | 0.91× |
+
+At r_p = 0.1 m every row is within 1–2% of itself across the two timesteps; at
+0.35 m the largest move is B0 at 0.81×. **The sensitivity is confined to the
+perfect-perception corner and falls hardest on the aggregating rows, while the
+dispersive row is untouched.** A reading consistent with that — a stationary
+cluster is re-acquired more often when there are twice as many attempts per
+second, whereas a dispersed swarm costs the pursuer travel time it cannot recover
+by attempting more — is offered as a reading and not as a finding; nothing here
+tests it.
+
+**This is a disclosure, not a defect being fixed.** Every published pursuit number
+is at dt = 0.10 and stands as measured; changing the pursuer now would invalidate
+all of them and violate rule 2. What changes is what may be said: the pursuit
+results are **calibrated at dt = 0.10**, the perfect-perception corner is the
+regime where that calibration bites, and §2.2's timestep-independence must not be
+quoted as covering it. It belongs in Limitations, in §12.3, and in the methods
+companion alongside the F3 provenance disclosure.
+
+### Comparison 2's overlap, and comparison 1's caveat
+
+Comparison 2 keeps its sign in 9 of 10 (the rule's threshold) and loses on
+disjointness, 4 of 10. The single flip is **model 09** at −0.0554, which is the
+model with the largest contact tolerance (1.98e-5) and the second-largest dropout
+rate (0.0849) — but **model 01 has the largest dropout of all (0.0906) and does
+not flip**, so the table offers no single-parameter story and none is claimed.
+The honest summary is that A1's margin at the design point (+0.1133 [+0.0666,
++0.1510]) is not large enough to survive this much implementation noise as a
+*disjoint* ordering, which is consistent with experiment 2 finding the same margin
+thin in n.
+
+**Comparison 1's robustness has a caveat the rule does not see.** The reach
+diagnostic — reported, not thresholded, and added to the script before any Phase 5
+number was read — shows S2-gauci reaching a single cluster in only **0.65** of runs
+in model 05 and 0.80 in model 03, against 0.94–1.00 for every tuned row in every
+model (the reference itself is 0.86 for gauci). Model 05 also carries C1's largest
+difference, +1.1811. So part of C1's robustness is the enumerated row failing to
+aggregate at all in the noisier models rather than merely being taxed more. That is
+a *stronger* version of the same ordering, but it is a different mechanism from the
+one A2 states, and the findings section must say so rather than banking the count.
+
+### What this experiment cannot say, in the words that must travel with it
+
+The family perturbs **implementation** choices — actuation noise, sensor dropout,
+contact-solver effort, timestep — around the design point. The kinematics, the
+traction model, the pursuer's lock-on law and the sensor geometry are identical in
+every model. A result robust here is robust to **how carefully the simulator is
+integrated and how noisy its sensors are, not to whether the model is right.**
+This is not a reality-gap study: no hardware, no ARGoS, no second simulator, and
+§12.3 already records that none of those exist. This experiment does not change
+that; it answers a narrower question than the objection that prompted it, and the
+paper must not let the narrower answer stand in for the wider one.
+
+### Outputs
+
+22 result files `results/pseudo_reality_{aggregation,pursuit}_model_XX.jsonl`
+(52 800 records), `figures/pseudo_reality.png` from
+`harness/figures_pseudo_reality.py`, and `figures/pursuer_searched_s3_pareto.png`
+from `harness/figures_pursuer_searched_s3_pareto.py` — experiment 1's own Pareto
+figure with all four kinds of row, which is deviation D2 of this pre-registration.
+
 ### Invocations
 
 | phase | commit | command | when (UTC) | output | wall / size |
@@ -702,3 +851,18 @@ to before the change, which is how that was checked.
 | 5 eval | `310100b` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_03.toml --out results/pseudo_reality_pursuit_model_03.jsonl` | 2026-09-10T16:22Z | `results/pseudo_reality_pursuit_model_03.jsonl` | 28 s / 3.5M |
 | 5 eval | `4d15db6` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_04.toml --out results/pseudo_reality_aggregation_model_04.jsonl` | 2026-09-10T16:24Z | `results/pseudo_reality_aggregation_model_04.jsonl` | 91 s / 1.1M |
 | 5 eval | `4d15db6` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_04.toml --out results/pseudo_reality_pursuit_model_04.jsonl` | 2026-09-10T16:24Z | `results/pseudo_reality_pursuit_model_04.jsonl` | 28 s / 3.5M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_05.toml --out results/pseudo_reality_aggregation_model_05.jsonl` | 2026-09-10T16:25Z | `results/pseudo_reality_aggregation_model_05.jsonl` | 86 s / 1.1M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_05.toml --out results/pseudo_reality_pursuit_model_05.jsonl` | 2026-09-10T16:26Z | `results/pseudo_reality_pursuit_model_05.jsonl` | 24 s / 3.5M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_06.toml --out results/pseudo_reality_aggregation_model_06.jsonl` | 2026-09-10T16:27Z | `results/pseudo_reality_aggregation_model_06.jsonl` | 43 s / 1.1M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_06.toml --out results/pseudo_reality_pursuit_model_06.jsonl` | 2026-09-10T16:27Z | `results/pseudo_reality_pursuit_model_06.jsonl` | 15 s / 3.5M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_07.toml --out results/pseudo_reality_aggregation_model_07.jsonl` | 2026-09-10T16:28Z | `results/pseudo_reality_aggregation_model_07.jsonl` | 44 s / 1.1M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_07.toml --out results/pseudo_reality_pursuit_model_07.jsonl` | 2026-09-10T16:28Z | `results/pseudo_reality_pursuit_model_07.jsonl` | 13 s / 3.5M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_08.toml --out results/pseudo_reality_aggregation_model_08.jsonl` | 2026-09-10T16:29Z | `results/pseudo_reality_aggregation_model_08.jsonl` | 49 s / 1.1M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_08.toml --out results/pseudo_reality_pursuit_model_08.jsonl` | 2026-09-10T16:29Z | `results/pseudo_reality_pursuit_model_08.jsonl` | 16 s / 3.5M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_09.toml --out results/pseudo_reality_aggregation_model_09.jsonl` | 2026-09-10T16:30Z | `results/pseudo_reality_aggregation_model_09.jsonl` | 43 s / 1.1M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_09.toml --out results/pseudo_reality_pursuit_model_09.jsonl` | 2026-09-10T16:30Z | `results/pseudo_reality_pursuit_model_09.jsonl` | 14 s / 3.5M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/aggregation_model_10.toml --out results/pseudo_reality_aggregation_model_10.jsonl` | 2026-09-10T16:31Z | `results/pseudo_reality_aggregation_model_10.jsonl` | 82 s / 1.1M |
+| 5 eval | `5b5bdae` | `./target/release/swarm sweep --config configs/pseudo_reality/pursuit_model_10.toml --out results/pseudo_reality_pursuit_model_10.jsonl` | 2026-09-10T16:32Z | `results/pseudo_reality_pursuit_model_10.jsonl` | 24 s / 3.5M |
+| 5 figures | `5b5bdae` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T16:35Z` | `figures/pseudo_reality.png`  | 7 s |
+| 5 figures | `5b5bdae` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pseudo_reality.py` | `2026-09-10T16:36Z` | `figures/pseudo_reality.png`  | 8 s |
+| 5 figures | `5b5bdae` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_pursuer_searched_s3_pareto.py` | `2026-09-10T16:37Z` | `figures/pursuer_searched_s3_pareto.png`  | 3 s |
