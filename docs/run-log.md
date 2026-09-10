@@ -210,6 +210,102 @@ the script draws it and the caption says so.
 because Phase 0 does not authorise editing the source document; the correction
 belongs in Phase 6.
 
+---
+
+## Freeze lift 1 — Phase 2: a *searched* S = 3 pursuer row
+
+Pre-registered at `docs/preregistration/searched-s3-pursuer.md`, commit
+**`577f15a`**, before any code was written or any search ran.
+
+### What existed, and what had to be added
+
+The pre-registration's "check first" came back: `swarm search` already searched a
+`kind = "table"` controller at `sensor.encoding = "ternary"` over six constants,
+and a `[pursuer]` block was already live during a search (a 5-run probe at
+r_p = 0.35 m, κ = 2.5 gave 0–8 captures per run). Only the objective was missing.
+
+`--objective` was added at **`e18a356`**, defaulting to `dispersion`. Rule 2's
+bit-neutrality check: `scripts/verify_determinism.py` byte-identical before and
+after, and a budget-40 search agreeing with the pre-change binary on every field
+it already had, `best_constants` and the whole `history` included. Nine new tests;
+119 Rust tests against 110.
+
+The same commit implements finding F3's requirement — search output records the
+git hash (with `-dirty` when the tree is not clean) and an FNV-1a hash of the
+resolved base config. **All six searches recorded clean hashes**, at `126bde3`,
+`e088818` and `1b31dc7`.
+
+### Budget
+
+Dry-run at the ×2.1 correction: six searches 1.67 core-h, three evaluation sweeps
+1.08 core-h, **2.75 core-h total** for 137 700 trials and 3 305 Mrts. That crosses
+the per-experiment 2 × 10⁶ × 100 line and sits at 4.6% of the 60 core-hour plan
+ceiling. Recorded rather than waved through — and worth stating that the literal
+gate has little bite on this simulator, since one 100-run cell at n = 20,
+τ = 600 s is already 12 Mrts and any experiment with ≥ 17 such cells crosses it.
+
+### The two objectives separated completely
+
+| search | training objective | state-0 arc | state 1 (robot seen) |
+|---|---|---|---|
+| `survival` s1 | 0.8614 | **1624.8 cm** | (−0.785, −0.785) — ignores it |
+| `survival` s2 | 0.8702 | **169.0 cm** | (−0.975, −0.949) — ignores it |
+| `survival` s3 | 0.8536 | **160.3 cm** | (−0.737, −0.735) — ignores it |
+| `survival_task` s1 | 0.6804 | 8.5 cm | (+0.607, −0.847) — turns toward |
+| `survival_task` s2 | 0.6608 | 5.4 cm | (+0.646, −0.838) — turns toward |
+| `survival_task` s3 | 0.4581 | 0.5 cm | (+0.155, +0.386) — turns toward |
+
+Every `survival` seed has state 0 and state 1 as near-identical negative pairs:
+the robot never stops for a neighbour. That is D-dispersive's construction,
+arrived at independently three times **from a B1-ternary starting point**.
+
+### Which rule fired
+
+`scripts/experiment1_decision.py` applies the rule; its thresholds are
+transcribed from `577f15a` into named constants so that editing one to fit a
+result is a visible act.
+
+**(a) FIRES, on one seed of three, by one cell.** `S3-survival_task-s2` beats
+B1-ternary ‡ on mean per-robot survival with disjoint Wilson intervals in
+**13 of 25** held-out cells at h = 1.93 s (rule: ≥ 12), loses 1, overlaps 11,
+and holds **dispersion among survivors at 1.40 [1.39, 1.42]** against a bar of
+3.0 — better than B1's own 1.52. Pooled at h = 1.93 s it is
+**0.5125 [0.5081, 0.5169]** against B1's **0.4596 [0.4553, 0.4640]**, disjoint,
+and it is wiped out in 16.4% of runs against B1's 24.2%. Seeds 1 and 3 do not
+fire (6 of 25, and 6 with 11 losses).
+
+**(b) FIRES on all three `survival` seeds.** State-0 arcs 1624.8 / 169.0 /
+160.3 cm against a 50 cm bar, and dispersion among survivors **14 492 / 10 872 /
+9 744** against a bar of 10 — two orders of magnitude past D-dispersive's own
+370.4. They do not merely abandon aggregation, they fly apart. They also beat B1
+on survival in **19 of 25** cells, which is the point: survival alone is easy to
+maximise and the row that maximises it is useless.
+
+**Seed spread is 224.8% and 166.4%**, far outside §21's 10% agreement rule, so
+§21's branch (b) applies: the baseline is **best-of-three † per cell** and the
+scatter is the uncertainty, not a nuisance to average away.
+
+**Winner's curse**, honest re-score at 100 runs per training condition against 2:
+`survival` +0.0215 / +0.0339 / +0.0364; `survival_task` **+0.1687** / +0.1007 /
++0.0142. The two-axis objective is markedly noisier to estimate, which is the
+same lesson §20 drew at θ_m = 0.9.
+
+### Where the advantage lives, and where it does not
+
+The 13 winning cells are not scattered: they are the **low-κ, mid-range** ones,
+where the pursuer is dangerous and confusion does not rescue the swarm. At κ ≥ 2.5
+the searched row and B1 converge and B1 edges ahead. At the perfect-perception
+corner (r_p = 1.0 m = 1.35 R, κ = 3) the searched row collapses to 0.0335
+[0.0265, 0.0423] against B1's 0.0525 — **worse**. The advantage is
+regime-specific and the write-up must say so.
+
+At the Pareto cell r_p = 0.2 m, κ = 0 the searched row reaches survival
+**0.6795 [0.6587, 0.6996]** against D-dispersive's 0.7040 [0.6836, 0.7236] — an
+overlapping interval — while holding the base task at **1.39** against D's
+**379.90**. It very nearly matches the task-abandoning row's survival at 273× the
+task quality, which is a stronger version of §12's two-axis point than any
+hand-designed row could make.
+
 ### Invocations
 
 | phase | commit | command | when (UTC) | output | wall / size |
@@ -299,3 +395,6 @@ belongs in Phase 6.
 | 2 search | `e088818` | `./target/release/swarm search --out results/search_s3_pursuer_survival_task_seed1.json --config configs/search/train_s3_pursuer_survival_task.toml --objective survival_task --budget 1200 --runs-per-eval 12 --seed 1 --training-seed 930000 --init [-0.7,-1.0,1.0,-1.0,-1.0,-1.0] --class pursuer.range=0.2,0.35,0.6 --class pursuer.confusion=0.5,2.5` | 2026-09-10T12:47Z | `results/search_s3_pursuer_survival_task_seed1.json` | 72 s / 8.0K |
 | 2 search | `1b31dc7` | `./target/release/swarm search --out results/search_s3_pursuer_survival_task_seed2.json --config configs/search/train_s3_pursuer_survival_task.toml --objective survival_task --budget 1200 --runs-per-eval 12 --seed 2 --training-seed 930000 --init [-0.7,-1.0,1.0,-1.0,-1.0,-1.0] --class pursuer.range=0.2,0.35,0.6 --class pursuer.confusion=0.5,2.5` | 2026-09-10T12:48Z | `results/search_s3_pursuer_survival_task_seed2.json` | 74 s / 8.0K |
 | 2 search | `1b31dc7` | `./target/release/swarm search --out results/search_s3_pursuer_survival_task_seed3.json --config configs/search/train_s3_pursuer_survival_task.toml --objective survival_task --budget 1200 --runs-per-eval 12 --seed 3 --training-seed 930000 --init [-0.7,-1.0,1.0,-1.0,-1.0,-1.0] --class pursuer.range=0.2,0.35,0.6 --class pursuer.confusion=0.5,2.5` | 2026-09-10T12:49Z | `results/search_s3_pursuer_survival_task_seed3.json` | 45 s / 8.0K |
+| 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3.toml --out results/pursuer_searched_s3.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3.jsonl` | 158 s / 42M |
+| 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_pareto.toml --out results/pursuer_searched_s3_pareto.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_pareto.jsonl` | 19 s / 5.1M |
+| 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_rescore.toml --out results/pursuer_searched_s3_rescore.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_rescore.jsonl` | 19 s / 5.1M |
