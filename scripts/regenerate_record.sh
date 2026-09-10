@@ -190,7 +190,6 @@ job_eval_s3() {
 }
 
 # ------------------------------------------------------- freeze lift 1, phase 3
-# ------------------------------------------------------- freeze lift 1, phase 3
 job_capability_n() {
   # Pre-registered at docs/preregistration/capability-flatness-n.md (0dd7ae1).
   sweep "3 eval" terrain_capability_n terrain_capability_n
@@ -202,6 +201,15 @@ job_capability_n_tau() {
   sweep "3 eval" terrain_capability_n_tau terrain_capability_n_tau
 }
 
+# ------------------------------------------------------- freeze lift 1, phase 4
+job_tuning_lambda() {
+  # Pre-registered at docs/preregistration/lambda-tuning-control.md (d6c40c8).
+  # The three rows of terrain_tuning_control.toml, unchanged, at lambda = 0.05
+  # and 0.20 m. Same base seed as the lambda = 0.10 m sweep, so the cells pair by
+  # run index against it and the three lambdas are one experiment.
+  sweep "4 eval" terrain_tuning_control_lambda terrain_tuning_control_lambda
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
@@ -209,7 +217,7 @@ job_diagnostics() {
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
      searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
-     capability_n capability_n_tau)
+     capability_n capability_n_tau tuning_lambda)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"
