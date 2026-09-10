@@ -26,6 +26,15 @@ fill its own panel and look like structure.
 
 Both rows are Gauci's enumerated constants, so neither carries † nor ‡: what
 varies is the environment model, not the controller.
+
+NOT A BYTE-FOR-BYTE PORT, and it cannot be one. The image this replaces was drawn
+by a `swarm-figure` invocation whose arguments were never recorded, so there is
+no committed original to compare against and no way to tell whether any
+reconstruction is the same figure — the one attempt made during the verification
+pass differed from the committed PNG in 44% of pixels. What this script
+reproduces is the figure `paper-source.md` §10 *describes*. Written 2026-09-10,
+in the freeze-lift-1 Phase 0 regeneration; nobody should read a later diff
+against the lost image as a regression.
 """
 
 import matplotlib

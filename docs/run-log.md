@@ -66,8 +66,13 @@ both quadratic, and because it read `τ` from the dry run but not `dt`.
 robot-timesteps × 100 on their own — `phase0_seeds` is 1.0 × 10⁹,
 `terrain_class_eval_tau` 2.1 × 10⁹. They were run anyway: their cell counts and
 runs/cell are fixed by the frozen configs, cutting runs/cell is forbidden by the
-same rule, and the plan as a whole is inside the ~48 core-hour ceiling. This is
-recorded rather than waved through.
+same rule, and the plan as a whole is inside the ceiling. This is recorded rather
+than waved through.
+
+**Revised gate, in force from Phase 2** (set on review of this phase): the
+whole-plan ceiling is **60 core-hours**, and because the dry-run throughput model
+proved about 2× optimistic here, every Phase 2–5 estimate is reported as the
+dry-run figure **× 2.1**.
 
 ### Findings
 
@@ -91,6 +96,23 @@ that seed stream medians to 1.401, and a binary rebuilt at the cited commit
 still exactly invariant to the link distance, spread 0 across 2.2 R…6.0 R, which
 is what ADR 0003 rests on.
 
+*Corrected values, regenerated at `axle_length = 0.051` (30 runs/cell, as the
+config states), for Phase 6 to replace rows 13 and 14 with:*
+
+| link distance | one cluster at τ (Wilson) | share of time single (median) | final dispersion (median) |
+|---|---|---|---|
+| 2.2 R | 0.53 [0.36, 0.70] | 0.475 [0.459, 0.492] | 1.3875 [1.3559, 1.4625] |
+| 2.5 R | 0.77 [0.59, 0.88] | 0.656 [0.623, 0.672] | 1.3875 |
+| 3.0 R | 0.77 [0.59, 0.88] | 0.803 [0.787, 0.828] | 1.3875 |
+| 3.5 R | 0.87 [0.70, 0.95] | 0.885 [0.869, 0.918] | 1.3875 |
+| 4.0 R | 0.93 [0.79, 0.98] | 0.943 [0.934, 0.951] | 1.3875 |
+| 5.0 R | 1.00 [0.89, 1.00] | 0.967 [0.967, 0.967] | 1.3875 |
+| 6.0 R | 1.00 [0.89, 1.00] | 0.967 [0.967, 0.984] | 1.3875 |
+
+Row 13 becomes **1.3875 at every value**, spread exactly 0; row 14 becomes
+**0.475 → 0.967**. The invariance the row exists to state is if anything cleaner
+than before.
+
 **F2.** The same sweep at θ_m = 0.7 reproduces §4's table exactly — 1.17, 2.69,
 1.40, 1.34, 1.58, each at the published λ — because there the traction multiplier
 bottoms out at 0.300, above both the old `.max(0.0)` and the new floor. At
@@ -99,6 +121,24 @@ bottoms out at 0.300, above both the old `.max(0.0)` and the new floor. At
 0.20 against §13's published peak of 2.97. The R₀-versus-axle conclusion is
 unaffected in direction and is stronger at HEAD: 44% against 648%, rather than
 5% against 560%.
+
+*Corrected values, regenerated with the floor in place, for Phase 6:*
+
+| row | published (θ_m = 1.0) | corrected (θ_m = 1.0) |
+|---|---|---|
+| 23 — axle 4× at fixed R₀ | 2.83 / 2.97 / 2.93, spread **5%** | 2.21 / 2.74 / 3.18, spread **44%** |
+| 24 — R₀ 4× at fixed axle | 1.59 / 2.97 / 10.46, spread **560%** | 1.65 / 2.74 / 12.37, spread **648%** |
+
+**Nothing in scope moves at all**, which is a slightly stronger statement than
+"the in-scope difference is rounding". Below θ_m = 1.0 the traction multiplier
+cannot reach the floor — at the paper's ceiling of 0.9 its minimum is
+1 − 0.9 × 0.9998 = 0.100, twice the floor — so no cell the paper quotes is
+touched, and this sweep's highest in-scope amplitude, θ_m = 0.7, reproduces cell
+for cell. The 2.967-against-2.97 check above is at θ_m = 1.0 under the *old*
+clamp: it shows the published number was computed correctly for the model of its
+day, not that the in-scope effect is small. Rows 23 and 24 are the only two §13
+rows quoted from the stall band, and correction #10 already cut that band from
+the figures.
 
 **F3.** Ruled out: the simulator (`terrain_h3_capability`, the evaluation sweep
 from the same commit, reproduces exactly), the search code (a binary built at
@@ -117,6 +157,23 @@ their optimiser seeds; §7, §9 and §10 do not.
 Nothing downstream is lost to F3 — every evaluation sweep hard-codes the
 published constants in its own config, and those sweeps all reproduce. What is
 not currently true is "run this command and you get this controller".
+
+**And the published rows are ordinary draws, not lucky ones.**
+`configs/diagnostics/f3_seed1_rerun_sanity.toml` scores each published row
+against the controller the same protocol returns at optimiser seed 1, at that
+row's own training cell, 100 runs on the held-out evaluation seed, paired by run
+index:
+
+| training cell | published | re-run, seed 1 | paired ratio re-run / published |
+|---|---|---|---|
+| S2-rough, θ_m = 0.9, λ = 0.10 m | 1.3834 [1.3505, 1.4409] | 1.3646 [1.3390, 1.4014] | 0.9832 [0.9380, 1.0139] |
+| S2-flat, θ_m = 0.0, λ = 0.10 m | 1.2031 [1.1991, 1.2103] | 1.2063 [1.2014, 1.2138] | 1.0019 [0.9910, 1.0091] |
+
+Both paired intervals include 1 and both pairs of marginal intervals overlap. So
+the re-runs' better *training* objectives (1.2737 against 1.3009) buy nothing on
+held-out seeds — which is C5/S16's winner's curse showing up again, from the
+other side: a search's returned objective ranks its own draw and not the
+controller. This is a sanity check on the rows of record, not a claim.
 
 ### Verification
 
@@ -228,3 +285,11 @@ belongs in Phase 6.
 | 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_class_search.py` | `2026-09-09T23:05Z` | `figures/terrain_class_search.png`  | 4 s |
 | 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_class_tau.py` | `2026-09-09T23:05Z` | `figures/terrain_class_tau.png`  | 1 s |
 | 0.4 figures | `f7093a0` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_seed_reproducibility.py` | `2026-09-09T23:05Z` | `figures/phase0_seed_reproducibility.png`  | 2 s |
+| 0.3 diagnostic | `377f268` | `./target/release/swarm sweep --config configs/diagnostics/f3_seed1_rerun_sanity.toml --out results/f3_seed1_rerun_sanity.jsonl` | 2026-09-10T12:13Z | `results/f3_seed1_rerun_sanity.jsonl` | 18 s / 336K |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_gauci_scaling.py` | `2026-09-10T12:14Z` | `figures/gauci_scaling.png`  | 4 s |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_occlusion_shakedown.py` | `2026-09-10T12:14Z` | `figures/occlusion_shakedown_curve.png` `figures/occlusion_shakedown_surface.png`  | 3 s |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_idea_a.py` | `2026-09-10T12:14Z` | `figures/terrain_idea_a_curve.png` `figures/terrain_idea_a_surface.png`  | 3 s |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_h2.py` | `2026-09-10T12:14Z` | `figures/terrain_h2_powered.png` `figures/terrain_h2_r0_scaling.png`  | 3 s |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_mechanism.py` | `2026-09-10T12:14Z` | `figures/terrain_mechanism.png`  | 5 s |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_h3_capability.py` | `2026-09-10T12:14Z` | `figures/terrain_h3_capability.png`  | 3 s |
+| 0.4 figures | `377f268` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_terrain_retune_cost.py` | `2026-09-10T12:14Z` | `figures/terrain_retune_cost.png` `figures/terrain_warm_s4.png`  | 2 s |

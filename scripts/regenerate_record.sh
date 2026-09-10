@@ -35,6 +35,9 @@ run() {  # phase, output-path, command...
 }
 
 sweep()  { run "$1" "results/$2.jsonl" $SWARM sweep  --config "configs/sweeps/$3.toml" --out "results/$2.jsonl"; }
+# Diagnostics live outside configs/sweeps/ so that "every config in sweeps/ is an
+# experiment" stays true; nothing in the record rests on one.
+sweep_dx() { run "$1" "results/$2.jsonl" $SWARM sweep --config "configs/diagnostics/$3.toml" --out "results/$2.jsonl"; }
 search() { local phase="$1" name="$2"; shift 2
            run "$phase" "results/$name.json" $SWARM search --out "results/$name.json" "$@"; }
 
@@ -155,8 +158,13 @@ job_phase0_seeds() {
   sweep "0.2 seeds"      phase0_seeds_objective_probe phase0_seeds_objective_probe
 }
 
+job_diagnostics() {
+  # Freeze lift 1, finding F3: are the published searched rows typical draws?
+  sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
+}
+
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
-     searches_class class_eval phase0_seeds)
+     searches_class class_eval phase0_seeds diagnostics)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"

@@ -32,6 +32,15 @@ survives here is the R₀-versus-axle comparison: at θ_m = 1.0 a 4× change of 
 at fixed R₀ moves the peak degradation by 5%, a 4× change of R₀ at fixed axle by
 560%. The caption says so, because a reader who takes this panel for a ratio law
 is taking a superseded reading.
+
+NOT A BYTE-FOR-BYTE PORT, and it cannot be one. The image this replaces was drawn
+by a `swarm-figure` invocation whose arguments were never recorded, so there is
+no committed original to compare against and no way to tell whether any
+reconstruction is the same figure — the one attempt made during the verification
+pass differed from the committed PNG in 44% of pixels. What this script
+reproduces is the figure `paper-source.md` §10 *describes*. Written 2026-09-10,
+in the freeze-lift-1 Phase 0 regeneration; nobody should read a later diff
+against the lost image as a regression.
 """
 
 import sys

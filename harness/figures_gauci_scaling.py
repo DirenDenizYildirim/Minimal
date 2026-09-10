@@ -1,10 +1,9 @@
 """Validation §1: the Gauci reproduction and its scaling in swarm size.
 
 Ported from a `swarm-figure` invocation whose arguments were never recorded
-(verification-report D9). The committed PNG cannot be reproduced byte-for-byte
-because the command that made it is lost; this script reproduces the figure
-*inventory §10 describes* — "Gauci's constants, n = 2…100, 100 runs/cell" — from
-`results/gauci_scaling.jsonl`, and from now on that file is the provenance.
+(verification-report D9). §10 describes it as "Gauci's constants, n = 2…100,
+100 runs/cell", and that is what this script draws from
+`results/gauci_scaling.jsonl` — which, with this file, is now the provenance.
 
 Two panels because the week-1 gate turned on the difference between them. The
 literature scores aggregation as **reaching** a connected configuration, not as
@@ -15,6 +14,15 @@ second would say this simulator disagrees with the source; it does not.
 Reach is a proportion, so it gets a Wilson interval, not a bootstrap one: a
 bootstrap of 100 successes out of 100 resamples 100 successes every time and
 reports a zero-width interval at p = 1.
+
+NOT A BYTE-FOR-BYTE PORT, and it cannot be one. The image this replaces was drawn
+by a `swarm-figure` invocation whose arguments were never recorded, so there is
+no committed original to compare against and no way to tell whether any
+reconstruction is the same figure — the one attempt made during the verification
+pass differed from the committed PNG in 44% of pixels. What this script
+reproduces is the figure `paper-source.md` §10 *describes*. Written 2026-09-10,
+in the freeze-lift-1 Phase 0 regeneration; nobody should read a later diff
+against the lost image as a regression.
 """
 
 import matplotlib

@@ -19,6 +19,15 @@ above ≈0.8. The standing rule this produced — compare spatially varying dial
 matched **realised** intensity — is why `realised_fn_rate` is on every record,
 and a figure that plots only the nominal axis invites exactly the reading the
 section retracted.
+
+NOT A BYTE-FOR-BYTE PORT, and it cannot be one. The image this replaces was drawn
+by a `swarm-figure` invocation whose arguments were never recorded, so there is
+no committed original to compare against and no way to tell whether any
+reconstruction is the same figure — the one attempt made during the verification
+pass differed from the committed PNG in 44% of pixels. What this script
+reproduces is the figure `paper-source.md` §10 *describes*. Written 2026-09-10,
+in the freeze-lift-1 Phase 0 regeneration; nobody should read a later diff
+against the lost image as a regression.
 """
 
 import sys
