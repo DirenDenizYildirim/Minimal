@@ -155,6 +155,32 @@ wiring the later phases:
 * `verify_numbers.py` ids **71/72 crossed** between documents — fix the script to
   match §13, not the other way round.
 
+## 7b. The timestep disclosure (freeze lift 1, phase 5b)
+
+From the Phase 5 review, decision 1. All four go in:
+
+* **Methods 4.1** — "timestep-independent" is **scoped to motion integration**.
+  The exact-arc claim is about integrating constant wheel speeds over a control
+  step and is true of the motion; it was never a statement about the pursuit.
+* **Methods 4.4** — states `p_lock`'s semantics explicitly: the acquisition
+  probability **per 0.1 s attempt window**, converted to a per-step probability
+  by `1 − (1 − p_lock)^(dt/0.1)`.
+* **§11** — gains **"never say the pursuit is timestep-independent."**
+* **Limitations / §12.3** — the disclosure itself: what the defect was, that
+  experiment 4 found it, that the fix is bit-neutral at `dt = 0.1` so no
+  published number moves, and the residual 2.5% handling-time quantisation that
+  is disclosed rather than corrected because correcting it would not be
+  bit-neutral.
+
+`verification-report.md`'s "harness corrections" subsection gains the audit table
+of every per-step quantity in `pursuer.rs` and the byte-diff evidence.
+
+**§25 is written twice over, in this order and never collapsed:** (a) the
+registered rule fired FRAGILE on comparison 5 under the registered family; (b)
+the cause was diagnosed; (c) under the corrected pursuit the same five models
+give what they give. Amendment **D8** is the pre-registration entry that licenses
+(c), and it says the same thing.
+
 ## 8. Findings sections to write
 
 | § | experiment | pre-registration | run-log section |
