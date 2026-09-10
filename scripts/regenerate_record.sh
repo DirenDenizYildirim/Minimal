@@ -228,6 +228,19 @@ job_pseudo_reality() {
 }
 
 # ------------------------------------------------------ freeze lift 1, phase 5b
+job_pseudo_reality_fixed2() {
+  # Amendment D9. Both fixes in: p_lock per 0.1 s attempt window (D8) and
+  # wheel_noise rescaled to the control period (D9). wheel_noise acts on the
+  # ROBOTS, so ALL FIVE comparisons move and both halves are re-run -- unlike D8,
+  # which was pursuit-only. Still only the five dt = 0.05 models: at dt = 0.1
+  # both fixes are the identity and every other file is byte-identical.
+  $PY scripts/build_pseudo_reality_configs.py --check
+  for i in 02 03 04 05 10; do
+    sweep_pr "5c eval" "pseudo_reality_aggregation_fixed2_model_$i" "aggregation_model_$i"
+    sweep_pr "5c eval" "pseudo_reality_pursuit_fixed2_model_$i"     "pursuit_model_$i"
+  done
+}
+
 job_pseudo_reality_fixed() {
   # Amendment D8. p_lock is now per 0.1 s attempt window rather than per control
   # step, so the pursuer's lethality no longer depends on sim.dt. At dt = 0.1 the
@@ -259,7 +272,7 @@ job_diagnostics() {
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
      searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
      capability_n capability_n_tau tuning_lambda pseudo_reality
-     pseudo_reality_fixed)
+     pseudo_reality_fixed pseudo_reality_fixed2)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"

@@ -181,6 +181,48 @@ the cause was diagnosed; (c) under the corrected pursuit the same five models
 give what they give. Amendment **D8** is the pre-registration entry that licenses
 (c), and it says the same thing.
 
+## 7c. Settled by the Phase 5b review, phase 5c (do not re-litigate)
+
+**The reference reach of 0.86 is the record's own number, not a contradiction.**
+Decision 3 asked whether it conflicts with §13. It does not. `§13 row 31` reads
+"H3: reach at the worst cell, S2-gauci | **0.86** | [0.79, 0.93] | §7", and §7's
+prose says it in words: *"Reach is 1.00 across almost the whole grid and moves
+only in the worst cell and only for the un-searched row: 0.86 for S2-gauci against
+1.00 and 0.99 for the searched rows."* `pseudo_reality_aggregation_model_00`
+returns **0.86 [0.78, 0.91]** ever-single-cluster and 0.18 [0.12, 0.27]
+single-cluster-at-τ, reproducing `terrain_tuning_control`,
+`terrain_h3_capability`, `terrain_retune_cost`, `terrain_regime_robustness` and
+`terrain_class_eval` **to the digit**. The 1.00 is the *flat-ground* cell
+(θ_m = 0) and the *searched* rows; the reach ≥ 0.8 validity window (row 94) is
+cleared at 0.86.
+
+**One real inconsistency surfaced by that check, for Phase 6:** §13 row 31 gives
+the interval as **[0.79, 0.93]** (normal approximation) while §7's prose at the
+same cell gives **[0.78, 0.91]** (Wilson). Same 100 runs, same point estimate, two
+interval conventions in one document. §12.1 D0 settled on Wilson for proportions;
+row 31's interval should be brought to it, and this is a **statistic change, not a
+value correction** — it goes in the D0 list, not the F1/F2 list.
+
+**Model 09 is a `dt = 0.10` model** (decision 5). Both timestep fixes are the
+identity for it, so its comparison-2 flip is not a timestep artefact and will not
+move under any re-run. The register wording decision 5 gave therefore applies as
+written:
+
+> holds in the reference and 9 of 10 perturbed models; in one, the terrain-bit
+> row is disjointly better (−0.055 [−0.088, −0.018]); no single-parameter cause.
+
+Grade stays **SUPPORTED †** — an upper-bound claim, and one reversal is a
+disclosure — and **model 09 is named in Limitations**.
+
+**C3's D-dispersive row moved 7/10 → 10/10 disjoint under the D8 pursuer fix**
+(decision 6), the one place the fix changed a count, and in the expected
+direction. Recorded in the run log's Phase 5b section.
+
+**The "evasion exploits the control period" lead is deleted** (decision 7). The
+robot side was *not* clean — `noise.wheel_noise` carried a defect of the same
+class — so the reading would have been an artefact reading. It does not go in the
+open-questions list.
+
 ## 8. Findings sections to write
 
 | § | experiment | pre-registration | run-log section |
