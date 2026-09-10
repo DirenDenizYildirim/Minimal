@@ -476,3 +476,4 @@ objective.
 | 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3.toml --out results/pursuer_searched_s3.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3.jsonl` | 158 s / 42M |
 | 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_pareto.toml --out results/pursuer_searched_s3_pareto.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_pareto.jsonl` | 19 s / 5.1M |
 | 2 eval | `ceda8b6` | `./target/release/swarm sweep --config configs/sweeps/pursuer_searched_s3_rescore.toml --out results/pursuer_searched_s3_rescore.jsonl` | 2026-09-10T12:53Z | `results/pursuer_searched_s3_rescore.jsonl` | 19 s / 5.1M |
+| 3 eval | `1582175` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n.toml --out results/terrain_capability_n.jsonl` | 2026-09-10T13:42Z | `results/terrain_capability_n.jsonl` | 466 s / 2.4M |

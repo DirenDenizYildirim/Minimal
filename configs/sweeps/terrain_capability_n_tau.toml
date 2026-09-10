@@ -1,0 +1,118 @@
+# EXPERIMENT 2, tau CONTINGENCY (freeze lift 1) — the n = 10 block at tau = 3600 s.
+#
+# Pre-registered at docs/preregistration/capability-flatness-n.md, commit 0dd7ae1,
+# WITH ITS TRIGGER FIXED IN ADVANCE: "if any row's reach at n = 10, theta_m = 0.9,
+# tau = 600 s is below 0.8, the whole n = 10 block is re-run at tau = 3600 s and
+# both trial lengths are reported."
+#
+# IT FIRED. At tau = 600 s, S2-gauci reaches a single cluster in 0.71 [0.61, 0.79]
+# of runs at n = 10, theta_m = 0.9. Every other row is at 0.99-1.00, so the
+# truncation is specific to the enumerated row -- which is exactly the row the
+# hold ratios are read against, and therefore the worst place to have it.
+#
+# A hold ratio measured before the swarm has finished aggregating is a
+# measurement of the clock. Section 20 is the cautionary case: a truncated
+# training objective produced a diagnosis that was simply wrong, and section 14
+# found reach at the largest start radius rising from 0.46 to 1.00 between these
+# two trial lengths.
+#
+# THE WHOLE BLOCK is re-run, not only the offending row: comparing S2-gauci at
+# 3600 s against rows measured at 600 s would swap one confound for another.
+#
+# Rows, lambda, coverage and runs/cell are identical to terrain_capability_n.toml,
+# and the base seed is the same, so run i is the same placement in both files and
+# the two trial lengths pair run for run.
+
+name = "terrain-capability-n-tau"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "swarm.n"
+values = [10]
+
+[[axis]]
+path = "sim.duration"
+values = [3600.0]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[rows]]
+label = "S2-gauci"
+# the enumerated reference; the only tight minimum here
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-class-flat-s1"
+# §19/§21 class search, optimiser seed 1
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.432983, -0.882043] },
+  { wheels = [0.792395, -0.886538] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s2"
+# §21 class search, optimiser seed 2
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.542573, -0.980003] },
+  { wheels = [0.946660, -0.811344] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s3"
+# §21 class search, optimiser seed 3
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.409734, -0.752740] },
+  { wheels = [0.732649, -0.606024] },
+] }
+
+[[rows]]
+label = "S2-searched"
+# §7's searched S = 2 row, from terrain_h3_capability.toml
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
+
+[[rows]]
+label = "S4-terrain"
+# §7's cold S = 4 row, from terrain_h3_capability.toml
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.236416, -0.519837] },
+  { wheels = [0.797842, -0.406434] },
+  { wheels = [-0.186302, -0.965739] },
+  { wheels = [0.930956, -0.450512] },
+] }
+
+[[rows]]
+label = "S4-warm"
+# §10's warm-started S = 4 row, from terrain_warm_s4.toml
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.250759, -0.693480] },
+  { wheels = [0.614411, -0.318877] },
+  { wheels = [-0.134207, -0.947583] },
+  { wheels = [0.829046, -0.279431] },
+] }

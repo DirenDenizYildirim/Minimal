@@ -196,6 +196,12 @@ job_capability_n() {
   sweep "3 eval" terrain_capability_n terrain_capability_n
 }
 
+job_capability_n_tau() {
+  # The pre-registered tau contingency, whose trigger fired: S2-gauci reaches a
+  # cluster in only 0.71 of runs at n = 10, theta_m = 0.9, tau = 600 s.
+  sweep "3 eval" terrain_capability_n_tau terrain_capability_n_tau
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
@@ -203,7 +209,7 @@ job_diagnostics() {
 
 ALL=(validation terrain_early pursuer searches_single tuning regime lambda
      searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
-     capability_n)
+     capability_n capability_n_tau)
 for job in "${@:-${ALL[@]}}"; do
   echo "======== job $job"
   "job_$job"
