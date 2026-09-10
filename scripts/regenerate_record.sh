@@ -189,6 +189,22 @@ job_eval_s3() {
   sweep "2 eval"  pursuer_searched_s3_rescore pursuer_searched_s3_rescore
 }
 
+# ------------------------------------------------------- freeze lift 1, phase 2
+job_eval_s3() {
+  # The three evaluation sweeps are regenerated from the six search results
+  # first, so a stale config can never be the thing that was run.
+  $PY scripts/build_pursuer_searched_s3_configs.py --check
+  sweep "2 eval" pursuer_searched_s3         pursuer_searched_s3
+  sweep "2 eval" pursuer_searched_s3_pareto  pursuer_searched_s3_pareto
+  sweep "2 eval" pursuer_searched_s3_rescore pursuer_searched_s3_rescore
+}
+
+# ------------------------------------------------------- freeze lift 1, phase 3
+job_capability_n() {
+  # Pre-registered at docs/preregistration/capability-flatness-n.md (0dd7ae1).
+  sweep "3 eval" terrain_capability_n terrain_capability_n
+}
+
 job_diagnostics() {
   # Freeze lift 1, finding F3: are the published searched rows typical draws?
   sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
