@@ -15,6 +15,10 @@ cd "$(dirname "$0")/.."
 LOG=docs/run-log.md
 export PYTHONPATH=harness/src
 PY=.venv/bin/python
+# The phase column of the run-log row. Defaults to the Phase 0 regeneration this
+# script was written for; a later phase's figure sets it so the row says which
+# phase drew the figure rather than claiming every figure is Phase 0's.
+PHASE="${PHASE:-0.4 figures}"
 
 # Scripts in the order their sections appear, so a partial run still leaves a
 # readable prefix of the inventory.
@@ -59,7 +63,8 @@ for s in "${@:-${SCRIPTS[@]}}"; do
   # Fall back to whatever the script's own savefig calls name, so a script that
   # prints nothing still gets its outputs recorded.
   [ -n "$out" ] || out=$(grep -oE 'figures/[a-z0-9_]+\.png' "harness/$s" | sort -u | tr '\n' ' ')
-  printf '| 0.4 figures | `%s` | `PYTHONPATH=harness/src .venv/bin/python harness/%s` | `%s` | %s | %s s |\n' \
+  printf '| %s | `%s` | `PYTHONPATH=harness/src .venv/bin/python harness/%s` | `%s` | %s | %s s |\n' \
+    "$PHASE" \
     "$(git rev-parse --short HEAD)" "$s" "$(date -u +%Y-%m-%dT%H:%MZ)" \
     "$(for f in $out; do printf '`%s` ' "$f"; done)" "$((t1 - t0))" >> "$LOG"
 done

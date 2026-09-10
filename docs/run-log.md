@@ -691,3 +691,4 @@ to before the change, which is how that was checked.
 | 3 eval | `1582175` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n.toml --out results/terrain_capability_n.jsonl` | 2026-09-10T13:42Z | `results/terrain_capability_n.jsonl` | 466 s / 2.4M |
 | 3 eval | `493ec46` | `./target/release/swarm sweep --config configs/sweeps/terrain_capability_n_tau.toml --out results/terrain_capability_n_tau.jsonl` | 2026-09-10T13:45Z | `results/terrain_capability_n_tau.jsonl` | 97 s / 1.3M |
 | 4 eval | `9cc4aee` | `./target/release/swarm sweep --config configs/sweeps/terrain_tuning_control_lambda.toml --out results/terrain_tuning_control_lambda.jsonl` | 2026-09-10T14:22Z | `results/terrain_tuning_control_lambda.jsonl` | 241 s / 4.2M |
+| 4 figures | `b2de8f9` | `PYTHONPATH=harness/src .venv/bin/python harness/figures_tuning_control_lambda.py` | `2026-09-10T14:32Z` | `figures/terrain_tuning_control_lambda.png`  | 3 s |
