@@ -2634,8 +2634,8 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 10 | pairs still touching at τ here | ~10 | — | % | validation | `47a5dd5` |
 | 11 | reach at n = 2 / 5 / 10+ | 0.88 / 0.98 / 1.00 | — | — | validation §1 | `2441bfc` |
 | 12 | clean-arena dispersion at n = 20 | 1.43 | — | — | validation §1 | `2441bfc` |
-| 13 | dispersion invariance to link distance (2.2 R → 6.0 R) | 1.401 at every value | — | — | validation §3 | `2441bfc` |
-| 14 | single-cluster share over the same range | 0.43 → 0.98 | — | — | validation §3 | `2441bfc` |
+| 13 | dispersion invariance to link distance (2.2 R → 6.0 R) | **1.3875 at every value, spread exactly 0** | — | — | validation §3 | `2441bfc`, **corrected freeze lift 1 (F1)** |
+| 14 | single-cluster share over the same range | **0.475 → 0.967** | — | — | validation §3 | `2441bfc`, **corrected freeze lift 1 (F1)** |
 | 15 | field median \|f\| | 0.3476 | max 0.9998, p99 0.9332 | — | model | `c137593` |
 | 16 | θ_m ceiling | 0.9 (sweeps), 1.0 (figures) | — | — | correction #10 | `42a746a` |
 | 17 | traction floor | 0.05 | never binds in range | — | model | `e83675e` |
@@ -2644,15 +2644,15 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 20 | occlusion: realised FN rate at nominal 0.6 (correlated) | 0.89 | — | — | §1 | `24ca1ac` |
 | 21 | occlusion: correlated vs i.i.d. at matched realised 0.85–0.95 | 4.68 vs 3.32 | — | — | §1 | `24ca1ac` |
 | 22 | H2: peak λ/R₀, four of five rows, **at θ_m = 0.7** | 0.69 | at θ_m = 1.0 only two of five | — | §4 | `9b0b994` |
-| 23 | H2: peak-degradation spread, axle 4× at fixed R₀, **at θ_m = 1.0** | 5 | 2.97 / 2.83 / 2.93 | % | §4 | `9b0b994` |
-| 24 | H2: peak-degradation spread, R₀ 4× at fixed axle, **at θ_m = 1.0** | 560 | 2.97 / 1.59 / 10.46 | % | §4 | `9b0b994` |
+| 23 | H2: peak-degradation spread, axle 4× at fixed R₀, **at θ_m = 1.0** | **44** | **2.21 / 2.74 / 3.18** | % | §4 | `9b0b994`, **corrected freeze lift 1 (F2)** |
+| 24 | H2: peak-degradation spread, R₀ 4× at fixed axle, **at θ_m = 1.0** | **648** | **1.65 / 2.74 / 12.37** | % | §4 | `9b0b994`, **corrected freeze lift 1 (F2)** |
 | 25 | mechanism: per-wheel pooled degradation | 1.175 | [1.154, 1.190] | — | §6 | `e83675e` |
 | 26 | mechanism: scalar-centre pooled | 0.980 | [0.976, 0.986] | — | §6 | `e83675e` |
 | 27 | mechanism: per-wheel hold ratio at λ = 0.10 m, θ_m = 0.9 (paired) | **2.149** | [1.853, 2.455] | — | §6 | `e83675e` |
 | 28 | H3: hold ratio at θ_m = 0.9, S2-gauci (paired) | **2.149** | [1.853, 2.455] | — | §7 | `9af4707` |
 | 29 | H3: S2-searched † (paired) | **1.099** | [1.044, 1.145] | — | §7 | `9af4707` |
 | 30 | H3: S4-terrain † (paired) | **1.212** | [1.158, 1.251] | — | §7 | `9af4707` |
-| 31 | H3: reach at the worst cell, S2-gauci | 0.86 | [0.79, 0.93] | — | §7 | `9af4707` |
+| 31 | H3: reach at the worst cell, S2-gauci | 0.86 | **[0.78, 0.91]** | — | §7 | `9af4707`; **interval restated Wilson per §12.1 D0 in freeze lift 1** — it had been a normal approximation, [0.79, 0.93], on the same 100 runs and the same point estimate |
 | 32 | search budget, single-condition rows | 600 × 12 = 7 200 | — | runs | §7 | `9af4707` |
 | 33 | R₀ after searching at θ_m = 0.9 | 4.74 | — | cm | §7, §13 | `9af4707` |
 | 34 | Idea B: mean per-robot survival over the grid, B0 | **0.4324** | Wilson [0.4281, 0.4367], 50 000 robots | — | §5 | `9b0b994` |
@@ -2680,6 +2680,25 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 56 | §10: warm-start training objective | 1.2595 | — | — | §10 | `6989a91` |
 | 57 | §10: cold S4 / S2 training objectives | 1.3012 / 1.3009 | — | — | §10 | `6989a91` |
 | 58 | §10: warm-start L2 from its start | 0.464 | halves diverged ≤ 0.254 | — | §10 | `6989a91` |
+
+> **Provenance note on rows 56, 57 and 58 — searched, optimiser seed not
+> recorded, non-regenerable.** These three came from four single-condition
+> searches whose optimiser seed is recorded nowhere: not in the config, not in
+> the output JSON, not in the run log. Freeze lift 1 ruled out the simulator (the
+> binary built at `9af4707` returns byte-identical constants to HEAD over the
+> full budget), the search code, the configs and the CLI defaults, and confirmed
+> that **all five class searches reproduce bit-for-bit** — so the gap is the
+> missing seed and nothing else. A sanity check found the published rows to be
+> ordinary draws: paired ratios against re-runs of 0.9832 [0.9380, 1.0139] and
+> 1.0019 [0.9910, 1.0091], both including 1.
+>
+> **The published constants are the rows of record and are not replaced.** This
+> is a disclosure, not a defect to hide: the numbers are right, and they cannot
+> be regenerated from what was written down. Every search run from freeze lift 1
+> onward records its optimiser seed, training seed base, budget, git hash and
+> config hash in its output JSON (`swarm-cli/src/search.rs`), so no later row can
+> arrive in this state. See `verification-report.md` for the four re-run
+> controllers and the elimination, and §9 for the Limitations entry.
 | 59 | §11: full-expansion slope at ℓ/λ = 0.25 | 0.976 | R² 0.9983 | — | §11 | `f73cc8a` |
 | 60 | §11: at ℓ/λ = 0.51 (three rows, R₀ 4× apart) | 0.900 / 0.894 / 0.901 | agree to 0.007 | — | §11 | `f73cc8a` |
 | 61 | §11: at ℓ/λ = 1.02 | 0.623 | R² 0.7373 | — | §11 | `f73cc8a` |
@@ -2784,6 +2803,43 @@ continuous quantities, Wilson for proportions. "Source" is the findings section;
 | 160 | §8: the same at 0.27 R | 0.6164 / 0.7369 / 0.7442 | [0.6068,0.6259] / [0.7282,0.7454] / [0.7356,0.7527] | — | §8 | `c5203f4` |
 | 161 | §8: the same at 0.81 R | 0.0199 / 0.1295 / 0.5084 | [0.0173,0.0228] / [0.1231,0.1362] / [0.4986,0.5182] | — | §8 | `c5203f4` |
 | 162 | §8: the same at 1.35 R (perfect perception) | 0.0199 / 0.0655 / 0.3816 | [0.0173,0.0228] / [0.0608,0.0705] / [0.3721,0.3912] | — | §8 | `c5203f4` |
+
+**Freeze lift 1 — rows 163–189.** Four experiments run against four reviewer
+objections, each pre-registered before its sweep. Every row below is recomputed
+by `scripts/verify_numbers.py`, and the four decision scripts it pulls from are
+the single implementation of each statistic. Commits are the commit the sweep ran
+at; the pre-registration hash is given in the source column because it, not the
+sweep, is what makes the rule a rule.
+
+| # | quantity | value | CI | unit | source | commit |
+|---|---|---|---|---|---|---|
+| 163 | **G4: best-of-three searched S = 3 † beats B0-blind at h = 1.93 s** | **18 of 25** cells (0 worse, 7 overlapping; per seed **18 / 17 / 14**) | — | held-out cells | §22, prereg `577f15a` | `ceda8b6` |
+| 164 | G4: dispersion among survivors, best-of-three S = 3 † vs B0-blind | **1.41 vs 1.45** | [1.399, 1.423] vs [1.445, 1.472] | m | §22 | `ceda8b6` |
+| 165 | G4′: rule (a), S3-survival_task-s2 † against B1-ternary ‡ | 13 of 25 cells (1 worse, 11 overlapping) | — | held-out cells | §22 | `ceda8b6` |
+| 166 | §22: pooled mean per-robot survival at h = 1.93 s, S3-survival_task-s2 † / B1 ‡ / B0 | 0.5125 / 0.4596 / 0.3655 | [0.5081,0.5169] / [0.4553,0.4640] / [0.3613,0.3697] | — | §22 | `ceda8b6` |
+| 167 | §22: rule (b), dispersion among survivors, the three survival-only rows † | 14 492 / 10 872 / 9 744 | — | m | §22 | `ceda8b6` |
+| 168 | §22: runs with ≤ 5 survivors, **as a share of USABLE runs** — survival-only † / D ‡ / B1 ‡ | **0 / 0 / 0 %** vs **8.1 %** vs **11.7 %** | 2500/2500 usable vs 2476/2500 vs 1479/2500 | — | §22 | `ceda8b6` |
+| 169 | §22: Pareto at r_p = 0.2 m, κ = 0 — two-axis † vs D ‡ | 0.6795 at 1.39 vs 0.7040 at 379.90 | [0.6587,0.6996] vs [0.6836,0.7236] | survival, m | §22 | `ceda8b6` |
+| 170 | **A1 at n = 50**: best S = 2 / S4-terrain † / S4-warm † | 1.0412 / 1.1277 / 1.1175 | [0.9640,1.1155] / [1.0841,1.2507] / [1.0673,1.1814] | hold ratio | §23, prereg `0dd7ae1` | `1582175` |
+| 171 | **A1 at n = 10, τ = 3600 s**: best S = 2 / S4-terrain † / S4-warm † | 1.1449 / 1.0490 / 1.1158 | [1.1055,1.1748] / [1.0275,1.1124] / [1.0699,1.1479] | hold ratio | §23 | `493ec46` |
+| 172 | §23: the pre-registered τ contingency firing, S2-gauci reach at n = 10, θ_m = 0.9, τ = 600 s → 3600 s | 0.71 → **1.00** | [0.61,0.79] → [0.96,1.00] | — | §23 | `493ec46` |
+| 173 | §23: the n = 10 margin — S4-terrain's upper bound minus the best S = 2 row's lower bound | **0.0069** | — | hold-ratio units | §23 | `493ec46` |
+| 174 | **A3: paired terrain-tuning term at θ_m = 0.9**, λ = 0.05 / 0.10 / 0.20 m | **+0.0951 / +0.0818 / +0.0368** | [+0.0456,+0.1366] / [−0.0008,+0.1331] / [+0.0165,+0.0667] | m | §24, prereg `d6c40c8` | `9cc4aee` |
+| 175 | §24: objective-tuning share of the anchor-to-rough gap, three λ | 95.0 / 96.9 / 94.4 | terrain share 5.0 / 3.1 / 5.6 | % | §24 | `9cc4aee` |
+| 176 | **A2: matched-controller cost, as a range over three λ** | **+1.2 % to +21.4 %** | §12.1 D1 paired form; replaces the single-λ 10–20 % | % | §24 | `9cc4aee` |
+| 177 | **A8: the θ_m = 0.6 crossing**, λ = 0.05 / 0.10 / 0.20 m | +0.0659 / +0.0421 / −0.0160 | [+0.0296,+0.0918] / [+0.0107,+0.0659] / [−0.0305,+0.0043] | m | §24 | `9cc4aee` |
+| 178 | §24: the anchor's own hold ratio at three λ (the gap being decomposed shrinks with it) | 2.0719 / 2.1492 / 1.5186 | — | hold ratio | §24 | `9cc4aee` |
+| 179 | §24: pairing check — run *i* is the same seed and initial dispersion at every λ | **600 of 600, 0 disagreements** | — | run indices | §24 | `9cc4aee` |
+| 180 | **Pseudo-reality comparison 1** (terrain tax) | **ROBUST** | 10/10 same sign, 10/10 disjoint | of 10 models | §25, prereg `367ee93` | `cfa5288` |
+| 181 | **Pseudo-reality comparison 2** (capability flatness) | *not established either way* | 9/10 sign, **4/10 disjoint**; the flip is model 09 at −0.0554 [−0.0879,−0.0183] | of 10 models | §25 | `cfa5288` |
+| 182 | §25: is any S = 4 row **disjointly better** than S = 2 — A1 as worded | **1 of 10** (model 09); not in the reference | — | of 10 models | §25 | `cfa5288` |
+| 183 | **Pseudo-reality comparison 3** (confusion through aggregation), B0 / B1 ‡ / D ‡ | ROBUST / ROBUST / ROBUST | 10/10 / 10/10 / **10/7** disjoint | of 10 models | §25 | `cfa5288` |
+| 184 | **Pseudo-reality comparison 4**, r_p = 0.1 / 0.35 / 1.0 m | *not established* / ROBUST / ROBUST | **10/3** / 10/10 / 10/10 disjoint | of 10 models | §25 | `cfa5288` |
+| 185 | **Pseudo-reality comparison 5** — S3 † against B1 ‡ at r_p = 1 m | **1 of 14 orderings FRAGILE** | 5/10 same sign, 7/10 disjoint, **5/10 flips**, all of them `dt = 0.05` models | of 10 models | §25 | `cfa5288` |
+| 186 | §25: reach diagnostic, lowest anywhere — *reported, not thresholded* | **0.65**, S2-gauci in model 05 (reference 0.86) | — | — | §25 | `cfa5288` |
+| 187 | **D10 split**: sign flips in the model-only sub-family (`dt = 0.10`) | **1 of 14 orderings** (comparison 2) | 2 further orderings flip only in the control-period half | of 14 | §25 | `0cd99a7` |
+| 188 | **Phase 5c: S2-gauci reach at θ_m = 0.9, noise-free, by control period** | **0.9050 → 0.6150**, DISJOINT | [0.8723,0.9300] → [0.5664,0.6614]; S2-searched 0.9950 → 0.9825, overlapping | dt 0.10 → 0.05 | §25 | `0cd99a7` |
+| 189 | Phase 5c: the same row's hold ratio, noise-free, by control period | **2.0739 → 2.9747**, DISJOINT | [1.9538,2.2019] → [2.7337,3.2093] | hold ratio | §25 | `0cd99a7` |
 
 ---
 

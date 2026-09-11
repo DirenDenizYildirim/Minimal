@@ -885,20 +885,20 @@
   {
    "id": 13,
    "quantity": "dispersion invariance to link distance (2.2 R → 6.0 R)",
-   "value": "1.401 at every value",
+   "value": "**1.3875 at every value, spread exactly 0**",
    "ci": null,
    "unit": null,
    "source_section": "validation §3",
-   "commit": "2441bfc"
+   "commit": "2441bfc`, **corrected freeze lift 1 (F1)**"
   },
   {
    "id": 14,
    "quantity": "single-cluster share over the same range",
-   "value": "0.43 → 0.98",
+   "value": "**0.475 → 0.967**",
    "ci": null,
    "unit": null,
    "source_section": "validation §3",
-   "commit": "2441bfc"
+   "commit": "2441bfc`, **corrected freeze lift 1 (F1)**"
   },
   {
    "id": 15,
@@ -975,20 +975,20 @@
   {
    "id": 23,
    "quantity": "H2: peak-degradation spread, axle 4× at fixed R₀, **at θ_m = 1.0**",
-   "value": "5",
-   "ci": "2.97 / 2.83 / 2.93",
+   "value": "**44**",
+   "ci": "**2.21 / 2.74 / 3.18**",
    "unit": "%",
    "source_section": "§4",
-   "commit": "9b0b994"
+   "commit": "9b0b994`, **corrected freeze lift 1 (F2)**"
   },
   {
    "id": 24,
    "quantity": "H2: peak-degradation spread, R₀ 4× at fixed axle, **at θ_m = 1.0**",
-   "value": "560",
-   "ci": "2.97 / 1.59 / 10.46",
+   "value": "**648**",
+   "ci": "**1.65 / 2.74 / 12.37**",
    "unit": "%",
    "source_section": "§4",
-   "commit": "9b0b994"
+   "commit": "9b0b994`, **corrected freeze lift 1 (F2)**"
   },
   {
    "id": 25,
@@ -1048,10 +1048,10 @@
    "id": 31,
    "quantity": "H3: reach at the worst cell, S2-gauci",
    "value": "0.86",
-   "ci": "[0.79, 0.93]",
+   "ci": "**[0.78, 0.91]**",
    "unit": null,
    "source_section": "§7",
-   "commit": "9af4707"
+   "commit": "9af4707`; **interval restated Wilson per §12.1 D0 in freeze lift 1** — it had been a normal approximation, [0.79, 0.93], on the same 100 runs and the same point estimate"
   },
   {
    "id": 32,
@@ -2231,6 +2231,249 @@
    "unit": null,
    "source_section": "§8",
    "commit": "c5203f4"
+  },
+  {
+   "id": 163,
+   "quantity": "**G4: best-of-three searched S = 3 † beats B0-blind at h = 1.93 s**",
+   "value": "**18 of 25** cells (0 worse, 7 overlapping; per seed **18 / 17 / 14**)",
+   "ci": null,
+   "unit": "held-out cells",
+   "source_section": "§22, prereg `577f15a`",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 164,
+   "quantity": "G4: dispersion among survivors, best-of-three S = 3 † vs B0-blind",
+   "value": "**1.41 vs 1.45**",
+   "ci": "[1.399, 1.423] vs [1.445, 1.472]",
+   "unit": "m",
+   "source_section": "§22",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 165,
+   "quantity": "G4′: rule (a), S3-survival_task-s2 † against B1-ternary ‡",
+   "value": "13 of 25 cells (1 worse, 11 overlapping)",
+   "ci": null,
+   "unit": "held-out cells",
+   "source_section": "§22",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 166,
+   "quantity": "§22: pooled mean per-robot survival at h = 1.93 s, S3-survival_task-s2 † / B1 ‡ / B0",
+   "value": "0.5125 / 0.4596 / 0.3655",
+   "ci": "[0.5081,0.5169] / [0.4553,0.4640] / [0.3613,0.3697]",
+   "unit": null,
+   "source_section": "§22",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 167,
+   "quantity": "§22: rule (b), dispersion among survivors, the three survival-only rows †",
+   "value": "14 492 / 10 872 / 9 744",
+   "ci": null,
+   "unit": "m",
+   "source_section": "§22",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 168,
+   "quantity": "§22: runs with ≤ 5 survivors, **as a share of USABLE runs** — survival-only † / D ‡ / B1 ‡",
+   "value": "**0 / 0 / 0 %** vs **8.1 %** vs **11.7 %**",
+   "ci": "2500/2500 usable vs 2476/2500 vs 1479/2500",
+   "unit": null,
+   "source_section": "§22",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 169,
+   "quantity": "§22: Pareto at r_p = 0.2 m, κ = 0 — two-axis † vs D ‡",
+   "value": "0.6795 at 1.39 vs 0.7040 at 379.90",
+   "ci": "[0.6587,0.6996] vs [0.6836,0.7236]",
+   "unit": "survival, m",
+   "source_section": "§22",
+   "commit": "ceda8b6"
+  },
+  {
+   "id": 170,
+   "quantity": "**A1 at n = 50**: best S = 2 / S4-terrain † / S4-warm †",
+   "value": "1.0412 / 1.1277 / 1.1175",
+   "ci": "[0.9640,1.1155] / [1.0841,1.2507] / [1.0673,1.1814]",
+   "unit": "hold ratio",
+   "source_section": "§23, prereg `0dd7ae1`",
+   "commit": "1582175"
+  },
+  {
+   "id": 171,
+   "quantity": "**A1 at n = 10, τ = 3600 s**: best S = 2 / S4-terrain † / S4-warm †",
+   "value": "1.1449 / 1.0490 / 1.1158",
+   "ci": "[1.1055,1.1748] / [1.0275,1.1124] / [1.0699,1.1479]",
+   "unit": "hold ratio",
+   "source_section": "§23",
+   "commit": "493ec46"
+  },
+  {
+   "id": 172,
+   "quantity": "§23: the pre-registered τ contingency firing, S2-gauci reach at n = 10, θ_m = 0.9, τ = 600 s → 3600 s",
+   "value": "0.71 → **1.00**",
+   "ci": "[0.61,0.79] → [0.96,1.00]",
+   "unit": null,
+   "source_section": "§23",
+   "commit": "493ec46"
+  },
+  {
+   "id": 173,
+   "quantity": "§23: the n = 10 margin — S4-terrain's upper bound minus the best S = 2 row's lower bound",
+   "value": "**0.0069**",
+   "ci": null,
+   "unit": "hold-ratio units",
+   "source_section": "§23",
+   "commit": "493ec46"
+  },
+  {
+   "id": 174,
+   "quantity": "**A3: paired terrain-tuning term at θ_m = 0.9**, λ = 0.05 / 0.10 / 0.20 m",
+   "value": "**+0.0951 / +0.0818 / +0.0368**",
+   "ci": "[+0.0456,+0.1366] / [−0.0008,+0.1331] / [+0.0165,+0.0667]",
+   "unit": "m",
+   "source_section": "§24, prereg `d6c40c8`",
+   "commit": "9cc4aee"
+  },
+  {
+   "id": 175,
+   "quantity": "§24: objective-tuning share of the anchor-to-rough gap, three λ",
+   "value": "95.0 / 96.9 / 94.4",
+   "ci": "terrain share 5.0 / 3.1 / 5.6",
+   "unit": "%",
+   "source_section": "§24",
+   "commit": "9cc4aee"
+  },
+  {
+   "id": 176,
+   "quantity": "**A2: matched-controller cost, as a range over three λ**",
+   "value": "**+1.2 % to +21.4 %**",
+   "ci": "§12.1 D1 paired form; replaces the single-λ 10–20 %",
+   "unit": "%",
+   "source_section": "§24",
+   "commit": "9cc4aee"
+  },
+  {
+   "id": 177,
+   "quantity": "**A8: the θ_m = 0.6 crossing**, λ = 0.05 / 0.10 / 0.20 m",
+   "value": "+0.0659 / +0.0421 / −0.0160",
+   "ci": "[+0.0296,+0.0918] / [+0.0107,+0.0659] / [−0.0305,+0.0043]",
+   "unit": "m",
+   "source_section": "§24",
+   "commit": "9cc4aee"
+  },
+  {
+   "id": 178,
+   "quantity": "§24: the anchor's own hold ratio at three λ (the gap being decomposed shrinks with it)",
+   "value": "2.0719 / 2.1492 / 1.5186",
+   "ci": null,
+   "unit": "hold ratio",
+   "source_section": "§24",
+   "commit": "9cc4aee"
+  },
+  {
+   "id": 179,
+   "quantity": "§24: pairing check — run *i* is the same seed and initial dispersion at every λ",
+   "value": "**600 of 600, 0 disagreements**",
+   "ci": null,
+   "unit": "run indices",
+   "source_section": "§24",
+   "commit": "9cc4aee"
+  },
+  {
+   "id": 180,
+   "quantity": "**Pseudo-reality comparison 1** (terrain tax)",
+   "value": "**ROBUST**",
+   "ci": "10/10 same sign, 10/10 disjoint",
+   "unit": "of 10 models",
+   "source_section": "§25, prereg `367ee93`",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 181,
+   "quantity": "**Pseudo-reality comparison 2** (capability flatness)",
+   "value": "*not established either way*",
+   "ci": "9/10 sign, **4/10 disjoint**; the flip is model 09 at −0.0554 [−0.0879,−0.0183]",
+   "unit": "of 10 models",
+   "source_section": "§25",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 182,
+   "quantity": "§25: is any S = 4 row **disjointly better** than S = 2 — A1 as worded",
+   "value": "**1 of 10** (model 09); not in the reference",
+   "ci": null,
+   "unit": "of 10 models",
+   "source_section": "§25",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 183,
+   "quantity": "**Pseudo-reality comparison 3** (confusion through aggregation), B0 / B1 ‡ / D ‡",
+   "value": "ROBUST / ROBUST / ROBUST",
+   "ci": "10/10 / 10/10 / **10/7** disjoint",
+   "unit": "of 10 models",
+   "source_section": "§25",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 184,
+   "quantity": "**Pseudo-reality comparison 4**, r_p = 0.1 / 0.35 / 1.0 m",
+   "value": "*not established* / ROBUST / ROBUST",
+   "ci": "**10/3** / 10/10 / 10/10 disjoint",
+   "unit": "of 10 models",
+   "source_section": "§25",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 185,
+   "quantity": "**Pseudo-reality comparison 5** — S3 † against B1 ‡ at r_p = 1 m",
+   "value": "**1 of 14 orderings FRAGILE**",
+   "ci": "5/10 same sign, 7/10 disjoint, **5/10 flips**, all of them `dt = 0.05` models",
+   "unit": "of 10 models",
+   "source_section": "§25",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 186,
+   "quantity": "§25: reach diagnostic, lowest anywhere — *reported, not thresholded*",
+   "value": "**0.65**, S2-gauci in model 05 (reference 0.86)",
+   "ci": null,
+   "unit": null,
+   "source_section": "§25",
+   "commit": "cfa5288"
+  },
+  {
+   "id": 187,
+   "quantity": "**D10 split**: sign flips in the model-only sub-family (`dt = 0.10`)",
+   "value": "**1 of 14 orderings** (comparison 2)",
+   "ci": "2 further orderings flip only in the control-period half",
+   "unit": "of 14",
+   "source_section": "§25",
+   "commit": "0cd99a7"
+  },
+  {
+   "id": 188,
+   "quantity": "**Phase 5c: S2-gauci reach at θ_m = 0.9, noise-free, by control period**",
+   "value": "**0.9050 → 0.6150**, DISJOINT",
+   "ci": "[0.8723,0.9300] → [0.5664,0.6614]; S2-searched 0.9950 → 0.9825, overlapping",
+   "unit": "dt 0.10 → 0.05",
+   "source_section": "§25",
+   "commit": "0cd99a7"
+  },
+  {
+   "id": 189,
+   "quantity": "Phase 5c: the same row's hold ratio, noise-free, by control period",
+   "value": "**2.0739 → 2.9747**, DISJOINT",
+   "ci": "[1.9538,2.2019] → [2.7337,3.2093]",
+   "unit": "hold ratio",
+   "source_section": "§25",
+   "commit": "0cd99a7"
   }
  ],
  "document_revision": "Phase A",

@@ -82,16 +82,19 @@ def _():
 @item(12, "1.43", "gauci_scaling n=20")
 def _():
     r = rec("gauci_scaling").filter(n=20); return fm(r.column("final_dispersion")), f"n={len(r)}"
-@item(13, "1.401 at every value", "link_distance")
+@item(13, "1.3875 at every value, spread exactly 0", "link_distance")
 def _():
     ld = rec("link_distance"); k = [f for f in ld.fields() if "link" in f.lower()]
     ds = [float(np.median(rr.column("final_dispersion"))) for _, rr in sorted(ld.group_by(k).items())]
-    return f"{min(ds):.4f}-{max(ds):.4f}", f"{len(ds)} values of {k[0]}"
-@item(14, "0.43 -> 0.98", "link_distance")
+    return (f"{min(ds):.4f} at every value, spread {max(ds)-min(ds):.4f}",
+            f"{len(ds)} values of {k[0]}; max {max(ds):.4f}")
+@item(14, "0.475 -> 0.967", "link_distance")
 def _():
+    # Three decimals, not two: §13 quotes this to three and a two-decimal
+    # recomputation reads as a mismatch to check_section13's precision rule.
     ld = rec("link_distance"); k = [f for f in ld.fields() if "link" in f.lower()]
     fs = [float(np.median(rr.column("fraction_time_single_cluster"))) for _, rr in sorted(ld.group_by(k).items())]
-    return f"{min(fs):.2f} -> {max(fs):.2f}", f"{len(fs)} values"
+    return f"{min(fs):.3f} -> {max(fs):.3f}", f"{len(fs)} values"
 @item(18, "0 of 23", "terrain_h1_fine")
 def _():
     g = sorted(rec("terrain_h1_fine").group_by(["terrain.slope_angle", "terrain.friction_amplitude"]).items())
@@ -136,14 +139,16 @@ def _():
     p = _h2_peaks(0.7)
     at = sum(1 for v in p.values() if abs(v[3] - 0.69) < 0.02)
     return f"{at} of {len(p)} at lambda/R0 = 0.69", "; ".join(f"{k} {v[3]:.2f}" for k, v in p.items()) + " -- the amplitude is not stated in the numbers table; at theta_m = 1.0 only 2 of 5"
-@item(23, "5 %", "terrain_h2_powered_valid, theta_m = 1.0")
+@item(23, "44 %", "terrain_h2_powered_valid, theta_m = 1.0")
 def _():
-    p = _h2_peaks(1.0); v = [p[k][1] for k in ("base", "axle-half-R0-same", "axle-x2-R0-same")]
-    return f"{100*(max(v)-min(v))/min(v):.0f} %", f"peaks {[round(x,2) for x in v]}"
-@item(24, "560 %", "terrain_h2_powered_valid, theta_m = 1.0")
+    # Peaks listed in §13's order -- half the axle, base, twice the axle -- so
+    # the row reads as a sequence rather than needing the reader to reorder it.
+    p = _h2_peaks(1.0); v = [p[k][1] for k in ("axle-half-R0-same", "base", "axle-x2-R0-same")]
+    return f"{100*(max(v)-min(v))/min(v):.0f} %", "peaks " + " / ".join(f"{x:.2f}" for x in v)
+@item(24, "648 %", "terrain_h2_powered_valid, theta_m = 1.0")
 def _():
-    p = _h2_peaks(1.0); v = [p[k][1] for k in ("base", "R0-half-axle-same", "R0-x2-axle-same")]
-    return f"{100*(max(v)-min(v))/min(v):.0f} %", f"peaks {[round(x,2) for x in v]}"
+    p = _h2_peaks(1.0); v = [p[k][1] for k in ("R0-half-axle-same", "base", "R0-x2-axle-same")]
+    return f"{100*(max(v)-min(v))/min(v):.0f} %", "peaks " + " / ".join(f"{x:.2f}" for x in v)
 
 # ------------------------------------------------------------- mechanism, H3
 def _mech(row):
@@ -272,16 +277,21 @@ def _():
 # --------------------------------------------------------- sections 13, 14
 def _tune(file, row, amp):
     return cells(file, row=row, **{"terrain.friction_amplitude": amp})
-@item(71, "2.208 / 1.195 / 1.104", "terrain_tuning_control")
-def _():
-    return " / ".join(frm(_tune("terrain_tuning_control", r, 0.9).column("final_dispersion"),
-                          _tune("terrain_tuning_control", r, 0.0).column("final_dispersion"))
-                      for r in ("S2-gauci", "S2-flat", "S2-rough")), "ratio of medians"
-@item(72, "2.149 / 1.200 / 1.099", "terrain_tuning_control")
+# Rows 71 and 72 were CROSSED between this script and §13 until freeze lift 1:
+# §13 row 71 is the paired form and row 72 the retired ratio-of-medians, and this
+# script computed them the other way round. Both numbers were always right and
+# both always reproduced; only the labels were swapped, so the fix is to the
+# script, not to §13. (Phase 0 verification report, D-crossed-ids.)
+@item(71, "2.149 / 1.200 / 1.099", "terrain_tuning_control")
 def _():
     return " / ".join(fm(paired(_tune("terrain_tuning_control", r, 0.9).rows,
                                 _tune("terrain_tuning_control", r, 0.0).rows))
-                      for r in ("S2-gauci", "S2-flat", "S2-rough")), "median of paired ratios"
+                      for r in ("S2-gauci", "S2-flat", "S2-rough")), "median of paired ratios (§12.1 D1)"
+@item(72, "2.208 / 1.195 / 1.104", "terrain_tuning_control")
+def _():
+    return " / ".join(frm(_tune("terrain_tuning_control", r, 0.9).column("final_dispersion"),
+                          _tune("terrain_tuning_control", r, 0.0).column("final_dispersion"))
+                      for r in ("S2-gauci", "S2-flat", "S2-rough")), "ratio of medians -- RETIRED by §12.1 D1"
 def _dec(file):
     d = {r: float(np.median(_tune(file, r, 0.9).column("final_dispersion"))) for r in ("S2-gauci", "S2-flat", "S2-rough")}
     gap = d["S2-gauci"] - d["S2-rough"]
@@ -587,6 +597,280 @@ def _():
                       for r in ("S2-class-flat-s1", "S2-class-flat-s2", "S2-class-flat-s3")), ""
 
 
+# ===================== freeze lift 1: experiments 1-4, rows 160-193 ==========
+#
+# These pull from the four decision scripts rather than reimplementing their
+# statistics. That is deliberate and is the same rule as everywhere else in this
+# file: a number must have exactly one implementation. The decision scripts are
+# it -- they apply the pre-registered rules, they use `swarm_harness.stats`
+# throughout, and a second copy here could drift from the rule that decided the
+# experiment without anything failing.
+#
+# Each is imported lazily and memoised, because experiment 4's costs a few
+# seconds and most runs of this script do not need it.
+
+import importlib.util as _ilu, io as _io, contextlib as _ctx
+
+_DEC: dict[str, dict] = {}
+def dec(name: str, *flags: str) -> dict:
+    """Run a decision script with --json and return its parsed output."""
+    key = name + " ".join(flags)
+    if key not in _DEC:
+        spec = _ilu.spec_from_file_location(f"_d_{key}", REPO / "scripts" / f"{name}.py")
+        mod = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        argv, sys.argv = sys.argv, ["x", "--json", *flags]
+        buf = _io.StringIO()
+        try:
+            with _ctx.redirect_stdout(buf):
+                mod.main()
+        finally:
+            sys.argv = argv
+        t = buf.getvalue()
+        _DEC[key] = json.loads(t[t.index("\n{"):])
+    return _DEC[key]
+
+def ci(d, k="value", lo="lo", hi="hi", p=4):
+    return f"{d[k]:+.{p}f} [{d[lo]:+.{p}f}, {d[hi]:+.{p}f}]"
+
+# ------------------------------------------------- experiment 1, §22 --------
+def _s3(file, row, h=1.93, **kw):
+    return cells(file, row=row, **{"pursuer.handling_time": h}, **kw)
+def _perrobot(rows):
+    f = []
+    for x in rows:
+        n, sv = int(x["n"]), int(x["survivors"]); f.extend([1.0]*sv + [0.0]*(n-sv))
+    pv, lo, hi = wilson_ci(f); return pv, lo, hi
+
+S3_TASK = ("S3-survival_task-s1", "S3-survival_task-s2", "S3-survival_task-s3")
+S3_SURV = ("S3-survival-s1", "S3-survival-s2", "S3-survival-s3")
+
+def _cellwise(reference, rows, file="pursuer_searched_s3"):
+    """Per (r_p, kappa) cell at h = 1.93: does best-of-`rows` beat `reference`?
+
+    Best-of-three is per cell, per §21 branch (b). Returns (better, worse,
+    overlap, per-seed better counts) on mean per-robot survival with Wilson
+    intervals -- §12.1 D0's statistic, never a median of survival_fraction.
+    """
+    r = rec(file)
+    rps = sorted({x["pursuer.range"] for x in r.rows})
+    ks = sorted({x["pursuer.confusion"] for x in r.rows})
+    better = worse = overlap = 0
+    per_seed = [0]*len(rows)
+    for rp in rps:
+        for k in ks:
+            kw = {"pursuer.range": rp, "pursuer.confusion": k}
+            ref = _perrobot(_s3(file, reference, **kw).rows)
+            best = max((_perrobot(_s3(file, row, **kw).rows) for row in rows), key=lambda t: t[0])
+            for i, row in enumerate(rows):
+                if _perrobot(_s3(file, row, **kw).rows)[1] > ref[2]:
+                    per_seed[i] += 1
+            if best[1] > ref[2]: better += 1
+            elif best[2] < ref[1]: worse += 1
+            else: overlap += 1
+    return better, worse, overlap, per_seed
+
+@item(163, "18 of 25 (0 worse; per seed 18 / 17 / 14)", "pursuer_searched_s3")
+def _():
+    b, w, o, ps = _cellwise("B0-blind", S3_TASK)
+    return (f"{b} of {b+w+o} ({w} worse, {o} overlapping; per seed {' / '.join(map(str, ps))})",
+            "best-of-three per cell, §21 branch (b)")
+@item(164, "1.41 vs 1.45", "pursuer_searched_s3")
+def _():
+    """Dispersion among survivors for the BEST-OF-THREE SELECTION, not pooled.
+
+    Pooling all three seeds' runs answers a different question and gives 1.46:
+    the claim is about the row that won each cell, so the selection has to be
+    made per cell before the dispersions are pooled -- §21 branch (b) again.
+    """
+    r = rec("pursuer_searched_s3")
+    rps = sorted({x["pursuer.range"] for x in r.rows})
+    ks = sorted({x["pursuer.confusion"] for x in r.rows})
+    picked, ref = [], []
+    for rp in rps:
+        for k in ks:
+            kw = {"pursuer.range": rp, "pursuer.confusion": k}
+            best = max(S3_TASK, key=lambda row: _perrobot(_s3("pursuer_searched_s3", row, **kw).rows)[0])
+            picked += [x["final_dispersion"] for x in _s3("pursuer_searched_s3", best, **kw).rows
+                       if x["survivors"] >= 3]
+            ref += [x["final_dispersion"] for x in _s3("pursuer_searched_s3", "B0-blind", **kw).rows
+                    if x["survivors"] >= 3]
+    return (f"{np.median(picked):.2f} vs {np.median(ref):.2f}",
+            f"{fm(picked)} vs {fm(ref)}; best-of-three chosen per cell, then pooled")
+@item(165, "13 of 25", "pursuer_searched_s3")
+def _():
+    b, w, o, _ps = _cellwise("B1-ternary", ("S3-survival_task-s2",))
+    return f"{b} of {b+w+o}", f"{w} worse, {o} overlapping -- rule (a), seed 2 alone"
+@item(166, "0.5125 / 0.4596 / 0.3655", "pursuer_searched_s3")
+def _():
+    return " / ".join(f"{_perrobot(_s3('pursuer_searched_s3', r).rows)[0]:.4f}"
+                      for r in ("S3-survival_task-s2", "B1-ternary", "B0-blind")), "pooled at h = 1.93"
+@item(167, "14 492 / 10 872 / 9 744", "pursuer_searched_s3")
+def _():
+    return " / ".join(f"{np.median([x['final_dispersion'] for x in _s3('pursuer_searched_s3', r).rows if x['survivors'] >= 3]):.0f}"
+                      for r in S3_SURV), "dispersion among survivors, survival-only rows"
+@item(168, "0 / 0 / 0 runs with <= 5 survivors", "pursuer_searched_s3")
+def _():
+    out = []
+    for r in S3_SURV + ("D-dispersive", "B1-ternary"):
+        c = _s3("pursuer_searched_s3", r).rows
+        usable = [x for x in c if x["survivors"] >= 3]
+        le5 = sum(1 for x in usable if x["survivors"] <= 5)
+        out.append(f"{r.split('-')[-1]} {le5}/{len(usable)} ({100*le5/len(usable):.1f}%)")
+    return " ".join(out[:3]), "and " + "; ".join(out[3:]) + " -- share of USABLE runs"
+@item(169, "0.6795 vs 0.7040 at 1.39 vs 379.90", "pursuer_searched_s3_pareto")
+def _():
+    kw = {"pursuer.range": 0.2, "pursuer.confusion": 0.0, "pursuer.handling_time": 1.93}
+    out = []
+    for r in ("S3-survival_task-s2", "D-dispersive"):
+        c = cells("pursuer_searched_s3_pareto", row=r, **kw)
+        sv = _perrobot(c.rows)[0]
+        d = np.median([x["final_dispersion"] for x in c.rows if x["survivors"] >= 3])
+        out.append(f"{sv:.4f} at {d:.2f}")
+    return " vs ".join(out), "r_p = 0.2 m, kappa = 0; task quality ratio"
+
+# ------------------------------------------------- experiment 2, §23 --------
+@item(170, "1.0412 / 1.1277 / 1.1175 at n = 50", "terrain_capability_n")
+def _():
+    d = dec("experiment2_decision")["n=50"]
+    h = d["hold_ratios"]
+    return (f"{h[d['best_s2']][0]:.4f} / {h['S4-terrain'][0]:.4f} / {h['S4-warm'][0]:.4f}",
+            f"best S = 2 is {d['best_s2']}; {d['verdict']}")
+@item(171, "1.1449 / 1.0490 / 1.1158 at n = 10, tau = 3600 s", "terrain_capability_n_tau")
+def _():
+    d = dec("experiment2_decision")["n=10,tau=3600"]
+    h = d["hold_ratios"]
+    return (f"{h[d['best_s2']][0]:.4f} / {h['S4-terrain'][0]:.4f} / {h['S4-warm'][0]:.4f}",
+            f"best S = 2 is {d['best_s2']}; {d['verdict']}")
+@item(172, "0.71 -> 1.00", "terrain_capability_n(_tau)")
+def _():
+    a = fw(cells("terrain_capability_n", row="S2-gauci",
+                 **{"swarm.n": 10, "terrain.friction_amplitude": 0.9}).column("ever_single_cluster"))
+    b = fw(cells("terrain_capability_n_tau", row="S2-gauci",
+                 **{"swarm.n": 10, "terrain.friction_amplitude": 0.9}).column("ever_single_cluster"))
+    return f"{a} -> {b}", "the pre-registered tau contingency firing on Gauci alone"
+@item(173, "0.0069", "terrain_capability_n_tau")
+def _():
+    d = dec("experiment2_decision")["n=10,tau=3600"]
+    s4 = d["s4"]["S4-terrain"]; best = d["hold_ratios"][d["best_s2"]]
+    return f"{s4['hi'] - best[1]:.4f}", "S4-terrain upper bound minus best S = 2 lower bound"
+
+# ------------------------------------------------- experiment 3, §24 --------
+@item(174, "+0.0951 / +0.0818 / +0.0368", "terrain_tuning_control(_lambda)")
+def _():
+    d = dec("experiment3_decision")["per_lambda"]
+    return " / ".join(ci(d[k]["terrain_term"]["0.9"]) for k in ("0.05", "0.1", "0.2")), \
+           "paired terrain term at theta_m = 0.9, lambda 0.05 / 0.10 / 0.20 m"
+@item(175, "95.0 / 96.9 / 94.4 % objective-tuning", "terrain_tuning_control(_lambda)")
+def _():
+    d = dec("experiment3_decision")["per_lambda"]
+    return (" / ".join(f"{d[k]['decomposition']['objective_pct']:.1f}" for k in ("0.05", "0.1", "0.2")),
+            "terrain share " + " / ".join(f"{d[k]['decomposition']['terrain_pct']:.1f}" for k in ("0.05", "0.1", "0.2")))
+@item(176, "+1.2 % to +21.4 %", "terrain_tuning_control(_lambda)")
+def _():
+    d = dec("experiment3_decision")["matched_controller_cost"]
+    return f"{d['range_pct'][0]:+.1f} % to {d['range_pct'][1]:+.1f} %", \
+           "range over three lambda and both tuned rows, §12.1 D1 paired form"
+@item(177, "+0.0659 / +0.0421 / -0.0160 at theta_m = 0.6", "terrain_tuning_control(_lambda)")
+def _():
+    d = dec("experiment3_decision")["crossing"]
+    return " / ".join(ci(d["per_lambda"][k]) for k in ("0.05", "0.1", "0.2")), \
+           f"disjoint at {len(d['disjoint_at'])} of 3 -> claimed = {d['claimed']}"
+@item(178, "2.0719 / 2.1492 / 1.5186", "terrain_tuning_control(_lambda)")
+def _():
+    d = dec("experiment3_decision")["per_lambda"]
+    return " / ".join(f"{d[k]['hold_ratios']['S2-gauci']['value']:.4f}" for k in ("0.05", "0.1", "0.2")), \
+           "the anchor's own hold ratio; the gap being decomposed shrinks with it"
+@item(179, "600 of 600, 0 disagreements", "terrain_tuning_control(_lambda)")
+def _():
+    d = dec("experiment3_decision")
+    n = 3 * 2 * 100   # three rows x two new lambda x 100 run indices
+    return (f"{n} of {n}, 0 disagreements" if d["pairing_exact"] else "BROKEN"), \
+           "run i is the same seed and initial dispersion at every lambda"
+
+# ------------------------------------------------- experiment 4, §25 --------
+def _e4(*flags):
+    return dec("experiment4_decision", *flags)
+def _counts(d, name):
+    e = d["orderings"][name]
+    return f"{e['same_sign']}/{e['disjoint']}/{e['flips']}"
+
+@item(180, "10/10/0 ROBUST", "pseudo_reality_aggregation_model_*")
+def _():
+    d = _e4(); n = "C1 — hold-ratio difference at θ_m = 0.9"
+    return f"{_counts(d, n)} {d['orderings'][n]['verdict']}", "comparison 1, same-sign/disjoint/flips of 10"
+@item(181, "9/4/1 not established either way", "pseudo_reality_aggregation_model_*")
+def _():
+    d = _e4(); n = "C2 — hold-ratio difference at θ_m = 0.9, n = 20"
+    e = d["orderings"][n]
+    fl = e["flipping_models"][0]
+    return (f"{_counts(d, n)} {e['verdict']}",
+            f"the flip is model {fl:02d} at {ci(e['per_model'][str(fl)])}")
+@item(182, "1 of 10 disjointly BETTER (model 09)", "pseudo_reality_aggregation_model_*")
+def _():
+    d = _e4(); e = d["orderings"]["C2 — hold-ratio difference at θ_m = 0.9, n = 20"]
+    better = [m for m, v in e["per_model"].items() if v["hi"] < 0]
+    return (f"{len(better)} of 10", "A1 AS WORDED asks whether any S = 4 row is disjointly BETTER; "
+            + (f"model(s) {', '.join(better)}" if better else "none") + "; reference: no")
+@item(183, "ROBUST / ROBUST / ROBUST", "pseudo_reality_pursuit_model_*")
+def _():
+    d = _e4()
+    ns = [f"C3 — κ-response ratio — {r}" for r in ("B0-blind", "B1-ternary", "D-dispersive")]
+    return " / ".join(d["orderings"][n]["verdict"] for n in ns), \
+           " / ".join(_counts(d, n) for n in ns)
+@item(184, "not established / ROBUST / ROBUST", "pseudo_reality_pursuit_model_*")
+def _():
+    d = _e4()
+    ns = [f"C4 — B1 − D — r_p = {r} m" for r in ("0.1", "0.35", "1")]
+    return " / ".join(d["orderings"][n]["verdict"] for n in ns), \
+           " / ".join(_counts(d, n) for n in ns)
+@item(185, "1 fragile ordering of 14: C5 vs B1 at r_p = 1 m", "pseudo_reality_pursuit_model_*")
+def _():
+    d = _e4()
+    frag = [n for n, e in d["orderings"].items() if e["verdict"] == "FRAGILE"]
+    n = "C5 — S3† − B1-ternary — r_p = 1 m"
+    e = d["orderings"][n]
+    # The counts are spelled "x of 10" rather than "x/y/z" because §13 states
+    # them that way and the row has to read as one sequence in both documents.
+    return (f"{len(frag)} of 14 orderings FRAGILE: {'; '.join(frag)}",
+            f"{e['same_sign']}/10 same sign, {e['disjoint']}/10 disjoint, "
+            f"{e['flips']}/10 flips, all of them dt = 0.05 models "
+            + ", ".join(f"{m:02d}" for m in e["flipping_models"]))
+@item(186, "0.65 lowest, S2-gauci in model 05", "pseudo_reality_aggregation_model_*")
+def _():
+    d = _e4()["reach_diagnostic"]
+    lo = min((v, m, r) for m, row in d.items() for r, v in row.items())
+    return f"{lo[0]:.2f} ({lo[2]} in model {int(lo[1]):02d})", \
+           f"reference {d['0']['S2-gauci']:.2f}; reported, NOT thresholded"
+@item(187, "1 flip in 14 orderings, model-only", "pseudo_reality_*_model_*")
+def _():
+    d = _e4("--fixed2")["d10_split"]
+    only = [n for n, v in d.items() if not v["model_plus_control_period"].startswith("5/5 sign")
+            and v["model_only"].startswith("5/5 sign")]
+    flips = [n for n, v in d.items() if not v["model_only"].startswith("5/5 sign")]
+    return (f"{len(flips)} of {len(d)}: {'; '.join(flips) or 'none'}",
+            f"and {len(only)} ordering(s) flip only in the control-period half")
+@item(188, "0.9050 -> 0.6150 noise-free, DISJOINT", "dt_reach_noisefree")
+def _():
+    r = rec("dt_reach_noisefree")
+    a = fw(r.filter(row="S2-gauci", **{"sim.dt": 0.1, "terrain.friction_amplitude": 0.9}).column("ever_single_cluster"))
+    b = fw(r.filter(row="S2-gauci", **{"sim.dt": 0.05, "terrain.friction_amplitude": 0.9}).column("ever_single_cluster"))
+    c = fw(r.filter(row="S2-searched", **{"sim.dt": 0.1, "terrain.friction_amplitude": 0.9}).column("ever_single_cluster"))
+    e = fw(r.filter(row="S2-searched", **{"sim.dt": 0.05, "terrain.friction_amplitude": 0.9}).column("ever_single_cluster"))
+    return f"{a} -> {b}", f"S2-searched {c} -> {e}; 400 runs/cell, seed base 20260911, wheel_noise = 0"
+@item(189, "2.0739 -> 2.9747 hold ratio, noise-free", "dt_reach_noisefree")
+def _():
+    r = rec("dt_reach_noisefree")
+    out = []
+    for dt in (0.1, 0.05):
+        kw = {"sim.dt": dt}
+        num = r.filter(row="S2-gauci", **kw, **{"terrain.friction_amplitude": 0.9}).rows
+        den = r.filter(row="S2-gauci", **kw, **{"terrain.friction_amplitude": 0.0}).rows
+        m, lo, hi = median_ci(paired(num, den))
+        out.append(f"{m:.4f} [{lo:.4f}, {hi:.4f}]")
+    return " -> ".join(out), "the enumerated row's terrain tax at two control periods"
+
+
 def main():
     RESULTS.sort(key=lambda r: r["id"])
     if "--json" in sys.argv:
@@ -594,7 +878,7 @@ def main():
     print(f"{'#':>4}  {'claimed':<34}  {'recomputed':<44}  note")
     for r in RESULTS:
         print(f"{r['id']:>4}  {r['claimed'][:34]:<34}  {str(r['recomputed'])[:44]:<44}  {r['note'][:90]}")
-    print(f"\n{len(RESULTS)} of 130 rows recomputed from logged runs.")
+    print(f"\n{len(RESULTS)} of 189 rows recomputed from logged runs.")
     return 0
 
 

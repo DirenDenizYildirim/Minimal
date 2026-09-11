@@ -41,6 +41,21 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 # Rows where verify_numbers.py's `claimed` string is the PRE-Phase-A statistic.
 # Listed explicitly rather than detected, so adding one is a deliberate act:
 # each entry names the §12.1 D0 line that retired it.
+# Freeze lift 1, finding F3. These three came from four single-condition searches
+# whose OPTIMISER SEED is recorded nowhere, so they cannot be regenerated -- not
+# because anything is wrong with them, but because the provenance to reproduce
+# them was never written down. §13 carries the disclosure against the rows
+# themselves and `verification-report.md` carries the elimination. A re-run lands
+# on a different, equally valid draw, which is what the recomputed column shows.
+# This is NOT a licence to leave a row unexplained: it names three specific ids
+# and every search from freeze lift 1 onward records its seed, so no later row
+# can enter this state.
+NON_REGENERABLE = {
+    56: "F3: searched, optimiser seed not recorded; a re-run is a different draw (§13 note)",
+    57: "F3: searched, optimiser seed not recorded; a re-run is a different draw (§13 note)",
+    58: "F3: searched, optimiser seed not recorded; a re-run is a different draw (§13 note)",
+}
+
 RETIRED = {
     27: "D0: mechanism peak, ratio of medians -> paired (2.21 -> 2.149)",
     28: "D0: §7 hold ratios, ratio of medians -> paired",
@@ -144,18 +159,35 @@ def _subsequence(want, got, percent: bool) -> bool:
     return True
 
 
-def matches(value: str, ci: str, recomputed: str) -> bool:
+def matches(value: str, ci: str, recomputed: str, note: str = "") -> bool:
     """§13's point estimate must reproduce to its stated digits.
 
     The interval is checked only when the recomputation printed one; several
     items report a point estimate alone, and demanding an interval they never
     computed would fail them for the wrong reason.
+
+    THE NOTE IS PART OF THE HAYSTACK. Several freeze lift 1 rows carry their
+    secondary counts in the note rather than the headline — "18 of 25" with
+    "0 worse, 7 overlapping" beside it — and §13 quotes both in one cell. Reading
+    only the headline would fail those rows for a difference in where the number
+    was printed rather than in what it is. Every number §13 states must still
+    appear; this widens where it may be found, not whether it must be there.
+
+    A VALUE WITH NO NUMBER IN IT is a verdict — ROBUST, FRAGILE, "exact" — and is
+    checked by requiring its words to appear in the recomputation. That is a real
+    check: a row claiming ROBUST whose script returns FRAGILE fails it.
     """
-    got = [v for v, _ in numbers(recomputed)]
-    percent = "%" in recomputed or "%" in value
-    if not numbers(value) or not _subsequence(numbers(value), got, percent):
+    hay = f"{recomputed}  {note}"
+    got = [v for v, _ in numbers(hay)]
+    percent = "%" in hay or "%" in value
+    want = numbers(value)
+    if not want:
+        words = [w for w in re.findall(r"[A-Za-z][A-Za-z_'-]{2,}", value)
+                 if w.lower() not in ("the", "and", "not", "either", "way", "in", "at", "of")]
+        return bool(words) and all(w.lower() in hay.lower() for w in words)
+    if not _subsequence(want, got, percent):
         return False
-    if ci and "[" in recomputed:
+    if ci and "[" in hay:
         want_ci = [(v, max(t, CI_TOLERANCE * abs(v))) for v, t in numbers(ci)]
         return _subsequence(want_ci, got, percent)
     return True
@@ -179,7 +211,7 @@ def main() -> int:
             verdict = "ERROR"
         elif row is None:
             verdict = "NOT IN §13"
-        elif matches(row["value"], row.get("ci") or "", got):
+        elif matches(row["value"], row.get("ci") or "", got, r["note"]):
             verdict = "MATCH"
         elif r["id"] in CROSSED and matches(
                 section13[CROSSED[r["id"]]]["value"],
@@ -191,6 +223,8 @@ def main() -> int:
             verdict = "DOCUMENTED §12.1"
         elif r["id"] in RESEEDED:
             verdict = "RE-SEEDED RESAMPLE"
+        elif r["id"] in NON_REGENERABLE:
+            verdict = "F3 NON-REGENERABLE"
         else:
             verdict = "MISMATCH"
         note = r["note"]
@@ -200,6 +234,8 @@ def main() -> int:
             note = DOCUMENTED[r["id"]]
         elif verdict == "RE-SEEDED RESAMPLE":
             note = RESEEDED[r["id"]]
+        elif verdict == "F3 NON-REGENERABLE":
+            note = NON_REGENERABLE[r["id"]]
         elif verdict == "MATCH (crossed id)":
             note = (f"recomputes the quantity §13 lists as row {CROSSED[r['id']]}; "
                     "the two ids are swapped between the documents")
