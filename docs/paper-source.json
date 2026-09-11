@@ -5,7 +5,20 @@
   "experimental_record_commit": "ce427a8",
   "freeze_declaration_commit": "2b736de",
   "evidence_base": "docs/findings.md §1–§21; docs/literature-corrections.md #1–#15; docs/validation.md",
-  "no_further_runs": true
+  "no_further_runs": true,
+  "lifted_once": {
+   "reason": "four reviewer objections, four pre-registered experiments",
+   "preregistrations": {
+    "searched-s3-pursuer": "577f15a",
+    "capability-flatness-n": "0dd7ae1",
+    "lambda-tuning-control": "d6c40c8",
+    "pseudo-reality": "367ee93"
+   },
+   "refrozen_as": "freeze-2",
+   "evidence_base": "docs/findings.md §1–§25; docs/literature-corrections.md #1–#17; docs/validation.md; docs/preregistration/",
+   "section13_rows_added": "163–189",
+   "section13_rows_corrected": "13, 14, 23, 24 (values); 31 (interval convention); 56, 57, 58 (provenance note, values unchanged)"
+  }
  },
  "marks": {
   "dagger": "searched, not exhaustive — an upper bound",

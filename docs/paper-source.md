@@ -3022,6 +3022,25 @@ sweep, is what makes the rule a rule.
 
 ---
 
+## Freeze 2
+
+This document describes the evidence base as re-frozen at **`freeze-2`**. The
+original freeze was `ce427a8`; it was lifted once, on instruction, for the four
+pre-registered experiments in §§22–25 of `findings.md`, and closed again.
+
+* **Evidence base**: `findings.md` §1–§25, `literature-corrections.md` #1–#17,
+  `validation.md`, and the four pre-registrations under `docs/preregistration/`.
+* **§13 rows 163–189** are new. Rows 13, 14, 23 and 24 carry corrected values
+  (F1, F2 — no claim changes); row 31's interval is restated Wilson per §12.1 D0;
+  rows 56–58 keep their values and carry a provenance note (F3).
+* **Verification at this freeze**: `scripts/check_section13.py` reports **114
+  MATCH, 0 MISMATCH**, with three rows in the documented F3 category, six
+  recomputing a statistic §13 retired, one documented in §12.1 and one re-seeded
+  resample. `scripts/verify_determinism.py` is IDENTICAL. 128 Rust tests, 32
+  harness tests.
+* **`docs/paper-source.json` is generated** from §13 of this file by
+  `scripts/sync_paper_source_json.py`; the markdown is the authority.
+
 ## What could not be sourced from the repository
 
 Everything above is taken from `docs/findings.md` §1–§21,
