@@ -2470,6 +2470,458 @@ Figure: `figures/phase0_seed_reproducibility.png`
 
 ---
 
+## 22. Freeze lift 1: a *searched* S = 3 pursuer row
+
+**The objection.** Every S = 3 row in the record was a guess. B1, B2 and B3 are
+hand-written points in six-, ten- and twelve-constant spaces, and §5 showed what
+that costs when it read B2 scoring below B3 as "more sensing hurts". So "one
+sensor state is worth more than anything else" was a statement about three
+guesses, not about the capability.
+
+Pre-registered at `docs/preregistration/searched-s3-pursuer.md`, commit
+**`577f15a`**, before any search ran. Six searches — two objectives × three
+optimiser seeds — each started **at B1-ternary's own constants**, so the search
+can only be asked "is there better?". Training base 930000, evaluation seed
+20260904, 25 held-out cells at h = 1.93 s.
+
+### Both pre-registered branches fired, and they fired on different rows
+
+**Rule (a) fired on `survival_task` seed 2.** 13 of 25 cells better than
+B1-ternary ‡ (1 worse, 11 overlapping) against a pre-registered threshold of 12,
+holding dispersion among survivors at **1.40 [1.39, 1.42]** against a bar of 3.0 —
+better than B1's own 1.52. Pooled at h = 1.93 s: **0.5125 [0.5081, 0.5169]**
+against B1's **0.4596 [0.4553, 0.4640]**. Wiped out in 16.4% of runs against B1's
+24.2%.
+
+**It is a thin pass and is described as one.** Seeds 1 and 3 fire at 6 of 25 each;
+the seed spread is **166%**. The threshold was **not** moved after the fact —
+that is the one thing a pre-registration is for, and "it passed but we didn't like
+the margin so we moved the bar" is worse than a thin pass honestly described.
+
+**Rule (b) fired on all three `survival` seeds.** Told to maximise survival
+alone, from a B1-ternary start, each of the three independently walked to
+D-dispersive's construction: state-0 arcs of **1625 / 169 / 160 cm** against a bar
+of 50, and dispersion among survivors of **14 492 / 10 872 / 9 744** against a bar
+of 10 (D-dispersive's own is 370). They beat B1 on survival in 19 of 25 cells.
+
+> **The sentence this licenses, and both halves belong in it every time.** At
+> r_p = 0.2 m, κ = 0 the two-axis searched row reaches **0.6795 [0.6587, 0.6996]**
+> against D-dispersive's **0.7040 [0.6836, 0.7236]** — overlapping — at **1.39
+> against 379.90** dispersion. A near-tie on survival at **273× the task quality**.
+> Quoting either number without the other inverts what the result says.
+
+### G4 is two claims, and only one of them goes in the abstract
+
+Split on review. The **capability** claim is against **B0-blind**, and is stated:
+
+> One additional sensor state buys survival at fixed task quality: the
+> best-of-three searched S = 3 row † beats the S = 2 Gauci row in **18 of 25**
+> held-out cells at h = 1.93 s (**0 worse**; per seed **18 / 17 / 14**), holding
+> dispersion among survivors at **1.41** vs **1.45**.
+
+Pooled, best-of-three against B0's **0.3655 [0.3613, 0.3697]**: 0.4802 / 0.5125 /
+0.4413 per seed. **The per-seed counts travel with the best-of-three number
+everywhere it appears** — they are the reader's window on the selection bias.
+
+**B1-ternary ‡ already beat B0 in 19 of 25 cells.** That was strong evidence about
+a guess. **The upgrade here is provenance, not margin**: the claim now rests on a
+searched row † rather than a hand-designed one, which is what §5's B2 failure
+showed it needed.
+
+The regime-specific claim is **G4′**, graded SUGGESTED, and its job in the paper
+is the sentence *"the hand-designed rows are close to what a class search finds"*,
+which is itself useful.
+
+### The survivor check inverted the concern
+
+A dispersion of 14 492 quoted on a handful of survivors would be meaningless. It
+is the opposite:
+
+| row | usable runs (≥ 3 survivors) | survivors: min / p5 / median | ≤ 5 survivors, as a share of usable |
+|---|---|---|---|
+| S3-survival-s1/s2/s3 † | **2500 / 2500** each | 10 / 14 / 17, 9 / 14 / 17, 9 / 13 / 16 | **0 %** |
+| D-dispersive ‡ | 2476 / 2500 | 3 / 5 / 13 | **8.1 %** |
+| B1-ternary ‡ | 1479 / 2500 | 3 / 4 / 17 | **11.7 %** |
+| S3-survival_task-s1/s2/s3 † | 1628 / 1750 / 1543 of 2500 | — | **12.3 / 11.7 / 9.9 %** |
+
+The survival-only rows are **nearly-intact swarms spread over hundreds of metres**,
+not almost-dead swarms with two robots far apart. The caveat belongs to
+D-dispersive and B1 — **and equally to the two-axis searched rows, which carry it
+at the same magnitude**. The denominator is the runs the dispersion is computed
+on, not all runs, and the figure caption says so.
+
+### Seed 3 and the noise floor, for the methods companion
+
+`survival_task` seed 3 returned **0.4581** against seeds 1 and 2 at 0.6804 and
+0.6608. Winner's-curse gaps — reported training objective minus honest re-score at
+100 runs/condition on held-out seeds — are **+0.0215 / +0.0339 / +0.0364** for
+`survival` and **+0.1687 / +0.1007 / +0.0142** for `survival_task`. Seed 3's is
+the *smallest* gap of the six, which is the signature of a stall rather than of
+overfitting: the search did not find much to be optimistic about. **The
+`survival_task` objective has a noise floor a search can stall in**, and that is a
+C4/C5 result about method, not about capability.
+
+Figure: `figures/pursuer_searched_s3_pareto.png` — all four kinds of row on one
+pair of axes (`harness/figures_pursuer_searched_s3_pareto.py`).
+
+---
+
+## 23. Freeze lift 1: capability flatness away from n = 20
+
+**The objection.** Everything was at n = 20.
+
+Pre-registered at `docs/preregistration/capability-flatness-n.md`, commit
+**`0dd7ae1`**. Nothing was searched: seven existing rows, constants copied
+verbatim, evaluated at n ∈ {10, 50}. Start radius is derived from
+`swarm.init.coverage = 0.05`, giving 0.523 m and 1.170 m against 0.740 m at
+n = 20, so initial density is constant and the comparison is about size rather
+than about density.
+
+### The τ contingency fired, and that is the rule working
+
+The trigger was fixed before any data existed: any row below 0.8 reach at n = 10,
+θ_m = 0.9, τ = 600 s. **S2-gauci came in at 0.71 [0.61, 0.79]** while every other
+row sat at 0.99–1.00 — the truncation is specific to the enumerated row, which is
+the row the hold ratios are read against. The whole n = 10 block re-ran at
+τ = 3600 s, where its reach is **1.00 [0.96, 1.00]**. A hold ratio measured before
+the swarm has finished aggregating is a measurement of the clock, which is how
+§20's diagnosis went wrong.
+
+### Verdicts, per n, never pooled
+
+| n | τ | best S = 2 row | S4-terrain † | S4-warm † | verdict |
+|---|---|---|---|---|---|
+| 50 | 600 s | S2-searched **1.0412** [0.9640, 1.1155] | 1.1277 [1.0841, 1.2507] | 1.1175 [1.0673, 1.1814] | **A1 holds** |
+| 10 | 600 s *(truncated)* | S2-searched **1.1671** [1.1262, 1.1978] | 1.0549 [1.0348, 1.0927] | 1.0760 [1.0541, 1.1149] | *A1 fails* |
+| 10 | **3600 s** *(the rule is evaluated here)* | S2-searched **1.1449** [1.1055, 1.1748] | 1.0490 [1.0275, 1.1124] | 1.1158 [1.0699, 1.1479] | **A1 holds** |
+
+**A1 holds at both n — and n = 10 must not be written up as a clean hold.** The
+point estimates barely move between the two trial lengths; what flips the verdict
+is the intervals closing on each other by about 0.02 each. At τ = 3600 s they
+overlap by **0.0069 in hold-ratio units, about 0.6% of the statistic**.
+
+**And the candidates are transferred, not searched.** The S = 4 rows were searched
+at n = 20. At n ≠ 20 this experiment asks whether *n = 20-searched* terrain-bit
+rows help elsewhere, not whether any S = 4 row at those n would. **The upper bound
+at n = 10 is only the transferred row**, and A1's grade splits accordingly:
+SUPPORTED † at n = 20, SUGGESTED † at n ∈ {10, 50}.
+
+### The trend in n is the substantive result (claim A9)
+
+At λ = 0.10 m, θ_m = 0.9, S4-terrain † against the best S = 2 row:
+
+| n | S4-terrain † | best S = 2 | standing |
+|---|---|---|---|
+| 10 | 1.0490 [1.0275, 1.1124] | 1.1449 [1.1055, 1.1748] | nominally better, **overlapping by 0.0069** |
+| 20 | 1.2116 [1.1577, 1.2513] | 1.0988 [1.0437, 1.1446] | **disjointly worse** (the existing record) |
+| 50 | 1.1277 [1.0841, 1.2507] | 1.0412 [0.9640, 1.1155] | overlapping |
+
+The terrain bit's standing improves monotonically as the swarm shrinks. A1
+survives at every n under its own rule, but *"a terrain bit never helps"* is not
+what this shows: what it shows is that **no S = 4 row was found that is disjointly
+better, and the margin is smallest at the smallest swarm**. Untested mechanism:
+at n = 10 the start radius is 0.523 m and a swarm has fewer neighbours to use as
+landmarks, so exogenous information about the ground may be worth more.
+
+**This is on-message and is filed as such.** The paper's own framework says `c*`
+depends on `n` — that is P4 of the introduction — so A9 goes there as an
+observation consistent with the framework, **not** into Limitations.
+
+### The class-flat seeds scatter again
+
+At n = 10, τ = 3600 s: **1.3153 / 1.4239 / 1.3649**. At n = 50: **1.2952 / 1.3383
+/ 1.4509** (seed 3's interval is the widest, [1.2429, 1.6744]). §21's
+"region, not point" rule holds again, and is logged with the others for C3. In the
+event **S2-searched beat all three class-flat seeds at both n**, so the best S = 2
+row in every cell the rule looked at is a single-condition row — see §1.5 of
+`paper-source.md` for why that is the conservative choice here and does not
+contradict C1.
+
+
+---
+
+## 24. Freeze lift 1: the tuning control at a second and third λ
+
+**The objection.** One correlation length in the main terrain results.
+
+Pre-registered at `docs/preregistration/lambda-tuning-control.md`, commit
+**`d6c40c8`**; the config was committed at `9cc4aee` before the sweep started.
+Nothing was searched: the three rows of `terrain_tuning_control.toml`, constants
+byte-identical, at λ = 0.05 m and 0.20 m — a factor of two either side, straddling
+§15's difficulty peak at 7.46 cm. Same base seed, n, coverage, τ, dt and θ_m grid,
+so the new cells pair run-for-run against the existing ones.
+
+### A free control, and it passes
+
+Run *i* is the same placement at every λ: across all three rows and both new λ,
+**100 of 100 run indices agree with the λ = 0.10 m file on both the seed and the
+initial dispersion, 0 disagreements**. And because θ_m = 0 has no traction field
+for λ to correlate, the θ_m = 0 row of the terrain-term table is the *same run* at
+every λ — it returns **−0.0596 [−0.0763, −0.0371] at all three, to four
+decimals**. That is a control the design got for free, and it says the λ axis is
+reaching the terrain generator and nothing else.
+
+### A3 fails at both new λ, in the narrowing direction
+
+| λ | paired terrain term at θ_m = 0.9, D(S2-flat) − D(S2-rough) | verdict |
+|---|---|---|
+| 0.05 m | **+0.0951 [+0.0456, +0.1366]** | **A3 fails — excludes zero ABOVE** |
+| 0.10 m *(the existing record)* | +0.0818 [−0.0008, +0.1331] | A3 holds |
+| 0.20 m | **+0.0368 [+0.0165, +0.0667]** | **A3 fails — excludes zero ABOVE** |
+
+H1 predicted the interval would include zero at both new λ. It does not, at
+either. Both failures are in the direction the pre-registration named as
+**narrowing A3 rather than overturning it**: terrain-tuning buys something real.
+
+**λ = 0.10 m is not where the effect is smallest — it is where the interval is
+widest.** Its point estimate (+0.0818) is more than twice λ = 0.20 m's (+0.0368),
+which fails; widths are 0.1339 against 0.0502, and **A3 holds at λ = 0.10 m by
+0.0008**. Two seed-free checks on how thin that is:
+
+* Over 200 bootstrap resampling seeds — the harness fixes it at 0, so the
+  published verdict is reproducible and **stands** — the λ = 0.10 m lower bound
+  clears zero for **7 of 200**. At 0.05 and 0.20 m it clears for **200 of 200**.
+* A distribution-free sign test on the 100 paired runs: **68/100** favour S2-rough
+  at λ = 0.05 m (0.68 [0.58, 0.76]) and **67/100** at 0.20 m (0.67 [0.57, 0.75]),
+  both disjoint from a coin flip, against **59/100** at λ = 0.10 m (0.59 [0.49,
+  0.68]), which is not.
+
+**The honest reading is not "A3 held at one λ and broke at two".** It is that
+λ = 0.10 m is the least favourable of the three cells for detecting this effect,
+and it is the only cell the paper had measured. A null result from a single
+correlation length was never strong evidence for a null.
+
+### What survives unchanged is the sentence A3 is for
+
+| λ | objective-tuning | terrain-tuning | gap being decomposed |
+|---|---|---|---|
+| 0.05 m | 95.0 % | 5.0 % | 1.5886 |
+| 0.10 m | 96.9 % | 3.1 % | 1.7662 |
+| 0.20 m | 94.4 % | 5.6 % | 0.8351 |
+
+A3's sentence — *almost none of the re-tuned controller's advantage is terrain
+adaptation* — is **better supported by three λ than it was by one**: the terrain
+share is 3–6 % everywhere. What fails is the *null test* on the paired term, not
+the magnitude claim, and the register entry carries both.
+
+**The shares are percentages of a shrinking gap**, which the table alone reads the
+wrong way round: S2-gauci's hold ratio is 2.0719 / 2.1492 / **1.5186** across the
+three λ, so 5.6 % of 0.8351 at λ = 0.20 m is a smaller absolute quantity than
+3.1 % of 1.7662 at 0.10 m.
+
+### The crossing is claimed, and its location moves with λ (claim A8)
+
+Disjoint from zero at **2 of 3** λ — +0.0659 [+0.0296, +0.0918] at 0.05 m and
++0.0421 [+0.0107, +0.0659] at 0.10 m — so the rule claims it. H3 predicted it
+would not reappear; it did.
+
+The binary answer undersells the curves. **The θ_m at which terrain-tuning starts
+to pay rises monotonically with λ**: the sign flip sits between θ_m = 0.2 and 0.45
+at λ = 0.05 m, between 0.2 and 0.6 at 0.10 m, and between 0.45 and 0.9 at 0.20 m.
+Reported as an observation with **no mechanism offered**: the obvious one —
+"shorter λ is a rougher problem at the same θ_m" — is contradicted by the anchor's
+own tax being *lower* at λ = 0.05 m than at 0.10 m, because §15 puts the
+difficulty peak between them. The crossing's location moves monotonically in λ
+while the difficulty does not, so the two are not the same phenomenon.
+
+### The matched-controller cost widens rather than narrows (claim A2)
+
+| λ | S2-flat † | S2-rough † |
+|---|---|---|
+| 0.05 m | +21.4 % | +9.0 % |
+| 0.10 m | +20.0 % | +9.9 % |
+| 0.20 m | +9.6 % | **+1.2 %** (hold ratio 1.0116 [0.9911, 1.0826] — includes 1) |
+
+Range across the three λ and both tuned rows: **+1.2 % to +21.4 %**, against the
+10–20 % A2 stated from λ = 0.10 m alone. H2 predicted it would narrow; it widened,
+and the driver is λ = 0.20 m, where a terrain-tuned controller's cost at θ_m = 0.9
+is not distinguishable from zero.
+
+**One definitional wrinkle that is not a λ effect.** A2's 10–20 % is computed from
+§13's *retired* ratio-of-medians hold ratios (1.195, 1.104). Everything here uses
+§12.1 D1's *paired* ratios, which on the very same 100 runs give 1.2004 and
+1.0988 → 20.0 % and 9.9 %. The λ = 0.10 m column therefore does not match A2's
+original digits and the difference is the change of statistic, not the correlation
+length.
+
+### The limitation this design cannot remove
+
+Both tuned rows were **trained at λ = 0.10 m**. At 0.05 and 0.20 m this measures
+the *transfer* of a λ = 0.10-tuned controller, not the decomposition a λ-matched
+controller would show. A terrain term that grows away from the training λ is
+consistent with "the term is real everywhere" **and** with "part of it is a
+mismatch penalty the λ = 0.10-trained row pays away from its own λ", and this
+experiment cannot separate them. Stated in the pre-registration before the numbers
+existed, and repeated here so the finding cannot be quoted without it.
+
+Figure: `figures/terrain_tuning_control_lambda.png`
+(`harness/figures_tuning_control_lambda.py`).
+
+
+---
+
+## 25. Freeze lift 1: the pseudo-reality robustness check
+
+**The objection.** Purpose-built simulator, single model, no reality-gap check.
+
+Pre-registered at `docs/preregistration/pseudo-reality.md`, commit **`367ee93`**,
+with deviations D1–D10 appended there. Following Ligot & Birattari (2020, *Swarm
+Intelligence* 14), **eleven models**: 00 unperturbed, 01–10 drawn from the
+pre-registered sampling seed `20260910` by a committed script, so the family is
+reproducible from the seed rather than transcribed. Six parameters — wheel noise,
+sensor false-negative and false-positive rates, contact-solver iterations, contact
+tolerance, timestep — 100 runs a cell, paired **within** a model and never across
+models, because `dt` and `collision_iterations` differ between models and the same
+seed does not produce the same trajectory.
+
+**What this experiment can and cannot say, in the words that must travel with
+it.** The family perturbs **implementation** choices around the design point. The
+kinematics, the traction model, the pursuer's lock-on law and the sensor geometry
+are identical in every model. A result robust here is robust to *how carefully the
+simulator is integrated and how noisy its sensors are*, **not to whether the model
+is right**. This is not a reality-gap study: no hardware, no ARGoS, no second
+simulator, and §12.3 already records that none of those exist. This answers a
+narrower question than the objection that prompted it and must not be let stand in
+for the wider one.
+
+### The pre-registered verdicts, per comparison, never pooled
+
+| # | comparison | verdict | counts (of 10 sampled models) |
+|---|---|---|---|
+| 1 | terrain tax: S2-gauci vs best-of-three S2-class-flat | **ROBUST** | 10/10 same sign, 10/10 disjoint |
+| 2 | capability flatness: S4-terrain † vs S2-searched † | *not established either way* | 9/10 sign, **4/10 disjoint** (rule needs 7) |
+| 3 | confusion through aggregation, three rows | **ROBUST** | 10/10 sign each; disjoint 10, 10, **7** |
+| 4 | matched pair B1 ‡ vs D ‡, three r_p | *not established either way* | robust at 0.35 m and 1 m; **3/10 disjoint** at 0.1 m |
+| 5 | searched S = 3 † vs B0 and vs B1, six orderings | **FRAGILE** | one ordering: vs B1 at r_p = 1 m, **5/10 flips** |
+
+*"Not established either way" is not evidence of robustness and is not written as
+if it were.* Both counts are given for every ordering, whichever branch fired.
+
+**Two of the three predictions were wrong, and how they were wrong is the
+result.** H1 said comparisons 1 *and* 2 would both be robust: 2's signs hold and
+its intervals overlap in six of ten. H3 put comparison 4's risk at r_p = 0.35 m,
+where §8's crossing sits; that turns out to be its **most** robust cell, and the
+weak one is r_p = 0.1 m, where the effect is real in sign but only −0.003 to
+−0.040 in size. H2 was right: comparison 3 is robust in sign everywhere.
+
+### The fragility is located, and it is not the abstract's claim
+
+Comparison 5 is fragile in **one ordering of six**: best-of-three searched S = 3 †
+against **B1-ternary ‡** at **r_p = 1 m**, the perfect-perception corner (1.35 R —
+the pursuer sees the whole starting swarm from anywhere in it). The same row
+against **B0-blind** is ROBUST at r_p = 0.1 and 0.35 m and merely *not established*
+at 1 m, **with no flips at all**.
+
+That maps onto the G4 split exactly: **G4**, the capability claim that goes in the
+abstract, is against B0 and does not flip anywhere; **G4′**, the regime-specific
+claim, is against B1 and is the one that flips. Per the pre-registration a fragile
+result **does not retract** the claim — it bounds it. G4′ holds at the design
+model, which is where it was measured, and gains the qualifier that its ordering
+at the perfect-perception corner does not survive this neighbourhood.
+
+### Comparison 2, and A1 as it is actually worded
+
+Comparison 2 keeps its sign in 9 of 10 and loses on disjointness, 4 of 10. The
+single flip is **model 09** at **−0.0554 [−0.0879, −0.0183]** — the model with the
+largest contact tolerance and the second-largest dropout rate, but **model 01 has
+the largest dropout of all and does not flip**, so the table offers no
+single-parameter story and none is claimed.
+
+**A1 as worded asks a different question from the one the rule scored.** The rule
+tested the n = 20 record, which is *S = 4 disjointly worse*. A1 claims only that
+**no S = 4 row was found disjointly better**. On that question the answer is **1 of
+10** — model 09 — and not the reference. So A1 as worded holds in the reference and
+9 of 10 perturbed models; one reversal in an upper-bound claim is a disclosure,
+not a refutation, the grade stays SUPPORTED †, and model 09 is named in §9.
+
+### Comparison 1's robustness has a caveat the rule cannot see
+
+The reach diagnostic — **reported, not thresholded**, and added to the script
+before any Phase 5 number was read — shows S2-gauci reaching a single cluster in
+only **0.65** of runs in model 05 and 0.80 in model 03, against 0.94–1.00 for
+every tuned row in every model (the reference itself is 0.86). Model 05 also
+carries comparison 1's largest difference. **So part of C1's robustness is the
+enumerated row failing to aggregate at all in those models rather than aggregating
+and being taxed more.** That is a stronger version of the same ordering by a
+different mechanism from the one A2 states, and it is said here rather than banked
+as a count.
+
+### The timestep, which the experiment found and two amendments chased
+
+The flip table separated exactly on `sim.dt`: **5 of 5 flips at dt = 0.05, 0 of 5
+at dt = 0.10.** The pre-registration forbids fitting a mechanism from ten models
+over six parameters and none is fitted — but a fact about the code is not an
+inference from ten points.
+
+**D8: the pursuer's acquisition rate was a function of the timestep.**
+`pursuer.rs::step` rolled `p_lock = 1/(1 + κ·n_local)` once per *control step*, so
+the probability of acquiring within a second was `1 − (1 − p_lock)^(1/dt)`.
+Halving the timestep doubled the attempts. `p_lock` is now defined per **0.1 s
+attempt window** and converted by `1 − (1 − p_lock)^(dt/0.1)`, which at `dt = 0.1`
+returns it bit-for-bit; **twelve of twelve pursuit results files regenerated
+byte-identical over 105 800 records**, so no published number moves.
+
+**D9: `wheel_noise` had the same shape, with the exponent the other way up.** It
+was a fixed-σ Gaussian on **wheel speed** every step, and a velocity noise is
+multiplied by `dt` before it reaches the pose, so accumulated variance over a span
+is `T·σ²·dt`. The invariant scaling is `σ ∝ 1/√dt` — the **reciprocal** of the
+`σ ∝ √dt` that is right for a direct increment to a state variable, which is what
+the pursuer's random-walk search adds to its heading and why that one was already
+correct. A `dt = 0.05` model carried **1/√2** of the diffusion its parameter
+names, not √2 more. Fixed the same way; **eleven files byte-identical**, including
+the noise sweep and the timestep sweep.
+
+**Neither fix, nor both, changed a single comparison-level verdict.** Three
+ordering-level counts moved: comparison 3's D row from a thin 7/10 disjoint to
+10/10, comparison 2's from 4/10 to 6/10, and comparison 4 at r_p = 0.1 m gained
+one coin-flip (model 02 at +0.0010, on a quantity whose whole range is −0.003 to
+−0.040). **Comparison 5 is still FRAGILE and the same five models still flip.**
+
+### What the fixes did not explain, and the disclosure that follows
+
+A dedicated 2×2 diagnostic, and then an independent 400-run replication on a
+**disjoint seed base** so it is a fresh sample rather than an extension of one
+after seeing it:
+
+| S2-gauci, `wheel_noise = 0` | dt = 0.10 | dt = 0.05 | |
+|---|---|---|---|
+| reach at θ_m = 0.9 | **0.9050** [0.8723, 0.9300] | **0.6150** [0.5664, 0.6614] | **DISJOINT** |
+| hold ratio | **2.0739** [1.9538, 2.2019] | **2.9747** [2.7337, 3.2093] | **DISJOINT** |
+
+**The aggregation dynamics are timestep-sensitive at n = 20 under terrain with the
+noise dial at zero, and the sensitivity is specific to the enumerated row** —
+S2-searched moves 0.9950 → 0.9825, overlapping. The record's own
+`timestep_convergence` sweep already contained this at n = 5, noise-free and flat:
+reach **0.98 → 0.82** at τ = 600 s and **1.00 → 0.92** at τ = 6000 s going from
+dt = 0.1 to 0.05, disjoint at both. `validation.md` §H-E quotes only the n = 2
+*dispersion* column and concludes the timestep is not load-bearing.
+
+**§2.2's "the result is independent of the timestep" is true of the exact-arc
+integration it is about, and is not true of the dynamics built on top of it.**
+That scoping, and the statement of `p_lock`'s semantics, are the paper-facing
+consequences; **"never say the pursuit is timestep-independent"** goes in §11.
+
+### D10: the family is split for interpretation, and the registered counts stand
+
+`sim.dt` is the **robots' control period** — a perturbation of the robot, not of
+the world, and not what a Ligot-style pseudo-reality family is for. It was
+registered, drawn and run, so it cannot be removed; it can be reported separately.
+Counts out of five, **with no threshold attached**, because the rule's 9-of-10 and
+7-of-10 were set for ten models and rescaling them after the fact would be
+inventing a rule:
+
+**In the model-only sub-family — the one that is actually a pseudo-reality — there
+is exactly one sign flip in fourteen orderings, and it is comparison 2's model
+09.** Every flip of the fragile ordering is in the control-period sub-family, 0 of
+5 against 5 of 5. The registered ten-model verdicts stand as the pre-registered
+result; this is what they are made of.
+
+Figures: `figures/pseudo_reality.png` (the registered family, the panels the rule
+fired on) and `figures/pseudo_reality_corrected_both.png` (with both amendments
+in), from `harness/figures_pseudo_reality.py`.
+
+---
+
 ## Next (noted, not run)
 
 Carried forward and updated. Items 1 and 2 are now answered (§§15, 16); what
