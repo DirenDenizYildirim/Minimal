@@ -286,3 +286,143 @@ repairs, not regrading. The two results a reader is most likely to lean on — t
 2×2 tuning control (rows 68–74) and the seed study (rows 118–130) — reproduce to
 the last printed digit, as do the whole §14 regime grid, the §19 class-search
 grid, and every pursuer κ-response.
+
+---
+
+# Freeze lift 1 — what the re-run found, and the harness corrections
+
+The evidence base was frozen at `ce427a8`. The freeze was lifted once, for four
+experiments answering four reviewer objections, and re-frozen at `freeze-2`. This
+section records what regenerating the frozen record turned up and what was
+corrected in the harness along the way. Every item here is a finding about the
+*record or the tooling*, not about the science.
+
+## F1 — rows 13/14 were produced at the wrong axle length
+
+`validation.md` §3's link-distance table and §13 rows 13–14 were computed with
+`axle_length = 0.053`. The committed baseline is **0.051** — correction #2, where
+5.3 cm was the literature error and 5.1 cm the measured value. **The whole table
+returns cell for cell at 0.053**, which settles the cause rather than guessing it.
+
+| | as published | at the committed 0.051 |
+|---|---|---|
+| dispersion, 2.2 R → 6.0 R | 1.401 at every value | **1.3875 at every value** |
+| spread | 0 | **exactly 0** |
+| single-cluster share | 0.43 → 0.98 | **0.475 → 0.967** |
+
+**The 0.053 values are kept here with the cause**, §13 carries the corrected ones,
+and `validation.md`'s table is left as measured with a note above it — it is what
+shows the cause. **Nothing the table is cited for changes**: the invariance of
+dispersion to the link distance is exact at both axle lengths.
+
+*Citation audit, run before the correction was applied.* Rows 13/14 are cited by
+§7 claim **S18** (qualitative, no digits), §6 claim **C7** (quotes 1.401 and
+0.43 → 0.98), §1.5, correction #6 and ADR 0003. The paper-writing notes quote
+none of the numbers and reference S18 once by claim id. Both citing passages are
+updated.
+
+## F2 — rows 23/24 predate the traction floor
+
+Computed before `e83675e` added `traction_floor = 0.05`. Recomputed with the floor:
+
+| | as published | with the floor |
+|---|---|---|
+| axle 4× at fixed R₀, θ_m = 1.0 | 5 % (2.97 / 2.83 / 2.93) | **44 %** (2.21 / 2.74 / 3.18) |
+| R₀ 4× at fixed axle, θ_m = 1.0 | 560 % (2.97 / 1.59 / 10.46) | **648 %** (1.65 / 2.74 / 12.37) |
+
+**No claim changes**: R₀ still sets the magnitude and the axle still does not, by
+an order of magnitude either way. And **there is no in-scope effect at all** — the
+cell is θ_m = 1.0, outside the paper's stated range, and at θ_m ≤ 0.9 the traction
+multiplier's minimum is 0.100, twice the floor, so the floor is never reached in
+any cell the paper quotes. Claim **S9b** quotes all six numbers and is updated.
+
+## F3 — three rows cannot be regenerated, and why
+
+Rows 56, 57 and 58 come from four single-condition searches whose **optimiser
+seed is recorded nowhere**: not in the config, not in the output JSON, not in the
+run log. Re-running them lands on a different draw.
+
+| controller | published | re-run at HEAD | paired ratio against the published row |
+|---|---|---|---|
+| warm-start training objective | 1.2595 | 1.2811 | — |
+| cold S4 training objective | 1.3012 | 1.3018 | — |
+| cold S2 training objective | 1.3009 | 1.2737 | — |
+| warm-start L2 from its start | 0.464 | 0.625 | — |
+| seed-1 re-runs at their own training cell, 100 runs | — | — | **0.9832 [0.9380, 1.0139]** and **1.0019 [0.9910, 1.0091]** |
+
+**What was ruled out.** The simulator: a binary built at `9af4707` returns
+byte-identical constants to HEAD over the full budget. The search code, the
+configs, the CLI defaults: all unchanged in the relevant paths. And **all five
+class searches reproduce bit-for-bit**, which is the decisive control — the same
+code, the same machine, the same command, reproducing exactly when the seed *is*
+recorded. The gap is the missing seed and nothing else.
+
+**The published constants are the rows of record and are not replaced.** Both
+paired ratios include 1, so the published rows are ordinary draws rather than
+lucky ones. **This is a disclosure, not a defect to hide.** §13 carries the note
+against the rows, §9 carries limitation L29, and `swarm search` now writes its
+optimiser seed, training seed base, budget, git hash and config hash into every
+output JSON (`swarm-cli/src/search.rs`), so no later row can enter this state.
+
+## Harness corrections
+
+Found while wiring the later phases. None of them changed a number; all of them
+could have.
+
+* **`job_eval_s3` was defined twice** in `scripts/regenerate_record.sh`. Bash
+  silently takes the later definition, so it worked and would have kept working
+  while the two drifted apart. Fixed at `1582175`.
+* **`job_capability_n` was defined but never listed in `ALL`**, so a full re-run
+  would have skipped it in silence. Fixed at the same commit, and the driver now
+  has a check that every `job_*` is reachable from `ALL` and every `ALL` entry
+  exists — run on every change since.
+* **`scripts/regenerate_figures.sh` hardcoded `0.4 figures`** in its run-log row,
+  which was true of every figure it had drawn until freeze lift 1. The phase is
+  now a parameter (`80caaca`); every existing row is unchanged.
+* **`scripts/regenerate_figures.sh` aborted at the first script printing no PNG
+  path.** `set -euo pipefail` plus a `grep` that exits 1 —
+  `figures_mechanism_regression.py` prints only "ok". Fixed with a temp file and a
+  fallback that greps the script's own `savefig` calls.
+* **`derive()` raised `KeyError` on every sweep coordinate**: sweep coords live
+  under `cell`, and the predicate was evaluated against the top level only.
+* **§13 rows 71 and 72 were crossed** between `verify_numbers.py` and §13 — the
+  script computed the paired form under id 71's label and the ratio of medians
+  under 72's, while §13 has them the other way round. **Fixed in the script**,
+  which is where the error was: both numbers always reproduced and only the labels
+  were swapped.
+* **`docs/paper-source.json` was a hand-maintained mirror of §13**, which is how
+  the crossing survived a verification pass. It is now generated from the markdown
+  by `scripts/sync_paper_source_json.py`, with a `--check` mode that fails if the
+  two drift.
+* **D9 is closed.** The eleven CLI-driven figures each have a committed script and
+  §10 names it. The scripts are **not** byte-for-byte ports and cannot be — there
+  is no committed original, and the one reconstruction attempted differed from the
+  committed PNG in 44% of pixels. Each script's docstring says so with the date.
+
+## Simulator corrections — both bit-neutral, both disclosures
+
+Two defects of the same class, each found by experiment 4 and each fixed so that
+**every published run is bit-identical**.
+
+* **`p_lock` was per control step**, so the pursuer's acquisition rate — and
+  therefore its lethality — was a function of `sim.dt`. Now defined per 0.1 s
+  attempt window and converted by `1 − (1 − p_lock)^(dt/0.1)`, the identity at
+  `dt = 0.1` by an explicit branch. **Twelve pursuit results files regenerated
+  byte-identical over 105 800 records.** Five new tests.
+* **`noise.wheel_noise` was a fixed-σ Gaussian on wheel speed per step**, so
+  accumulated diffusion went as `σ²·dt`. Now `σ_step = σ_ref·√(0.1/dt)` — the
+  **reciprocal** of the `σ ∝ √dt` that is correct for a direct increment to a
+  state variable, because a velocity noise is multiplied by `dt` before it reaches
+  the pose. **Eleven files byte-identical**, including the noise sweep
+  (`small_n_noise_probe`, noise at `dt = 0.1`) and the timestep sweep
+  (`timestep_convergence`, `dt` from 0.002 to 0.1, noise-free). Four new tests.
+
+**One dt dependence is disclosed and not fixed**: the handling-time debt is paid
+in whole control steps, so `h = 1.93 s` is 2.000 s of idle at `dt = 0.1` and
+1.950 s at 0.05 — **2.5%**, in the same direction as the `p_lock` error and two
+orders smaller. Correcting it would change `dt = 0.1` behaviour and is therefore
+not bit-neutral. The full per-step audit of `pursuer.rs`, `world.rs`, `robot.rs`,
+`sensor.rs`, `occlusion.rs` and `terrain.rs` is in `docs/run-log.md`, Phases 5b
+and 5c.
+
+Rust tests: **119 → 128** (105 core, 23 CLI, 1 ignored); harness tests 32.
