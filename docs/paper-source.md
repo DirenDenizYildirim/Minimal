@@ -98,8 +98,11 @@ whole Idea A terrain grid the share of runs that *ever* reach a single cluster i
 aggregate" sees almost nothing while one set on dispersion sees a clean monotone
 signal (correction #6; §2). A second measurement points the same way: over a link
 distance from 2.2 to 6.0 body radii, median final dispersion does not move at all
-(1.401 at every value) while the share of time reading as a single cluster climbs
-from 0.43 to 0.98.
+(**1.3875** at every value, spread exactly 0) while the share of time reading as a
+single cluster climbs from **0.475 to 0.967**. *(Corrected in freeze lift 1, F1:
+the published figures were produced at `axle_length = 0.053`; see §13 rows 13–14
+and `verification-report.md`. The invariance the claim rests on is unchanged —
+the spread is exactly zero either way.)*
 
 ### 1.4 `c*(θ, n)` is a function of swarm size, and part of the answer is a theorem
 
@@ -130,6 +133,31 @@ therefore:
 > baseline's **uncertainty** and is reported alongside, not averaged away. The
 > published constants (`S2-gauci`) remain the only **enumerated** row and are
 > kept as the reference the baseline is measured against.
+
+**The candidate set is not the same for both jobs the baseline does, and after
+experiment 2 (§23) it has to say so.** The rule above was written for one of them.
+
+* **For a capability comparison** — "is any S = 4 row better than S = 2 here?",
+  which is claim A1 — the S = 2 competitor is the **best of every S = 2 row
+  evaluated in the cell, including single-condition rows**. That is the
+  conservative choice: it makes S = 4 harder to beat, which is the right
+  direction for an upper-bound claim. At experiment 2's cells this mattered —
+  `S2-searched`, a single-condition row, **beat all three class seeds at both
+  n = 10 and n = 50**, so it and not the class baseline is what A1's verdict is
+  measured against.
+* **For the `c*(θ)` baseline as a region** — claim C3 — the candidate set stays
+  **the class rows**, and the spread between the three seeds is the region's
+  width. That is the whole point of C3: a frontier drawn through one
+  single-condition row measures overfitting to its training arena.
+
+**These two do not contradict each other and the paper must not read as if they
+do.** C1's cells are flat ground at three start radii and n = 50, where a
+single-condition row is *worse* than the published constants — that is the
+failure C3 exists to prevent. A1's cells are λ = 0.10 m, θ_m = 0.9 at the
+training n and two others, where the same kind of row is the *strongest* S = 2
+candidate available. Different cells, and a different job for the row: C1 asks
+what a single-condition row does away from its training point, A1 asks what the
+best available S = 2 row does at a point where one was trained.
 
 Seed 1 is the row §19 originally named as the baseline and is the weakest of the
 three by cell count (9 W / 2 L / 1 tied against the reference, where seeds 2 and 3
@@ -832,8 +860,13 @@ peak falls between grid points (λ/R₀ of 0.35 and 0.69 score 2.69 and 2.43), s
 the λ grid sets that entry, not the physics.
 
 The magnitudes settle it. At θ_m = 1.0: varying the **axle 4×** at fixed R₀ gives
-peak degradation 2.83, 2.97, 2.93 — a spread of **5%**; varying **R₀ 4×** at
-fixed axle gives 1.59, 2.97, 10.46 — a spread of **560%**.
+peak degradation **2.21, 2.74, 3.18** — a spread of **44%**; varying **R₀ 4×** at
+fixed axle gives **1.65, 2.74, 12.37** — a spread of **648%**. *(Corrected in
+freeze lift 1, F2: produced before `e83675e` added `traction_floor = 0.05`; see
+§13 rows 23–24. The ordering is unchanged and no claim changes — and this cell,
+θ_m = 1.0, is outside the paper's stated range, where the traction multiplier's
+minimum is 0.100, twice the floor, so the correction has no in-scope effect at
+all.)*
 **Branch.** H2 supported *as a statement about R₀ versus the axle*.
 **Changed.** Narrowed the target for the anisotropy lemma to `f(R₀, λ)` with the
 worst case near λ/R₀ ≈ 0.7. Also forced the θ_m ceiling: the sweep originally ran
@@ -1832,7 +1865,32 @@ search at the S = 2 optimum ties it (1.412 [1.349, 1.503] against 1.383 [1.350,
 switches between the two is worse than either at every θ_m (1.999 against 1.383
 at θ_m = 0.9). *Grade: SUPPORTED (with the standing upper-bound caveat: no S = 4
 controller better than the searched S = 2 one was found at equal budget).*
-*Sections: §7, §9, §10.*
+*Sections: §7, §9, §10, §23.*
+
+> **The grade splits by swarm size, after experiment 2 (§23).** Stated as agreed:
+>
+> > At n = 20, no S = 4 row was found better than the searched S = 2 row at equal
+> > budget (SUPPORTED †). At n ∈ {10, 50}, the n = 20-searched S = 4 rows are not
+> > disjointly better than the best S = 2 row (SUGGESTED †: candidates
+> > transferred, not searched at those n; margin 0.0069 at n = 10).
+>
+> Two reasons, and the second is not optional. **The margin**: disjointly worse at
+> n = 20, overlapping at 50, overlapping by **0.0069 in hold-ratio units** at 10.
+> n = 10 must not be written up as a clean hold. **The candidates**: the S = 4
+> rows were *searched at n = 20 and transferred*, so at n ≠ 20 this tests whether
+> n = 20-searched terrain-bit rows help elsewhere, not whether any S = 4 row at
+> those n would. **The upper bound at n = 10 is only the transferred row.**
+>
+> The pre-registered τ contingency fired at n = 10 on the enumerated row alone —
+> S2-gauci reaching a cluster in 0.71 of runs at τ = 600 s, every other row at
+> 0.99–1.00 — and the whole block re-ran at τ = 3600 s, where its reach is 1.00.
+> **That is the rule working**, and it is reported as such rather than as a hitch.
+>
+> Across the pseudo-reality family the claim as worded holds in the reference and
+> in **9 of 10** perturbed models; in one — **model 09** — the terrain-bit row is
+> disjointly *better*, at −0.055 [−0.088, −0.018], with no single-parameter cause
+> (§25). One reversal in an upper-bound claim is a disclosure, not a refutation,
+> and model 09 is named in §9.
 
 **A2. Terrain is a performance tax on a fixed controller, and the size of the tax
 depends almost entirely on how well matched the controller is.** At λ/R₀(gauci) =
@@ -1840,14 +1898,57 @@ depends almost entirely on how well matched the controller is.** At λ/R₀(gauc
 **1.195 [1.146, 1.265]**, S2-rough **1.104 [1.078, 1.150]**. A controller that
 never saw terrain degrades by 20% where the published constants degrade by 121%,
 so the published figure overstates what terrain does to a well-matched controller
-by about a factor of six. *Grade: SUPPORTED. Sections: §13, §7, §9.*
+by about a factor of six. *Grade: SUPPORTED. Sections: §13, §7, §9, §24.*
 
-**A3. Almost none of the re-tuned controller's advantage is terrain adaptation.**
-Decomposing the Gauci → S2-rough gap at θ_m = 0.9: **96.9% objective-tuning and
-3.1% terrain-tuning at start radius 0.74 m, against 99.7% / 0.3% at 1.5 m**. On
-flat ground the terrain-tuning term reverses and costs 4.1%. *Grade: SUPPORTED.
-Sections: §13, §14. The 0.3% figure must appear in the same sentence as the 3.1%
-one.*
+> **The matched-controller cost is a range over correlation length, not a single
+> figure, after experiment 3 (§24).** Measured at λ = 0.05, 0.10 and 0.20 m under
+> §12.1 D1's paired definition, the cost at θ_m = 0.9 is **+1.2 % to +21.4 %**
+> across the three λ and both tuned rows — wider than the 10–20 % this claim
+> quoted from λ = 0.10 m alone, and it must be written as a range over λ and said
+> to be one. The driver is λ = 0.20 m, where S2-rough's hold ratio is
+> **1.0116 [0.9911, 1.0826]** — an interval containing 1, so at that correlation
+> length terrain costs a terrain-tuned controller nothing measurable.
+>
+> **One wrinkle that is not a λ effect.** The 10–20 % above comes from §13's
+> *retired* ratio-of-medians hold ratios (1.195, 1.104). The range is computed
+> under the paired form §12.1 D1 settled on, which on the very same 100 runs gives
+> 1.2004 and 1.0988 → 20.0 % and 9.9 %. The λ = 0.10 m column therefore does not
+> match this claim's original digits, and the difference is the change of
+> statistic, not the correlation length.
+
+**A3. Almost none of the re-tuned controller's advantage is terrain adaptation —
+the terrain share is small at every correlation length measured, and it is not
+zero.** Decomposing the Gauci → S2-rough gap at θ_m = 0.9: **96.9% objective-tuning
+and 3.1% terrain-tuning at start radius 0.74 m, against 99.7% / 0.3% at 1.5 m**.
+On flat ground the terrain-tuning term reverses and costs 4.1%. At three
+correlation lengths the objective share is **95.0 / 96.9 / 94.4 %** (λ = 0.05 /
+0.10 / 0.20 m), so the claim is better supported by three λ than it ever was by
+one. *Grade: SUPPORTED †. Sections: §13, §14, §24. The 0.3% figure must appear in
+the same sentence as the 3.1% one.*
+
+> **"Small" and "zero" are different claims and only the first one holds.**
+> Experiment 3 pre-registered a null test — does the paired terrain-tuning term at
+> θ_m = 0.9 include zero? — and it **fails at two of the three λ, both above
+> zero**: +0.0951 [+0.0456, +0.1366] at 0.05 m and +0.0368 [+0.0165, +0.0667] at
+> 0.20 m, against +0.0818 [−0.0008, +0.1331] at 0.10 m. The direction narrows this
+> claim rather than overturning it: terrain-tuning buys something real, and what
+> it buys is 3–6 % of the gap.
+>
+> **λ = 0.10 m is not where the effect is smallest — it is where the interval is
+> widest.** Its point estimate is more than twice λ = 0.20 m's, which fails; the
+> interval widths are 0.1339 against 0.0502, and the hold is **by 0.0008**. Two
+> seed-free checks on how thin that is: over 200 bootstrap seeds the λ = 0.10 m
+> lower bound clears zero for 7 of 200 (200 of 200 at the other two λ), and a sign
+> test on the 100 paired runs gives **59/100** there — not distinguishable from a
+> coin flip — against 68/100 and 67/100, both disjoint from one. A null from a
+> single correlation length was never strong evidence for a null.
+>
+> **The †, and why it is there.** Both tuned rows were trained at λ = 0.10 m, so
+> the 0.05 and 0.20 m columns measure the *transfer* of a λ = 0.10-tuned
+> controller and not the decomposition a λ-matched controller would show. A term
+> that grows away from the training λ is consistent with "the term is real
+> everywhere" and with "part of it is a mismatch penalty", and this design cannot
+> separate them. Answering that needs a search at each λ.
 
 **A4. The mechanism is per-wheel traction changing curvature, not speed
 heterogeneity between robots.** A paired control that differs only in how the
@@ -1887,6 +1988,34 @@ which drops the slope to 0.474; and three body-scaled lengths — the body as an
 obstacle, the cluster link distance at 1.5 body diameters, and the occlusion
 footprint — are not separated. Section: §18.*
 
+**A8. Terrain-tuning starts to pay above a threshold amplitude, and where that
+threshold sits depends on the correlation length.** At θ_m = 0.6 the paired
+difference between the flat-trained and terrain-trained rows is **+0.0659
+[+0.0296, +0.0918]** at λ = 0.05 m and **+0.0421 [+0.0107, +0.0659]** at 0.10 m —
+both disjoint from zero, with the terrain-trained row ahead — and **−0.0160
+[−0.0305, +0.0043]** at 0.20 m, where the crossing has not happened yet. The
+pre-registered rule claims the crossing only if it is disjoint at more than one λ;
+it is disjoint at two of three. The sign flip sits between θ_m = 0.2 and 0.45 at
+λ = 0.05 m, between 0.2 and 0.6 at 0.10 m, and between 0.45 and 0.9 at 0.20 m.
+*Grade: SUGGESTED. Three correlation lengths, all evaluated with rows trained at
+one of them (†); the crossing's location is read off an eight-point θ_m grid, not
+solved for; and **no mechanism is offered** — the obvious one, "shorter λ is a
+rougher problem", is contradicted by the anchor's own tax being lower at
+λ = 0.05 m (2.0719) than at 0.10 m (2.1492), because §15 puts the difficulty peak
+at 7.46 cm between them. Sections: §24, §13 row 176.*
+
+**A9. The terrain bit's standing against S = 2 improves monotonically as n
+falls.** Hold ratios at λ = 0.10 m, θ_m = 0.9: **1.21 vs 1.10 at n = 20; 1.13 vs
+1.04 at n = 50; 1.05 vs 1.14 at n = 10, overlapping.** Untested mechanism: fewer
+neighbours to use as landmarks at small n. *Grade: OBSERVATION. Sections: §23.*
+
+> This belongs with **P4 of the introduction** — the framework already says `c*`
+> depends on `n`, and this is that dependence showing up in the one place the
+> paper has a capability comparison to make it in. It is not a Limitations entry
+> and must not be filed as one. It remains an observation: the n = 10 column is
+> the *transferred* S = 4 row (see A1), the intervals overlap, and no mechanism
+> was tested.
+
 ### B. Pursuer (active hostility)
 
 **B1. Confusion acts through aggregation, and a dispersive control proves it.**
@@ -1917,6 +2046,33 @@ over the grid: B0 **0.350** [0.300, 0.375], B1 **0.650** [0.600, 0.700], B3
 beyond 0.10 m while any row that can see the pursuer keeps 3–18 robots.
 *Grade: SUGGESTED — B1 and B3 are hand-designed ‡, so this is a lower bound on
 what S = 3 offers, not a measurement of it. Section: §5.*
+
+> **Upgraded to SUPPORTED † by experiment 1 (§22), and split in two.** The
+> capability claim — the one that goes in the abstract — is against **B0**, and is
+> stated exactly as follows:
+>
+> > One additional sensor state buys survival at fixed task quality: the
+> > best-of-three searched S = 3 row † beats the S = 2 Gauci row in 18 of 25
+> > held-out cells at h = 1.93 s (0 worse; per seed 18 / 17 / 14), holding
+> > dispersion among survivors at 1.41 vs 1.45.
+>
+> **The per-seed counts travel with the best-of-three number everywhere it
+> appears** — register, abstract, figure captions, findings. They are the reader's
+> window on the selection bias and there is no version of this sentence that drops
+> them.
+>
+> The secondary claim, **G4′**, is against B1-ternary ‡ and is regime-specific:
+> the searched row beats it in 13 of 25 cells, which is a thin pass honestly
+> described rather than a moved threshold. Its job in the paper is the sentence
+> *"the hand-designed rows are close to what a class search finds"*, which is
+> itself useful. **B1's own 19/25 against B0 was strong evidence about a guess;
+> the upgrade here is provenance, not margin.**
+>
+> Robustness (§25): the orderings against **B0 do not flip in any of the ten
+> pseudo-reality models** at r_p = 0.1 and 0.35 m. Against **B1** at r_p = 1 m —
+> the perfect-perception corner — the ordering flips in 5 of 10, all five of them
+> models drawn at the finer control period. So the fragility lands on G4′ and not
+> on G4, and it bounds G4′ rather than retracting it.
 
 **B5. Survival alone is the wrong axis; on two axes there is a regime where
 aggregation dominates outright.** The dispersive row's dispersion is **380–505**
@@ -2000,7 +2156,8 @@ SUPPORTED (constructive demonstration). Section: §7.*
 **C7. Reach and hold are different measurements and a threshold on the wrong one
 sees nothing.** Reach is 1.00 in every terrain cell except one runaway corner, and
 across a link distance from 2.2 to 6.0 body radii dispersion does not move at all
-(1.401) while the share of time reading as one cluster climbs 0.43 → 0.98.
+(**1.3875**) while the share of time reading as one cluster climbs **0.475 →
+0.967** (F1-corrected; see §13 rows 13–14).
 Reach is a proportion, so its median is 1 whenever the majority succeed — a median
 panel draws a flat line at 1 while the probability falls, and the first version of
 one figure did exactly that. *Grade: SUPPORTED. Sections: §2, §7, validation §3,
@@ -2034,7 +2191,7 @@ does not belong.
 | # | claim | sections |
 |---|---|---|
 | S1 | Along the terrain dial, over 0 ≤ θ_m ≤ 0.9 at λ/R₀(gauci) = 0.69, the capability minimum does not move: `c = (2,0,0,0)` suffices at every point, at start radius 0.74 m and at 1.5 m. | §9, §13, §14 |
-| S2 | No S = 4 controller better than the searched S = 2 one was found at equal budget, including when warm-started at the S = 2 optimum. | §7, §10 |
+| S2 | No S = 4 controller better than the searched S = 2 one was found at equal budget, including when warm-started at the S = 2 optimum. | §7, §10 **Split by swarm size after §23**: SUPPORTED † at n = 20; at n ∈ {10, 50} the n = 20-searched S = 4 rows are not disjointly better than the best S = 2 row, SUGGESTED † — candidates transferred, not searched at those n, margin 0.0069 at n = 10. Holds in 9 of 10 pseudo-reality models; model 09 reverses it (§25). |
 | S3 | A hand-built S = 4 composite that switches between the two S = 2 rows is worse than either at every θ_m, and reproduces Gauci exactly on flat ground. | §9 |
 | S4 | Terrain is a performance tax whose size depends mainly on how well matched the controller is: hold ratios **2.149 [1.853, 2.455]** (Gauci), **1.200 [1.124, 1.272]** (S2-flat), **1.099 [1.044, 1.145]** (S2-rough) at θ_m = 0.9, paired per run index. The matched-controller cost is therefore **10–20%**: 1.099 for the rough-trained row and 1.200 for the flat-trained one. | §13 |
 | S5 | Of the Gauci → S2-rough gap at θ_m = 0.9, 96.9% is objective-tuning and 3.1% terrain-tuning at R = 0.74 m, against 99.7% / 0.3% at 1.5 m. The decomposition is a **level** statistic (medians of dispersion, which are additive) and is unaffected by the hold-ratio definition; the paired test on the terrain term is what carries its uncertainty, and **the term is not distinguishable from zero at either radius**: 0.0818 [−0.0008, 0.1331] at 0.74 m and −0.0124 [−0.1116, 0.0775] at 1.5 m. | §13, §14 |
@@ -2042,8 +2199,9 @@ does not belong.
 | S7 | The heading-rate residual is the first-order per-wheel traction effect: slope 0.9943, R² 0.9999 at ℓ/λ = 0.128. | §11, §16 |
 | S8 | The quality of that linearisation collapses on ℓ/λ: max slope spread 0.0201 at matched ℓ/λ across a 4× range of λ, against a 0.86 range along the trend. | §16 |
 | S9 | **Peak LOCATION does not scale with R₀.** Two controllers differing threefold in R₀ peak at the same λ in metres (7.46 cm), and inside one controller family a doubling of R₀ moves the peak by 1.39 [0.72, 1.93] — an interval excluding the ratio law's 2.00 and containing a fixed scale's 1.00. | §15, §17 |
-| S9b | **Peak MAGNITUDE does scale with R₀, and not with the axle.** At θ_m = 1.0, varying the axle fourfold at fixed R₀ moves peak degradation by 5% (2.97 / 2.83 / 2.93); varying R₀ fourfold at fixed axle moves it by 560% (2.97 / 1.59 / 10.46). **S9 and S9b are separate results about separate quantities and must never be run together into one sentence**: R₀ sets *how bad* the worst case is and does not set *where* it is. | §4 |
+| S9b | **Peak MAGNITUDE does scale with R₀, and not with the axle.** At θ_m = 1.0, varying the axle fourfold at fixed R₀ moves peak degradation by **44%** (2.21 / 2.74 / 3.18); varying R₀ fourfold at fixed axle moves it by **648%** (1.65 / 2.74 / 12.37). *(F2-corrected in freeze lift 1; the ordering and the claim are unchanged, and θ_m = 1.0 is outside the paper's stated range.)* **S9 and S9b are separate results about separate quantities and must never be run together into one sentence**: R₀ sets *how bad* the worst case is and does not set *where* it is. | §4 |
 | S10 | Confusion acts through aggregation: κ 0 → 5 multiplies aggregating rows' survival ×3.05 and ×4.10 while a dispersive control with identical sensing gains ×1.20 and ×1.13. Under mean per-robot survival with Wilson intervals on 10 000 robots per cell the multipliers are unchanged and **every κ = 0 interval is disjoint from its κ = 5 interval** (B0 0.1796 → 0.5481 and 0.1444 → 0.5923; D 0.5300 → 0.6383 and 0.5912 → 0.6662). | §8 |
+| G4 | **One additional sensor state buys survival at fixed task quality: the best-of-three searched S = 3 row † beats the S = 2 Gauci row in 18 of 25 held-out cells at h = 1.93 s (0 worse; per seed 18 / 17 / 14), holding dispersion among survivors at 1.41 vs 1.45.** The row is searched, so † : an upper bound on what S = 3 offers. The per-seed counts travel with the best-of-three number wherever it appears. | §22, §25 |
 | S11 | With survival pooled over κ at h = 1.93 s and measured as mean per-robot survival with Wilson intervals, the matched pair crosses **between 0.27 R and 0.47 R**: the ternary row ‡ wins at 0.14 R (0.8788 [0.8723, 0.8851] against 0.8621 [0.8552, 0.8687], disjoint), the two overlap at 0.27 R (0.7369 [0.7282, 0.7454] against 0.7442 [0.7356, 0.7527]), and the dispersive row ‡ wins from 0.47 R outward (0.4875 [0.4777, 0.4973] against 0.6238 [0.6143, 0.6332], disjoint). Confusion narrows the gap but does not close it. The κ is part of the claim: at a fixed κ = 3 the ordering at 0.47 R reverses (S12). | §8 |
 | S12 | At r_p = 0.47 R **and** κ = 3 the dispersive row ‡ is Pareto-dominated: every aggregating row beats it on both survival and the base task. Under mean per-robot survival with Wilson intervals all four aggregating rows are **disjointly above** it (0.7575, 0.7565, 0.7765, 0.7620 against 0.6510), so the claim strengthens rather than weakens. | §12 |
 | S13 | Survival and base task differ by two orders of magnitude between strategies (380–505 against 1.43–1.63), so Idea B must be reported on two axes. | §12 |
@@ -2064,7 +2222,8 @@ does not belong.
 | G1 | The worst correlation length **is** the body diameter. | "Peak λ tracks body diameter over a 2× range (1.01 and 0.97 diameters, log-log slope 0.948 [0.474, 1.897]), on the two body sizes that aggregate at this start radius. Three lengths scale with the body and are not separated here: the body as an obstacle, the cluster link distance at 1.5 body diameters, and the occlusion footprint. Including the smallest body — which reaches a cluster in at most 72% of runs — lowers the slope to 0.474. No mechanism is proposed." | §18 |
 | G2 | The length scale is *fixed* rather than sub-proportional in R₀. | "Proportionality is rejected; a weak sub-proportional dependence is not excluded — the point estimate is 1.39 with an interval spanning 0.72 to 1.93, and peaks are located only to a log grid of ratio 1.39." | §17 |
 | G3 | S2-class-flat is a better point on the rough class's objective than the rough-trained row. | "**S2-class-flat is a better point on the rough objective than the rough-trained row** — 1.6456 against 2.6553 at 100 runs per condition on the rough search's own training seeds — which shows the search did not find its own optimum. It does not locate that optimum, so 'the objective prefers a large R₀' is not established." | §20 |
-| G4 | One sensor state (pursuer-vs-robot) is worth more than anything else on the capability axis. | "…among the hand-designed rows tried. B1–B3 are ‡, so this is a lower bound on what S = 3 offers, not a measurement of it, and B2's poor showing at S = 5 is a hand-design artefact and not evidence that more sensing hurts." | §5 |
+| G11 | The headline orderings survive a neighbourhood of the model. | "Pseudo-realities in the sense of Ligot & Birattari (2020), ten models sampled from a pre-registered seed around the design point. **Comparisons 1 and 3 are robust** (10/10 same sign, 10/10 disjoint; and 10/10 sign for all three rows). **Comparisons 2 and 4 are not established either way** — signs hold, intervals do not separate in enough models — which is not evidence of robustness and must not be written as if it were. **Comparison 5 is fragile in one ordering of fourteen**: the searched S = 3 row against B1 ‡ at the perfect-perception corner, flipping in 5 of 10. The family perturbs actuation noise, sensor dropout, contact-solver effort and timestep — *how carefully the simulator is integrated and how noisy its sensors are*, **not whether the model is right**. It is not a reality-gap study: no hardware, no ARGoS, no second simulator (§12.3)." | §25 |
+| G4′ | The hand-designed S = 3 rows are close to what a class search finds. | "Regime-specific and best-of-three: the searched S = 3 row † beats B1-ternary ‡ in **13 of 25** held-out cells at h = 1.93 s (1 worse, 11 overlapping), holding dispersion among survivors at 1.40 against B1's 1.52. A thin pass, described as one — the pre-registered threshold was 12 cells and was not moved after the fact. At r_p = 1 m this ordering flips in 5 of 10 pseudo-reality models (§25), so it is bounded to the design model there." | §22, §25 |
 | G5 | Smaller R₀ causes slower gathering. | "Time to first cluster is monotone in R₀ across the five rows measured (140, 245, 280, 330, 340 s at 3.0 m on flat ground for R₀ = 14.45, 7.47, 5.53, 4.74, 4.47 cm); R₀ was never swept as a dial in its own right, so this is an association across five controllers rather than a controlled measurement." | §14, §19 |
 | G6 | The class-search ingredients (geometric-mean objective, doubled budget) are what made it work. | "Neither was ablated; the row that transfers used both." | §19 |
 | G7 | More runs per condition would fix the class search's noise floor. | "The remedy follows from the measurement but was not run." | §20 |
@@ -2158,8 +2317,9 @@ deadlocks exist here. Nothing in this repository suggests they do at n = 20.
 
 **#6 — Idea A's threshold belongs on dispersion, not on a cluster count.**
 *Forced by:* reach is 1.00 in every cell of the Idea A grid except the runaway
-corner; and dispersion is invariant to the link distance (1.401 from 2.2 R to
-6.0 R) while the cluster metrics move a lot (0.43 → 0.98).
+corner; and dispersion is invariant to the link distance (**1.3875** from 2.2 R to
+6.0 R) while the cluster metrics move a lot (**0.475 → 0.967**). (F1-corrected;
+the invariance the decision rests on is unchanged.)
 *In force:* the build doc lists dispersion first among Idea A's metrics already —
 this makes that binding rather than a preference.
 

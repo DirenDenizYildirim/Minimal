@@ -253,6 +253,16 @@ a mis-specified metric.
 
 | link distance | single cluster at τ | share of time single | final dispersion |
 |---|---|---|---|
+> **Freeze lift 1, finding F1: this whole table was produced at
+> `axle_length = 0.053` and returns cell for cell at that value.** The committed
+> baseline is 0.051 (§13 row 2, corrected from 5.3 cm as a literature error), and
+> at 0.051 the dispersion column reads **1.3875 at every link distance** — spread
+> still exactly zero — and the single-cluster share runs **0.475 → 0.967**. §13
+> rows 13 and 14 carry the corrected values; this table is kept as it was
+> measured, because it is what shows the cause. See `verification-report.md`.
+> **Nothing the table is cited for changes**: the invariance of dispersion to the
+> link distance is exact at both axle lengths, which is the whole point of it.
+
 | 2.2 R | 0.73 | 0.43 | 1.401 |
 | 2.5 R | 0.87 | 0.62 | 1.401 |
 | 3.0 R | 0.90 | 0.77 | 1.401 |
