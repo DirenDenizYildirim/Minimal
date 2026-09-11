@@ -3025,7 +3025,7 @@ sweep, is what makes the rule a rule.
 ## Freeze 2
 
 This document describes the evidence base as re-frozen at **`freeze-2`** =
-**`09d0d693ca54`**. The
+**`53cb1e5d780d`**. The
 original freeze was `ce427a8`; it was lifted once, on instruction, for the four
 pre-registered experiments in §§22–25 of `findings.md`, and closed again.
 

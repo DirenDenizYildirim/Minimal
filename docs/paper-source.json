@@ -18,7 +18,7 @@
    "evidence_base": "docs/findings.md §1–§25; docs/literature-corrections.md #1–#17; docs/validation.md; docs/preregistration/",
    "section13_rows_added": "163–189",
    "section13_rows_corrected": "13, 14, 23, 24 (values); 31 (interval convention); 56, 57, 58 (provenance note, values unchanged)",
-   "refrozen_commit": "09d0d693ca54d8f96a6eb4cc5ca799f4eae26744"
+   "refrozen_commit": "53cb1e5d780d0e4fb3a0fc020d254bb7fabb19e6"
   }
  },
  "marks": {
