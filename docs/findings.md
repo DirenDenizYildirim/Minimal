@@ -2888,9 +2888,15 @@ after seeing it:
 | reach at θ_m = 0.9 | **0.9050** [0.8723, 0.9300] | **0.6150** [0.5664, 0.6614] | **DISJOINT** |
 | hold ratio | **2.0739** [1.9538, 2.2019] | **2.9747** [2.7337, 3.2093] | **DISJOINT** |
 
-**The aggregation dynamics are timestep-sensitive at n = 20 under terrain with the
-noise dial at zero, and the sensitivity is specific to the enumerated row** —
-S2-searched moves 0.9950 → 0.9825, overlapping. The record's own
+**The sensitivity is an interaction of terrain, timestep and controller — not a
+property of the aggregation dynamics as such.** The flat-ground half of the same
+diagnostic settles that: at **θ_m = 0**, noise-free, n = 20, **both** rows reach a
+cluster in **1.0000** of 400 runs at `dt = 0.1` *and* at `dt = 0.05`. Reach is
+untouched where there is no terrain. What does move on flat ground is dispersion,
+and only slightly — 1.3969 → 1.4281 for Gauci and 1.2482 → 1.2712 for the searched
+row, **2.2% and 1.8%**, disjoint but small. Under terrain the enumerated row loses
+a third of its reach and the searched row loses nothing (0.9950 → 0.9825,
+overlapping). The record's own
 `timestep_convergence` sweep already contained this at n = 5, noise-free and flat:
 reach **0.98 → 0.82** at τ = 600 s and **1.00 → 0.92** at τ = 6000 s going from
 dt = 0.1 to 0.05, disjoint at both. `validation.md` §H-E quotes only the n = 2
