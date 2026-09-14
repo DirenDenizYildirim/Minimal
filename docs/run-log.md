@@ -1046,6 +1046,21 @@ review's point and it stands. But it changes what the reach drop would mean: ADR
 the state-0 orbit), so *less* effective noise predicts *worse* reach — which is
 the direction observed.
 
+**The review named the wrong direction, and the implementation is the one that is
+right.** The Phase 5b review asked for the fix "the same way (rate defined per
+0.1 s window; σ scaled by √(dt/0.1))". For a **velocity** noise that is the
+reciprocal of the invariant scaling: `wheel_noise` is multiplied by `dt` before it
+reaches the pose, so one step contributes ~`σ·dt` of displacement and the
+accumulated variance over a span is `T·σ²·dt`. Holding diffusion constant
+therefore needs **σ_step ∝ 1/√dt**, which is what D9 implements and what the
+`accumulated_diffusion_per_unit_time_is_timestep_invariant` test pins. `σ ∝ √dt`
+is correct for a **direct increment to a state variable** — the pursuer's
+random-walk search adds exactly that to its *heading*, and that one was already
+right. Had the review's exponent been implemented, the `dt = 0.05` models would
+have ended up with **half** the diffusion their dial names instead of twice it,
+in the wrong direction and by the same factor. Confirmed by the reviewer at
+sign-off: the implementation stands, the review's direction was the error.
+
 **A distinction the diagnostic then forced, and it matters.** The scaling argument
 above is a statement about the **code**, provable by construction and pinned by a
 test that checks accumulated variance is invariant across four timesteps. It is

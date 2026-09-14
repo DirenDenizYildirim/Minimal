@@ -37,9 +37,36 @@ not margin.**
 | A9 (terrain bit's trend in n) | — | **OBSERVATION**, new |
 | G11 (pseudo-reality) | — | **SUGGESTED**, new |
 
+## Methods sentences, fixed
+
+**On the control period**, for Methods 4.1:
+
+> All results are stated at dt = 0.1 s, the control period of the e-puck model as
+> Gauci et al. simulate it. Motion integration is exact and timestep-independent;
+> the control period is a parameter of the robot, and the record does not
+> extrapolate across it.
+
+**On sensor dropout**, for Methods 4.3:
+
+> Dropout is i.i.d. per reading, so its correlation time equals the control
+> period.
+
+That second sentence is short and load-bearing. A per-reading Bernoulli is the
+right model for a sensor that samples once per control step — the *fraction* of
+corrupted readings is `fn_rate` at any `dt`, so nothing about the dropout rate
+needs rescaling — but the correlation time of the corruption follows `dt`. **It is
+the one remaining quantity that co-varies with the control period in the
+`dt = 0.05` half of the pseudo-reality family**, and it is why L32b leaves "the
+control period or its dropout spectrum" unseparated rather than picking one.
+
+**On `p_lock`**, for Methods 4.4:
+
+> `p_lock` is the probability of acquiring a target within one 0.1 s attempt
+> window, converted to a per-step probability by `1 − (1 − p_lock)^(dt/0.1)`.
+
 ## Sentences that must not be written
 
-* **"The pursuit is timestep-independent."** §2.2's exact-arc result is about
+* **"The pursuit is timestep-independent."** (§11 carries this one.) §2.2's exact-arc result is about
   integrating the motion. The pursuer's acquisition was a per-step Bernoulli until
   freeze lift 1 and the aggregation dynamics are themselves timestep-sensitive in
   the enumerated row. Methods 4.1 is scoped to motion integration; Methods 4.4

@@ -2819,6 +2819,17 @@ result **does not retract** the claim — it bounds it. G4′ holds at the desig
 model, which is where it was measured, and gains the qualifier that its ordering
 at the perfect-perception corner does not survive this neighbourhood.
 
+**Register wording for comparison 5:**
+
+> Fourteen orderings; one FRAGILE, on the hand-designed comparison G4′ at the
+> perfect-perception corner, and only under a control-period change. The
+> capability comparison G4 against B0 holds 5/5 in both sub-families at every
+> range.
+
+(That 5/5 is the **sign** count in each sub-family. Disjointness differs by range:
+5/5 in both sub-families at r_p = 0.1 and 0.35 m, and 1/5 model-only against 5/5
+control-period at r_p = 1 m, where survival is on a floor for every row.)
+
 ### Comparison 2, and A1 as it is actually worded
 
 Comparison 2 keeps its sign in 9 of 10 and loses on disjointness, 4 of 10. The

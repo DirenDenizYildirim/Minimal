@@ -1990,21 +1990,29 @@ which drops the slope to 0.474; and three body-scaled lengths — the body as an
 obstacle, the cluster link distance at 1.5 body diameters, and the occlusion
 footprint — are not separated. Section: §18.*
 
-**A8. Terrain-tuning starts to pay above a threshold amplitude, and where that
-threshold sits depends on the correlation length.** At θ_m = 0.6 the paired
-difference between the flat-trained and terrain-trained rows is **+0.0659
-[+0.0296, +0.0918]** at λ = 0.05 m and **+0.0421 [+0.0107, +0.0659]** at 0.10 m —
-both disjoint from zero, with the terrain-trained row ahead — and **−0.0160
-[−0.0305, +0.0043]** at 0.20 m, where the crossing has not happened yet. The
-pre-registered rule claims the crossing only if it is disjoint at more than one λ;
-it is disjoint at two of three. The sign flip sits between θ_m = 0.2 and 0.45 at
-λ = 0.05 m, between 0.2 and 0.6 at 0.10 m, and between 0.45 and 0.9 at 0.20 m.
-*Grade: SUGGESTED. Three correlation lengths, all evaluated with rows trained at
-one of them (†); the crossing's location is read off an eight-point θ_m grid, not
-solved for; and **no mechanism is offered** — the obvious one, "shorter λ is a
-rougher problem", is contradicted by the anchor's own tax being lower at
-λ = 0.05 m (2.0719) than at 0.10 m (2.1492), because §15 puts the difficulty peak
-at 7.46 cm between them. Sections: §24, §13 row 176.*
+**A8. The θ_m at which the rough-searched S = 2 row overtakes the flat-searched
+one moves monotonically with λ.** At θ_m = 0.6 the paired difference between the
+flat-trained and terrain-trained rows is **+0.0659 [+0.0296, +0.0918]** at
+λ = 0.05 m and **+0.0421 [+0.0107, +0.0659]** at 0.10 m — both disjoint from zero,
+with the terrain-trained row ahead — and **−0.0160 [−0.0305, +0.0043]** at 0.20 m,
+where the crossing has not happened yet. The sign flip sits between θ_m = 0.2 and
+0.45 at λ = 0.05 m, between 0.2 and 0.6 at 0.10 m, and between 0.45 and 0.9 at
+0.20 m. **Disjoint at 2 of 3 λ, the registered threshold.** *Grade: SUPPORTED †.
+Sections: §24, §13 row 176.*
+
+> **Mechanism unexplained.** The obvious reading — "shorter λ is a rougher problem
+> at the same θ_m" — is contradicted by the anchor's own tax being *lower* at
+> λ = 0.05 m (2.0719) than at 0.10 m (2.1492), because §15 puts the difficulty
+> peak at 7.46 cm between them. The crossing's location moves monotonically in λ
+> while the difficulty does not, so the two are not the same phenomenon and
+> nothing here identifies what the first one is.
+>
+> **Both rows were trained at λ = 0.10 m, so the direction of movement may partly
+> reflect where the rough row was tuned.** That is the caveat, and it belongs in
+> the entry rather than in the grade: a pre-registered rule fired, which is what
+> SUPPORTED means here, and the † is what carries the fact that both rows are
+> searched and evaluated away from their training λ. The crossing's location is
+> also read off an eight-point θ_m grid rather than solved for.
 
 **A9. The terrain bit's standing against S = 2 improves monotonically as n
 falls.** Hold ratios at λ = 0.10 m, θ_m = 0.9: **1.21 vs 1.10 at n = 20; 1.13 vs
@@ -2017,6 +2025,41 @@ neighbours to use as landmarks at small n. *Grade: OBSERVATION. Sections: §23.*
 > and must not be filed as one. It remains an observation: the n = 10 column is
 > the *transferred* S = 4 row (see A1), the intervals overlap, and no mechanism
 > was tested.
+
+**A10. Aggregation is control-period-invariant in reach on flat ground and is not
+under terrain, in the enumerated row only.** Noise-free, n = 20, R = 0.74 m,
+τ = 600 s, **400 runs a cell** on a seed base disjoint from the evaluation seed:
+
+| row | θ_m | dt = 0.10 | dt = 0.05 |
+|---|---|---|---|
+| S2-gauci | 0 | reach **1.0000** [0.9905, 1.0000] | reach **1.0000** [0.9905, 1.0000] |
+| S2-searched † | 0 | reach **1.0000** [0.9905, 1.0000] | reach **1.0000** [0.9905, 1.0000] |
+| S2-gauci | 0.9 | reach **0.9050** [0.8723, 0.9300] | reach **0.6150** [0.5664, 0.6614] |
+| S2-searched † | 0.9 | reach **0.9950** [0.9820, 0.9986] | reach **0.9825** [0.9643, 0.9915] |
+
+On flat ground reach is untouched at either control period, for both rows. What
+moves there is **dispersion**, and only slightly: 1.3969 [1.3835, 1.4061] →
+1.4281 [1.4133, 1.4430] for S2-gauci and 1.2482 [1.2415, 1.2577] → 1.2712
+[1.2625, 1.2803] for the searched row — **2.2% and 1.8%**, disjoint but small.
+Under terrain the enumerated row loses a third of its reach, disjointly, and the
+searched row's is unchanged within its interval. *Grade: OBSERVATION. Sections:
+§25, L31.*
+
+> **At dt = 0.05 the enumerated row falls below the reach ≥ 0.8 validity window**
+> (§17, row 94) at 0.6150. **No hold ratio may be read there**, and none is: every
+> hold ratio in the record is at dt = 0.1, where the same row sits at 0.9050 and
+> inside the window.
+>
+> **This does not conflict with §13 row 31.** Row 31's 0.86 [0.78, 0.91] is the
+> same cell at 100 runs on evaluation seed 20260904; the 0.9050 [0.8723, 0.9300]
+> here is 400 runs on 20260911, chosen disjoint so the replication is a fresh
+> sample rather than an extension of the first. **The two intervals overlap.**
+>
+> **Not in §13 and not covered by `verify_numbers.py`.** The record is closed at
+> freeze-2 and the post-freeze rule requires both verification scripts to pass
+> *unchanged*, so no row or item was added for the flat-ground pair. It is
+> recomputable from `results/dt_reach_noisefree.jsonl` and the invocation is in
+> `run-log.md`, Phase 5c. Recorded here as a source gap rather than left implicit.
 
 ### B. Pursuer (active hostility)
 
@@ -2507,7 +2550,8 @@ must appear in the paper's limitations section).
 | L28 | **The scalar field's ~2% improvement is unexplained.** Pooled 0.980 [0.976, 0.986], a real interval excluding 1.0. | §6 | **open** |
 | L29 | **Three §13 rows cannot be regenerated.** Rows 56, 57 and 58 came from four single-condition searches whose **optimiser seed was never recorded** — not in the config, not in the output, not in the run log. The simulator, the search code, the configs and the CLI defaults are all ruled out, and all five class searches reproduce bit-for-bit, so the gap is the missing seed alone. The published constants stand and a re-run is a different, equally valid draw. Every search from freeze lift 1 onward records seed, training base, budget, git hash and config hash. | §13, `verification-report.md` |
 | L30 | **`p_lock` was a function of the timestep, and is now a disclosure.** The pursuer's acquisition probability was rolled once per control step, so `P(acquire in 1 s) = 1 − (1 − p_lock)^(1/dt)` and its lethality depended on `sim.dt`. Found by experiment 4, fixed bit-neutrally at `dt = 0.1` (twelve pursuit files byte-identical over 105 800 records), so **no published number moves**. What changes is what may be said: the pursuit results are calibrated at `dt = 0.1`, and §2.2's timestep-independence is about exact-arc motion integration and does **not** cover the pursuit. A residual 2.5% handling-time quantisation at `h = 1.93 s` is disclosed and not corrected, because correcting it would not be bit-neutral. | §25, §2.2, §11 |
-| L31 | **Aggregation *under terrain* is timestep-sensitive in the enumerated row. On flat ground it is not.** Noise-free at n = 20, 400 runs a cell: at **θ_m = 0** S2-gauci reaches a cluster in **1.0000** of runs at both `dt = 0.1` and `dt = 0.05`, and so does S2-searched — reach is untouched. At **θ_m = 0.9** S2-gauci falls from **0.9050 [0.8723, 0.9300] to 0.6150 [0.5664, 0.6614]**, disjoint, with its hold ratio rising 2.0739 → 2.9747, while S2-searched moves 0.9950 → 0.9825, overlapping. So the sensitivity is an interaction of **terrain × timestep × controller**, not a property of the aggregation dynamics as such. A smaller pure-aggregation effect does exist and is on *dispersion*, not reach: on flat ground the median moves 1.3969 → 1.4281 for Gauci and 1.2482 → 1.2712 for the searched row — **2.2% and 1.8%**, disjoint but small. The record's own `timestep_convergence` sweep carries a related reach dip at n = 5 that `validation.md` §H-E does not quote. Every published number is at `dt = 0.1`; what is limited is the claim of timestep-independence, not the numbers. | §25, validation §H-E |
+| L31 | **The control period is a parameter of the robot, and the record does not extrapolate across it.** Motion integration is exact and timestep-independent, and nothing resting on it — R₀, ω₀, ω₁, the reproduction of Gauci's published constants — is affected. Aggregation is a different matter: on flat ground reach is control-period-invariant (1.0000 at both `dt`, both rows) with a ~2 % shift in dispersion, while **under terrain the enumerated row's reach is control-period-sensitive** (0.9050 [0.8723, 0.9300] → 0.6150 [0.5664, 0.6614]) **and the searched row's is not** (0.9950 → 0.9825). At `dt = 0.05` the enumerated row falls below the reach ≥ 0.8 validity window, so no hold ratio would be read there. Every published number is at `dt = 0.1`. See A10. | §25, A10, validation §H-E |
+| L32b | **The pseudo-reality family included the control period; every reversal of the fragile ordering (G4′, searched S = 3 vs B1 at r_p = 1.35 R) is in the control-period sub-family, none in the model-only sub-family. Whether the searched row's evasion exploits the control period or its dropout spectrum is not separable in this family and is left open.** Sensor dropout is i.i.d. per reading, so its correlation time equals the control period — the two move together across the `dt = 0.05` half of the family and nothing in the design pulls them apart. | §25, L32 |
 | L32 | **`sim.dt` was in the pseudo-reality family, and it is a perturbation of the robot rather than of the world.** Five of the ten sampled models carry a control period the design point does not, which is not what a Ligot-style family is for. It cannot be removed retroactively; the registered ten-model counts stand and the two sub-families are reported separately (D10). Every flip of the fragile ordering is in the control-period half. | §25 |
 | L33 | **Model 09 reverses A1.** In one of ten pseudo-reality models the terrain-bit row is disjointly *better* than the searched S = 2 row, at −0.055 [−0.088, −0.018], with no single-parameter cause. An upper-bound claim survives one reversal as a disclosure; it is named here so it is not found later. | §25 |
 | L34 | **The λ decomposition measures transfer, not a λ-matched decomposition.** Both tuned rows in experiment 3 were trained at λ = 0.10 m. A terrain term that grows at 0.05 and 0.20 m is consistent with "the term is real everywhere" and with "part of it is a mismatch penalty", and the design cannot separate them. | §24 |
