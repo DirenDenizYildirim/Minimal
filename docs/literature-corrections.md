@@ -412,3 +412,36 @@ only **enumerated** row and still own the hardest corner — largest start radiu
 under terrain, where they reach a cluster in every run and the searched row in
 86%. A frontier figure should carry the class-searched row as its baseline and
 the published constants as the reference it did not beat everywhere.
+
+---
+
+## Freeze lift 1 — two of our own numbers, corrected
+
+Neither is a correction to the literature; both are corrections to **this
+repository's record**, kept here because this is where a reader looks for "what
+changed and why".
+
+**#16. The link-distance invariance table was produced at the wrong axle.**
+`validation.md` §3 and §13 rows 13–14 were computed with `axle_length = 0.053`,
+while the committed baseline is **0.051** — itself correction #2, where 5.3 cm
+was the literature error and 5.1 cm the measured value. The whole table returns
+cell for cell at 0.053, so the cause is settled rather than guessed. At 0.051 the
+dispersion column reads **1.3875 at every link distance** (spread still exactly
+zero) and the single-cluster share runs **0.475 → 0.967**, against the published
+1.401 and 0.43 → 0.98. **Nothing the table is cited for changes**: what it is
+cited for is that dispersion is invariant to the link distance while the cluster
+metrics are not, and that is exact at both axle lengths. §13 carries the
+corrected values; `validation.md` keeps the table as measured, flagged, because
+it is what shows the cause.
+
+**#17. Two H2 spread figures predate the traction floor.** §13 rows 23–24 and
+§4's magnitudes were computed before `e83675e` added `traction_floor = 0.05`,
+which bounds how slow the ground can make a wheel. Recomputed with the floor in
+place, varying the axle fourfold at fixed R₀ gives peak degradation **2.21 / 2.74
+/ 3.18** — a spread of **44%**, not 5% — and varying R₀ fourfold at fixed axle
+gives **1.65 / 2.74 / 12.37**, a spread of **648%**, not 560%. **The ordering and
+the claim are unchanged**: R₀ still sets the magnitude and the axle still does
+not, by an order of magnitude either way. And the cell these are measured in,
+θ_m = 1.0, is **outside the paper's stated range** — at θ_m ≤ 0.9 the traction
+multiplier's minimum is 0.100, twice the floor, so the correction has no in-scope
+effect at all. S9b quotes all six numbers and is updated with them.

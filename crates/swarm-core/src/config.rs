@@ -163,6 +163,48 @@ pub struct NoiseConfig {
     pub wheel_noise: f64,
 }
 
+impl NoiseConfig {
+    /// Per-step wheel-speed σ, rescaled from the 0.1 s reference control period.
+    ///
+    /// `wheel_noise` is noise on a **velocity**, and a velocity is multiplied by
+    /// `dt` before it reaches the pose. So one step contributes a displacement of
+    /// order `σ·dt`, and over a span `T` the accumulated variance is
+    /// `(T/dt)·(σ·dt)² = T·σ²·dt` — **proportional to `dt`**. Left unscaled, a
+    /// `dt = 0.05` run carries `1/√2` of the diffusion its parameter names.
+    ///
+    /// The invariant scaling for a velocity noise is therefore `σ ∝ 1/√dt`:
+    ///
+    /// ```text
+    ///     σ_step = σ_ref · √(0.1 / dt)
+    /// ```
+    ///
+    /// Note this is the **reciprocal** of the `σ ∝ √dt` that is correct for a
+    /// direct increment to a state variable — which is what the pursuer's
+    /// random-walk search adds to its *heading*, and why that one already scales
+    /// the other way. Velocity noise and state noise scale oppositely and
+    /// confusing them puts the factor of √2 on the wrong side.
+    ///
+    /// `dt == REFERENCE_CONTROL_PERIOD` returns σ **exactly**, by an explicit
+    /// branch rather than by trusting `sqrt(1.0) == 1.0` and a multiply by it.
+    /// Every published run is at `dt = 0.1`, so that branch is what makes this
+    /// change bit-neutral for the record.
+    pub fn wheel_sigma_per_step(&self, max_wheel_speed: f64, dt: f64) -> f64 {
+        let sigma = self.wheel_noise * max_wheel_speed;
+        if dt == REFERENCE_CONTROL_PERIOD {
+            return sigma;
+        }
+        sigma * (REFERENCE_CONTROL_PERIOD / dt).sqrt()
+    }
+}
+
+/// The control period `wheel_noise` is defined against, in seconds.
+///
+/// Freeze lift 1, phase 5c. `noise.wheel_noise` is a fraction of maximum wheel
+/// speed and was implicitly "per control step"; see `wheel_sigma_per_step` for
+/// why that made the accumulated diffusion a function of `sim.dt`, and for the
+/// scaling that removes it while leaving `dt = 0.1` bit-identical.
+pub const REFERENCE_CONTROL_PERIOD: f64 = 0.1;
+
 impl Default for NoiseConfig {
     fn default() -> Self {
         // Off by default: the reference baseline is the noise-free idealisation
@@ -339,6 +381,64 @@ impl SimConfig {
             serde_json::from_value(v).map_err(|e| ConfigError(format!("parsing config: {e}")))?;
         cfg.validate()?;
         Ok(cfg)
+    }
+}
+
+#[cfg(test)]
+mod wheel_noise_scaling_tests {
+    use super::*;
+
+    #[test]
+    fn reference_control_period_returns_sigma_bit_exactly() {
+        // What makes the change bit-neutral: every published run is at dt = 0.1.
+        for &wn in &[0.0, 1e-6, 0.000339, 0.0377, 0.05, 1.0] {
+            let cfg = NoiseConfig { wheel_noise: wn };
+            let want = wn * 0.128;
+            let got = cfg.wheel_sigma_per_step(0.128, REFERENCE_CONTROL_PERIOD);
+            assert_eq!(got.to_bits(), want.to_bits(), "wheel_noise = {wn}");
+        }
+    }
+
+    #[test]
+    fn accumulated_diffusion_per_unit_time_is_timestep_invariant() {
+        // A velocity noise contributes ~sigma*dt of displacement per step, so
+        // over a fixed span T the variance is (T/dt)*(sigma*dt)^2 = T*sigma^2*dt.
+        // The rescaling must make that constant in dt.
+        let cfg = NoiseConfig { wheel_noise: 0.03 };
+        let span = 1.0;
+        let reference = {
+            let s = cfg.wheel_sigma_per_step(0.128, 0.1);
+            (span / 0.1) * (s * 0.1).powi(2)
+        };
+        for &dt in &[0.05, 0.02, 0.01, 0.2] {
+            let s = cfg.wheel_sigma_per_step(0.128, dt);
+            let var = (span / dt) * (s * dt).powi(2);
+            assert!(
+                (var - reference).abs() < 1e-18,
+                "dt = {dt}: variance {var} against {reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn finer_timesteps_raise_the_per_step_sigma() {
+        // The RECIPROCAL of the state-noise scaling, and the direction is the
+        // whole point: at dt = 0.05 an unscaled sigma gives 1/sqrt(2) of the
+        // diffusion, so the per-step sigma has to go UP, not down.
+        let cfg = NoiseConfig { wheel_noise: 0.03 };
+        let coarse = cfg.wheel_sigma_per_step(0.128, 0.2);
+        let reference = cfg.wheel_sigma_per_step(0.128, 0.1);
+        let fine = cfg.wheel_sigma_per_step(0.128, 0.05);
+        assert!(coarse < reference && reference < fine, "{coarse} < {reference} < {fine}");
+        assert!((fine / reference - std::f64::consts::SQRT_2).abs() < 1e-12);
+    }
+
+    #[test]
+    fn a_zero_dial_stays_exactly_zero_at_every_timestep() {
+        let cfg = NoiseConfig { wheel_noise: 0.0 };
+        for &dt in &[0.1, 0.05, 0.01, 0.5] {
+            assert_eq!(cfg.wheel_sigma_per_step(0.128, dt), 0.0);
+        }
     }
 }
 

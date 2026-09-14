@@ -231,6 +231,31 @@ physics updated ten times per cycle — and since integration here is exact-arc,
 substepping a constant-wheel-speed arc is a no-op. The timestep is neither wrong
 nor load-bearing.
 
+> **Freeze lift 1 correction to this subsection.** The table above is the n = 2
+> **dispersion** column. The same sweep also measured **reach** and also ran
+> **n = 5**, and that half was not reported here. At n = 5, `dt = 0.05` is the
+> worst timestep in the sweep and its interval is **disjoint from `dt = 0.1` at
+> both trial lengths** — reach 0.98 [0.93, 0.99] → **0.82 [0.73, 0.88]** at
+> τ = 600 s, and 1.00 [0.96, 1.00] → **0.92 [0.85, 0.96]** at τ = 6000 s. It is not
+> a convergence trend: 0.1 is the best value and the finer ones sit between.
+>
+> **So "the timestep is neither wrong nor load-bearing" is too strong as written,
+> and the scope is what changes.** Exact-arc integration *is* timestep-independent
+> — that is a closed-form property of integrating constant wheel speeds over a
+> step, it is checked by `cargo test` on every commit, and **nothing about R₀, ω₀,
+> ω₁ or the reproduction of Gauci's published constants is affected**: those are
+> properties of the integrator and the geometry, not of a swarm's trajectory
+> through time. What is not timestep-independent is **aggregation under terrain**:
+> at n = 20, noise-free, 400 runs a cell, the enumerated row's reach at θ_m = 0.9
+> falls from 0.9050 [0.8723, 0.9300] at `dt = 0.1` to 0.6150 [0.5664, 0.6614] at
+> 0.05, while **on flat ground both rows reach 1.0000 at either timestep**. The
+> effect is an interaction of terrain, timestep and controller.
+>
+> **The reach-scaling-in-n result is unaffected** (`gauci_scaling`, validation §1):
+> it is measured at `dt = 0.1`, which is the control period the whole record uses
+> and the one the paper states. What is limited is extrapolating any of it to a
+> different control period. See §25 of `findings.md` and limitation L31.
+
 ### H-F: the criterion was wrong — **this was it**
 
 See the gate status above and `docs/decisions/0005-aggregation-criterion.md`.
@@ -253,6 +278,16 @@ a mis-specified metric.
 
 | link distance | single cluster at τ | share of time single | final dispersion |
 |---|---|---|---|
+> **Freeze lift 1, finding F1: this whole table was produced at
+> `axle_length = 0.053` and returns cell for cell at that value.** The committed
+> baseline is 0.051 (§13 row 2, corrected from 5.3 cm as a literature error), and
+> at 0.051 the dispersion column reads **1.3875 at every link distance** — spread
+> still exactly zero — and the single-cluster share runs **0.475 → 0.967**. §13
+> rows 13 and 14 carry the corrected values; this table is kept as it was
+> measured, because it is what shows the cause. See `verification-report.md`.
+> **Nothing the table is cited for changes**: the invariance of dispersion to the
+> link distance is exact at both axle lengths, which is the whole point of it.
+
 | 2.2 R | 0.73 | 0.43 | 1.401 |
 | 2.5 R | 0.87 | 0.62 | 1.401 |
 | 3.0 R | 0.90 | 0.77 | 1.401 |

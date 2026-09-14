@@ -1,0 +1,81 @@
+# FREEZE LIFT 1, PHASE 5c — is the reach drop at dt = 0.05 a noise x dt
+# interaction, or a timestep effect that is there without any noise at all?
+#
+# A diagnostic, not an experiment: nothing in the record rests on it, which is
+# why it lives here and not in configs/sweeps/. It exists to settle one question
+# the Phase 5b review raised before anything is interpreted.
+#
+# THE QUESTION. Experiment 4's reach diagnostic found S2-gauci reaching a single
+# cluster in 0.65-0.89 of runs in the five dt = 0.05 models against 0.94-0.97 in
+# the five at dt = 0.10. Two readings:
+#   (a) noise x dt -- `noise.wheel_noise` is a per-step Gaussian on WHEEL SPEED
+#       with a fixed sigma, so the accumulated positional diffusion per unit time
+#       goes as sigma^2 * dt and a dt = 0.05 model carries ~1/sqrt(2) of the
+#       effective actuation noise its parameter names. ADR 0004 measured small
+#       noise as helping (it breaks the deterministic closure of the state-0
+#       orbit), so less effective noise should mean worse reach.
+#   (b) a pure timestep effect on the aggregation dynamics, present with the
+#       noise dial at zero.
+# The 2x2 below separates them. If reach drops at dt = 0.05 with
+# wheel_noise = 0, it is (b) and no amount of rescaling the noise will remove it.
+#
+# THE CELL is experiment 4's, exactly: lambda = 0.10 m, n = 20, coverage 0.05
+# (R = 0.74 m), tau = 600 s, evaluation seed 20260904. theta_m = 0 is the paired
+# flat-ground denominator, not a data point.
+#
+# THE NOISE VALUE is model 05's draw, 0.037657 -- the highest wheel_noise among
+# the five dt = 0.05 models and the model with the worst reach (0.65).
+#
+# S2-searched is here as the control: it reaches 1.00 in every one of the eleven
+# models, so if the timestep moves IT too, the effect is in the dynamics rather
+# than in Gauci's particular constants.
+
+name = "dt-noise-interaction"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "sim.dt"
+values = [0.1, 0.05]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[rows]]
+label = "S2-gauci-noise0"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+"noise.wheel_noise" = 0.0
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-gauci-noise0377"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+"noise.wheel_noise" = 0.037657
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-searched-noise0"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+"noise.wheel_noise" = 0.0
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
+
+[[rows]]
+label = "S2-searched-noise0377"
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+"noise.wheel_noise" = 0.037657
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }

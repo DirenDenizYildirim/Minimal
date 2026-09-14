@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+# Regenerate the experimental record from configs/, appending every invocation
+# to docs/run-log.md with the git hash it ran at, the wall time and the output
+# path. This is what makes "send me the source of Figure 9" answerable.
+#
+#   scripts/regenerate_record.sh            run every job, in verification order
+#   scripts/regenerate_record.sh JOB [JOB]  run only the named jobs
+#
+# Jobs are idempotent: re-running one overwrites its output and appends a new
+# run-log line. Every run is seeded from (sim.seed, run_index), so a re-run
+# reproduces the file bit-for-bit -- scripts/verify_determinism.py checks that.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+SWARM=./target/release/swarm
+LOG=docs/run-log.md
+PY=".venv/bin/python"
+export PYTHONPATH=harness/src
+
+log_line() {  # phase, command, seconds, output
+  local size="-"
+  [ -f "$4" ] && size="$(du -h "$4" | cut -f1)"
+  printf '| %s | `%s` | `%s` | %s | `%s` | %s |\n' \
+    "$1" "$(git rev-parse --short HEAD)" "$2" "$(date -u +%Y-%m-%dT%H:%MZ)" "$4" "$3 s / $size" >> "$LOG"
+}
+
+run() {  # phase, output-path, command...
+  local phase="$1" out="$2"; shift 2
+  echo "### $out"
+  local t0 t1
+  t0=$(date +%s)
+  "$@"
+  t1=$(date +%s)
+  log_line "$phase" "$*" "$((t1 - t0))" "$out"
+}
+
+sweep()  { run "$1" "results/$2.jsonl" $SWARM sweep  --config "configs/sweeps/$3.toml" --out "results/$2.jsonl"; }
+# Diagnostics live outside configs/sweeps/ so that "every config in sweeps/ is an
+# experiment" stays true; nothing in the record rests on one.
+sweep_dx() { run "$1" "results/$2.jsonl" $SWARM sweep --config "configs/diagnostics/$3.toml" --out "results/$2.jsonl"; }
+# Experiment 4's twenty-two sweep configs are GENERATED (one per model per
+# comparison group), so they live outside configs/sweeps/ rather than swamping a
+# directory where every file is a hand-written experiment.
+sweep_pr() { run "$1" "results/$2.jsonl" $SWARM sweep --config "configs/pseudo_reality/$3.toml" --out "results/$2.jsonl"; }
+search() { local phase="$1" name="$2"; shift 2
+           run "$phase" "results/$name.json" $SWARM search --out "results/$name.json" "$@"; }
+
+# A derived file: a filtered view of a sweep, kept as its own file because a
+# figure script or verify_numbers.py reads it under that name.
+derive() {  # phase, out-name, in-name, python-predicate
+  local phase="$1" out="results/$2.jsonl" src="results/$3.jsonl" pred="$4"
+  local t0 t1; t0=$(date +%s)
+  $PY - "$src" "$out" "$pred" <<'EOF'
+import json, sys
+src, out, pred = sys.argv[1:4]
+f = eval("lambda r: " + pred)
+n = 0
+with open(src) as fh, open(out, "w") as oh:
+    for line in fh:
+        r = json.loads(line)
+        if f({**r, **r.get("cell", {})}):  # sweep coords live under "cell"
+            oh.write(line); n += 1
+print(f"wrote {n} records to {out}")
+EOF
+  t1=$(date +%s)
+  log_line "$phase" "filter $src -> $out where $pred" "$((t1 - t0))" "$out"
+}
+
+# ---------------------------------------------------------------- the manifest
+job_validation() {
+  sweep "0.2 validation" gauci_scaling              gauci_scaling
+  sweep "0.2 validation" link_distance              link_distance_sensitivity
+  sweep "0.2 validation" occlusion_shakedown        occlusion_shakedown
+  sweep "0.2 validation" small_n_noise_probe        small_n_noise_probe
+  sweep "0.2 validation" small_n_start_radius_probe small_n_start_radius_probe
+  sweep "0.2 validation" small_n_time_gate          small_n_time_gate
+  sweep "0.2 validation" sensor_fov_gate            sensor_fov_gate
+  sweep "0.2 validation" timestep_convergence       timestep_convergence
+  sweep "0.2 validation" timestep_fov_gate          timestep_fov_gate
+}
+job_terrain_early() {
+  sweep "0.2 terrain"    terrain_idea_a             terrain_idea_a
+  sweep "0.2 terrain"    terrain_h1_fine            terrain_h1_fine
+  sweep "0.2 terrain"    terrain_h2_r0_scaling      terrain_h2_r0_scaling
+  sweep "0.2 terrain"    terrain_h2_powered         terrain_h2_powered
+  # theta_m = 1.5 is past the traction floor and outside the model's valid
+  # range; the figure and every number in section 13 use the valid subset.
+  derive "0.2 terrain"   terrain_h2_powered_valid   terrain_h2_powered \
+         "r['terrain.friction_amplitude'] <= 1.0"
+  sweep "0.2 terrain"    terrain_mechanism          terrain_mechanism
+  sweep "0.2 terrain"    terrain_mechanism_regression terrain_mechanism_regression
+  sweep "0.2 terrain"    terrain_h3_capability      terrain_h3_capability
+}
+job_pursuer() {
+  sweep "0.2 pursuer"    pursuer_idea_b             pursuer_idea_b
+  sweep "0.2 pursuer"    pursuer_dispersive         pursuer_dispersive
+  # The surface figure shows one handling time; the kappa figure shows both.
+  derive "0.2 pursuer"   pursuer_dispersive_h1.93   pursuer_dispersive \
+         "r['pursuer.handling_time'] == 1.93"
+  sweep "0.2 pursuer"    pursuer_pareto             pursuer_pareto
+}
+job_searches_single() {
+  search "0.2 search" search_s2 --config configs/search/train_s2_peak.toml \
+         --budget 600 --runs-per-eval 12 --seed 1 --training-seed 900000
+  search "0.2 search" search_s2_flat --config configs/search/train_s2_flat.toml \
+         --budget 600 --runs-per-eval 12 --seed 1 --training-seed 900000
+  search "0.2 search" search_s4 --config configs/search/train_s4_peak.toml \
+         --budget 600 --runs-per-eval 12 --seed 1 --training-seed 900000
+  search "0.2 search" search_s4_warm --config configs/search/train_s4_peak.toml \
+         --budget 600 --runs-per-eval 12 --seed 1 --training-seed 950000 \
+         --init '[-0.285218,-0.949495,0.935379,-0.226159]'
+}
+job_tuning() {
+  sweep "0.2 tuning"     terrain_retune_cost        terrain_retune_cost
+  sweep "0.2 tuning"     terrain_warm_s4            terrain_warm_s4
+  sweep "0.2 tuning"     terrain_tuning_control     terrain_tuning_control
+  sweep "0.2 tuning"     terrain_tuning_control_r15 terrain_tuning_control_r15
+}
+job_regime() {
+  sweep "0.2 regime"     terrain_regime_robustness  terrain_regime_robustness
+  sweep "0.2 regime"     terrain_regime_tau         terrain_regime_tau
+  sweep "0.2 regime"     terrain_regime_tau_flat    terrain_regime_tau_flat
+}
+job_lambda() {
+  sweep "0.2 lambda"     terrain_lambda_sweep       terrain_lambda_sweep
+  sweep "0.2 lambda"     terrain_lambda_collapse    terrain_lambda_collapse
+  sweep "0.2 lambda"     terrain_lambda_r0_family   terrain_lambda_r0_family
+  sweep "0.2 lambda"     terrain_lambda_r0_family_r074 terrain_lambda_r0_family_r074
+  sweep "0.2 lambda"     terrain_lambda_body        terrain_lambda_body
+}
+job_searches_class() {
+  local CLASS=(--class 'swarm.init.radius=0.74,1.5,3.0' --class 'swarm.n=20,50')
+  search "0.2 search" search_s2_class_flat --config configs/search/train_s2_class_flat.toml \
+         --budget 1200 --runs-per-eval 12 --seed 1 --training-seed 910000 "${CLASS[@]}"
+  search "0.2 search" search_s2_class_flat_seed2 --config configs/search/train_s2_class_flat.toml \
+         --budget 1200 --runs-per-eval 12 --seed 2 --training-seed 910000 "${CLASS[@]}"
+  search "0.2 search" search_s2_class_flat_seed3 --config configs/search/train_s2_class_flat.toml \
+         --budget 1200 --runs-per-eval 12 --seed 3 --training-seed 910000 "${CLASS[@]}"
+  search "0.2 search" search_s2_class_rough --config configs/search/train_s2_class_rough.toml \
+         --budget 1200 --runs-per-eval 12 --seed 1 --training-seed 920000 "${CLASS[@]}"
+  # tau varies BETWEEN conditions, so the class is explicit points, not a product.
+  search "0.2 search" search_s2_class_rough_tau --config configs/search/train_s2_class_rough_tau.toml \
+         --budget 1200 --runs-per-eval 12 --seed 1 --training-seed 920000 \
+         --class-point 'swarm.init.radius=0.74,swarm.n=20,sim.duration=600.0' \
+         --class-point 'swarm.init.radius=0.74,swarm.n=50,sim.duration=600.0' \
+         --class-point 'swarm.init.radius=1.5,swarm.n=20,sim.duration=600.0' \
+         --class-point 'swarm.init.radius=1.5,swarm.n=50,sim.duration=600.0' \
+         --class-point 'swarm.init.radius=3.0,swarm.n=20,sim.duration=3600.0' \
+         --class-point 'swarm.init.radius=3.0,swarm.n=50,sim.duration=3600.0'
+}
+job_class_eval() {
+  sweep "0.2 class"      terrain_class_eval               terrain_class_eval
+  sweep "0.2 class"      terrain_class_eval_tau           terrain_class_eval_tau
+  sweep "0.2 class"      terrain_class_tau_eval           terrain_class_tau_eval
+  sweep "0.2 class"      terrain_class_tau_eval_tau       terrain_class_tau_eval_tau
+  sweep "0.2 class"      terrain_class_objective_probe    terrain_class_objective_probe
+  sweep "0.2 class"      terrain_class_objective_probe_far terrain_class_objective_probe_far
+}
+job_phase0_seeds() {
+  sweep "0.2 seeds"      phase0_seeds                 phase0_seeds
+  sweep "0.2 seeds"      phase0_seeds_tau             phase0_seeds_tau
+  sweep "0.2 seeds"      phase0_seeds_objective_probe phase0_seeds_objective_probe
+}
+
+# ------------------------------------------------------- freeze lift 1, phase 2
+job_search_s3() {
+  # Pre-registered at docs/preregistration/searched-s3-pursuer.md (577f15a).
+  # Six searches: two objectives x three optimiser seeds. --seed varies and the
+  # training base is held at 930000, which is how section 21's seed study
+  # separated optimiser variability from a different draw of training arenas.
+  local CLASS=(--class 'pursuer.range=0.2,0.35,0.6' --class 'pursuer.confusion=0.5,2.5')
+  # B1-ternary, verbatim from configs/sweeps/pursuer_dispersive.toml: the search
+  # starts AT the hand-designed row and can only be asked "is there better?".
+  local INIT='[-0.7,-1.0,1.0,-1.0,-1.0,-1.0]'
+  for objective in survival survival_task; do
+    for seed in 1 2 3; do
+      search "2 search" "search_s3_pursuer_${objective}_seed${seed}" \
+        --config "configs/search/train_s3_pursuer_${objective}.toml" \
+        --objective "$objective" --budget 1200 --runs-per-eval 12 \
+        --seed "$seed" --training-seed 930000 --init "$INIT" "${CLASS[@]}"
+    done
+  done
+}
+
+job_eval_s3() {
+  # The three held-out evaluations for experiment 1. The configs are GENERATED
+  # from the six search JSONs by scripts/build_pursuer_searched_s3_configs.py and
+  # committed; --check here fails the job rather than silently evaluating a stale
+  # set of constants.
+  $PY scripts/build_pursuer_searched_s3_configs.py --check
+  sweep "2 eval"  pursuer_searched_s3         pursuer_searched_s3
+  sweep "2 eval"  pursuer_searched_s3_pareto  pursuer_searched_s3_pareto
+  sweep "2 eval"  pursuer_searched_s3_rescore pursuer_searched_s3_rescore
+}
+
+# ------------------------------------------------------- freeze lift 1, phase 3
+job_capability_n() {
+  # Pre-registered at docs/preregistration/capability-flatness-n.md (0dd7ae1).
+  sweep "3 eval" terrain_capability_n terrain_capability_n
+}
+
+job_capability_n_tau() {
+  # The pre-registered tau contingency, whose trigger fired: S2-gauci reaches a
+  # cluster in only 0.71 of runs at n = 10, theta_m = 0.9, tau = 600 s.
+  sweep "3 eval" terrain_capability_n_tau terrain_capability_n_tau
+}
+
+# ------------------------------------------------------- freeze lift 1, phase 4
+job_tuning_lambda() {
+  # Pre-registered at docs/preregistration/lambda-tuning-control.md (d6c40c8).
+  # The three rows of terrain_tuning_control.toml, unchanged, at lambda = 0.05
+  # and 0.20 m. Same base seed as the lambda = 0.10 m sweep, so the cells pair by
+  # run index against it and the three lambdas are one experiment.
+  sweep "4 eval" terrain_tuning_control_lambda terrain_tuning_control_lambda
+}
+
+# ------------------------------------------------------- freeze lift 1, phase 5
+job_pseudo_reality() {
+  # Pre-registered at docs/preregistration/pseudo-reality.md (367ee93).
+  # Eleven models: 00 is the unperturbed reference, 01-10 are drawn from the
+  # pre-registered sampling seed 20260910. --check fails the job rather than
+  # silently evaluating a stale draw.
+  $PY scripts/build_pseudo_reality_configs.py --check
+  for i in 00 01 02 03 04 05 06 07 08 09 10; do
+    sweep_pr "5 eval" "pseudo_reality_aggregation_model_$i" "aggregation_model_$i"
+    sweep_pr "5 eval" "pseudo_reality_pursuit_model_$i"     "pursuit_model_$i"
+  done
+}
+
+# ------------------------------------------------------ freeze lift 1, phase 5b
+job_pseudo_reality_fixed2() {
+  # Amendment D9. Both fixes in: p_lock per 0.1 s attempt window (D8) and
+  # wheel_noise rescaled to the control period (D9). wheel_noise acts on the
+  # ROBOTS, so ALL FIVE comparisons move and both halves are re-run -- unlike D8,
+  # which was pursuit-only. Still only the five dt = 0.05 models: at dt = 0.1
+  # both fixes are the identity and every other file is byte-identical.
+  $PY scripts/build_pseudo_reality_configs.py --check
+  for i in 02 03 04 05 10; do
+    sweep_pr "5c eval" "pseudo_reality_aggregation_fixed2_model_$i" "aggregation_model_$i"
+    sweep_pr "5c eval" "pseudo_reality_pursuit_fixed2_model_$i"     "pursuit_model_$i"
+  done
+}
+
+job_pseudo_reality_fixed() {
+  # Amendment D8. p_lock is now per 0.1 s attempt window rather than per control
+  # step, so the pursuer's lethality no longer depends on sim.dt. At dt = 0.1 the
+  # conversion is the identity and every published pursuit run is bit-identical
+  # (proved by byte-diff, see the run log), so ONLY the five dt = 0.05 models are
+  # re-run, and only their pursuit half -- comparisons 1 and 2 are aggregation and
+  # contain no pursuer.
+  #
+  # Output goes to NEW filenames. The registered result stands on the original
+  # files and they are not overwritten: section 25 reports the rule as it fired.
+  $PY scripts/build_pseudo_reality_configs.py --check
+  for i in 02 03 04 05 10; do
+    sweep_pr "5b eval" "pseudo_reality_pursuit_fixed_model_$i" "pursuit_model_$i"
+  done
+}
+
+job_diagnostics() {
+  # Freeze lift 1, finding F3: are the published searched rows typical draws?
+  sweep_dx "0.3 diagnostic" f3_seed1_rerun_sanity f3_seed1_rerun_sanity
+  # Phase 5c: is the dt = 0.05 reach drop a noise x dt interaction or a pure
+  # timestep effect? Nothing in the record rests on the answer, but the reading
+  # of experiment 4 does.
+  sweep_dx "5c diagnostic" dt_noise_interaction dt_noise_interaction
+  # Independent replication of the noise-free half at 400 runs on a disjoint
+  # seed base, because the 100-run intervals overlapped by 0.0024.
+  sweep_dx "5c diagnostic" dt_reach_noisefree dt_reach_noisefree
+}
+
+ALL=(validation terrain_early pursuer searches_single tuning regime lambda
+     searches_class class_eval phase0_seeds diagnostics search_s3 eval_s3
+     capability_n capability_n_tau tuning_lambda pseudo_reality
+     pseudo_reality_fixed pseudo_reality_fixed2)
+for job in "${@:-${ALL[@]}}"; do
+  echo "======== job $job"
+  "job_$job"
+done

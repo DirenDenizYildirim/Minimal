@@ -1,0 +1,126 @@
+# Training condition for a SEARCHED S = 3 pursuer row: survival alone
+#
+# Pre-registered at docs/preregistration/searched-s3-pursuer.md, commit 577f15a,
+# before this file was written. Every choice below is fixed there.
+#
+# WHY THIS EXISTS. Claim G4 -- that telling a pursuer from a neighbour is worth
+# more than anything else on the capability axis -- is graded SUGGESTED, because
+# every S = 3 row in the record is hand-designed. B1-ternary, B2-ternary-side and
+# B3-ternary-memory are three guesses in a six-, ten- and twelve-constant space,
+# and section 5 already showed what that costs: B2 scores BELOW B3 not because
+# five sensor states are worse than three but because its table is a bad guess.
+# A search cannot make G4 tight -- sep-CMA-ES is not exhaustive -- but it can turn
+# it from a statement about three guesses into an upper bound on the capability.
+#
+# THE OBJECTIVE. --objective survival: mean per-robot survival at tau, captured
+# robots counting as 0, pooled over robots within a condition and combined across
+# conditions as a geometric mean. Higher is better.
+#
+# This objective asks ONLY "how many robots are alive at the end", and it is run
+# deliberately without a task term so that the answer to a second question is on
+# the record: what does a survival-only search do? Section 8's D-dispersive shows
+# there is a strategy -- a 99 cm state-0 arc, never aggregate, always flee --
+# that survives well while abandoning the task entirely. If the search finds it,
+# that is a result about objective design, not a failed experiment, and the
+# pre-registration's rule (b) names the numbers that decide it: a state-0 arc
+# over 50 cm and dispersion among survivors over 10.
+#
+# The zero guard is not a floor. A condition in which the swarm is wiped out
+# scores 0 and takes the whole class objective to 0, so a candidate cannot
+# average five good conditions against one dead one. That is the honest answer.
+#
+# THE CLASS, six conditions crossed on the command line:
+#
+#   pursuer.range in {0.2, 0.35, 0.6} m   x   pursuer.confusion in {0.5, 2.5}
+#
+# r_p = 0.1 m is left out because every row keeps 17-18 of 20 there and the cell
+# cannot separate candidates; r_p = 1.0 m is left out because it is the
+# perfect-perception corner -- 1.35 start radii, so the pursuer sees the whole
+# starting swarm from anywhere in it -- and section 5 measured it identical to
+# r_p = infinity. kappa = 0 is left out because the blind row is wiped out there
+# at every range past 0.1 m, and a condition that scores 0 across a whole
+# neighbourhood of the search space carries no gradient. The EVALUATION grid
+# keeps all of them; the training class is the part that can discriminate.
+#
+# h = 1.93 s is 5x the 0.385 s the pursuer needs to travel between touching
+# neighbours in a formed cluster, so handling dominates the hunt and dilution has
+# room to act. At h = 0.39 s a cluster is close to a buffet and the confusion
+# mechanism has almost nothing to work with.
+#
+# THE INITIAL POINT is B1-ternary's constants, copied verbatim from
+# configs/sweeps/pursuer_dispersive.toml. The search therefore starts AT the
+# hand-designed row, and the only question it can be asked is "is there better?".
+# A null result then means "no improvement found from this known-good point",
+# which is a much sharper statement than "nothing good found". It is passed on the
+# command line as --init, not written into the table below, so that the table
+# stays a plain declaration of the capability being searched.
+#
+# BUDGET 1200 x 12, the doubled budget section 19 established for a class search:
+# 12 runs over 6 conditions is 2 runs per condition per evaluation, and giving a
+# six-condition class the same budget as a one-condition search would confound
+# "no better row exists" with "the search was not given enough evaluations".
+#
+# TRAINING SEED BASE 930000, disjoint from the evaluation seeds (20260904) and
+# from every base already used (900000, 910000, 920000, 950000), so this row is
+# not evaluated on anything it was trained on and cannot be paired by accident
+# with a row from another study. The three optimiser seeds are 1, 2 and 3 and
+# vary --seed ONLY, holding this base fixed -- which is how section 21 separated
+# optimiser variability from a different draw of training arenas.
+
+[robot]
+radius = 0.037
+axle_length = 0.051
+max_wheel_speed = 0.128
+
+[swarm]
+n = 20
+
+[swarm.init]
+# Overridden per condition by --class; the shape has to be named here or the
+# override creates a partial init block. The radius is DERIVED from coverage
+# (0.740 m at n = 20) rather than written down, so it cannot drift from the rule.
+shape = "disk"
+coverage = 0.05
+
+[sim]
+dt = 0.1
+duration = 120.0
+seed = 20260904
+
+[sensor]
+fov_half_angle = 0.0
+# Three states: nothing / robot / pursuer. This is the capability under test, and
+# it is not a new one -- Gauci et al.'s AAMAS 2014 clustering work already uses a
+# ternary LOS sensor (nothing / robot / object).
+encoding = "ternary"
+
+[controller]
+kind = "table"
+memory_bits = 0
+provenance = "optimiser_found"
+# Three entries, six constants. The values here are placeholders: the search
+# replaces the whole table every evaluation, and the actual starting point comes
+# from --init.
+entries = [
+  { wheels = [-0.7, -1.0] },
+  { wheels = [ 1.0, -1.0] },
+  { wheels = [-1.0, -1.0] },
+]
+
+[pursuer]
+# range and confusion are overridden per condition by --class.
+range = 0.35
+confusion = 2.5
+handling_time = 1.93
+speed_ratio = 1.5
+confusion_radius = 0.5
+
+[terrain]
+# Flat board: this experiment is about the pursuer, and adding terrain would put
+# two hostility dials in one search.
+slope_angle = 0.0
+friction_amplitude = 0.0
+
+[metrics]
+cluster_link_radii = 3.0
+sample_interval = 0.0

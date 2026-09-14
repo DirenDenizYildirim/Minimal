@@ -74,8 +74,14 @@ for row in ("S2-gauci", "S2-rough"):
     OUT["A1_hold_ratios"][f"lambda_sweep/{row}@peak7.46cm"] = hold(
         "terrain_lambda_sweep", row, **{"terrain.correlation_length": 0.0746})
 
-def decomposition(file):
+def decomposition(file, **extra):
     """Objective-tuning and terrain-tuning shares of the anchor-to-rough gap.
+
+    ``extra`` selects a sub-block of a file that carries extra sweep coordinates
+    -- freeze lift 1's experiment 3 puts the correlation length on an axis, so
+    the same three rows appear once per lambda in one file. With no ``extra``
+    this is exactly the call the two original sites make and returns exactly
+    what they returned; that is checked by re-running the script and diffing.
 
     NOT a hold ratio, and deliberately NOT paired-ratio'd. A decomposition needs
     two shares that add to the whole, which requires additive level estimates:
@@ -91,7 +97,7 @@ def decomposition(file):
     """
     src(f"results/{file}.jsonl")
     d = {r: {x["run_index"]: x["final_dispersion"]
-             for x in rec(file).filter(row=r, **{"terrain.friction_amplitude": 0.9}).rows}
+             for x in rec(file).filter(row=r, **{"terrain.friction_amplitude": 0.9}, **extra).rows}
          for r in ("S2-gauci", "S2-flat", "S2-rough")}
     keys = sorted(set(d["S2-gauci"]) & set(d["S2-flat"]) & set(d["S2-rough"]))
     lev = {r: float(np.median([d[r][k] for k in keys])) for r in d}
@@ -110,6 +116,21 @@ def decomposition(file):
 
 OUT["A1_decomposition"]["0.74m"] = decomposition("terrain_tuning_control")
 OUT["A1_decomposition"]["1.5m"] = decomposition("terrain_tuning_control_r15")
+
+# Freeze lift 1, experiment 3: the same decomposition at lambda = 0.05 and 0.20 m,
+# pre-registered at docs/preregistration/lambda-tuning-control.md (d6c40c8). The
+# rows are byte-identical to the lambda = 0.10 m ones and were TRAINED at 0.10 m,
+# so these two columns measure transfer, not a lambda-matched decomposition; the
+# findings section says so and the paper must not quote one without the other.
+_LAM = REPO / "results" / "terrain_tuning_control_lambda.jsonl"
+if _LAM.exists():
+    for _lam in (0.05, 0.20):
+        _sel = {"terrain.correlation_length": _lam}
+        OUT["A1_decomposition"][f"0.74m@lambda{_lam:g}"] = decomposition(
+            "terrain_tuning_control_lambda", **_sel)
+        for _row in ("S2-gauci", "S2-flat", "S2-rough"):
+            OUT["A1_hold_ratios"][f"tuning_control_lambda{_lam:g}/{_row}"] = hold(
+                "terrain_tuning_control_lambda", _row, **_sel)
 
 # flat-ground reversal, paired
 src("results/terrain_tuning_control.jsonl")

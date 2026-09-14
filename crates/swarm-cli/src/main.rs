@@ -71,6 +71,17 @@ enum Command {
         /// Trials per candidate; the objective is their median final dispersion.
         #[arg(long, default_value_t = 12)]
         runs_per_eval: usize,
+        /// What to optimise: `dispersion` (the default, and the objective every
+        /// row in the record was searched against), `survival`, or
+        /// `survival_task`.
+        ///
+        /// The two survival objectives are for a pursuer class and need a
+        /// `[pursuer]` block in the base config; both are HIGHER-is-better and
+        /// the output JSON says so. `survival` alone can be maximised by
+        /// abandoning aggregation entirely — that is a real strategy, not a bug,
+        /// and `survival_task` is the version that cannot.
+        #[arg(long, default_value = "dispersion")]
+        objective: String,
         /// Seed for the optimiser itself.
         #[arg(long, default_value_t = 1)]
         seed: u64,
@@ -142,6 +153,7 @@ fn main() -> Result<()> {
             config,
             budget,
             runs_per_eval,
+            objective,
             seed,
             training_seed,
             init,
@@ -155,6 +167,7 @@ fn main() -> Result<()> {
                 &config,
                 budget,
                 runs_per_eval,
+                &objective,
                 seed,
                 training_seed,
                 init,
@@ -501,6 +514,7 @@ fn search_cmd(
     path: &Path,
     budget: usize,
     runs_per_eval: usize,
+    objective: &str,
     seed: u64,
     training_seed: u64,
     init: Option<String>,
@@ -519,8 +533,17 @@ fn search_cmd(
         "searching {} constants for encoding {encoding} (S = {states})",
         2 * states
     );
+    let objective = search::Objective::parse(objective)?;
     eprintln!(
         "budget {budget} evaluations x {runs_per_eval} runs; training seed base {training_seed}"
+    );
+    eprintln!(
+        "objective {objective:?} ({} is better)",
+        if objective.higher_is_better() {
+            "higher"
+        } else {
+            "lower"
+        }
     );
     let init: Option<Vec<f64>> = match init {
         Some(text) => {
@@ -566,6 +589,7 @@ fn search_cmd(
         init,
         &class_axes,
         &class_points,
+        objective,
     )?;
     search::write_result(out, &result)?;
     eprintln!(

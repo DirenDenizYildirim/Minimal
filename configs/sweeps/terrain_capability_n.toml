@@ -1,0 +1,127 @@
+# EXPERIMENT 2 (freeze lift 1) — does A1 hold away from n = 20?
+#
+# Pre-registered at docs/preregistration/capability-flatness-n.md, commit 0dd7ae1.
+#
+# A1 says: no S = 4 controller better than the searched S = 2 one was found at
+# equal budget — a terrain bit does not buy back the peak. Every measurement
+# behind it is at n = 20. This evaluates the EXISTING rows at n = 10 and n = 50.
+#
+# NOTHING IS RE-SEARCHED, deliberately. The question is whether the ordering
+# survives a change of swarm size; re-searching at each n would answer a
+# different question (whether a controller tuned FOR that n does better) at an
+# order of magnitude more compute. Every controller below is copied verbatim from
+# the config that already carries it, and the terrain-bit definition is copied
+# verbatim too: sensor.encoding = "binary_with_terrain" with the threshold left
+# at its default, theta_m * MEDIAN_ABS = theta_m * 0.3476, which keeps the bit
+# roughly 50/50 and therefore informative.
+#
+# THE BASELINE IS BEST-OF-THREE CLASS-FLAT PER CELL, not seed 1 alone. Section
+# 21's branch (b) fired -- the three optimiser seeds scatter, R0 spanning 16.9%
+# against a pre-registered 10% rule -- and retired the single named baseline.
+# Comparing an S = 4 row against the weakest of three draws would be the mistake
+# section 21 exists to prevent.
+#
+# START RADIUS IS DERIVED, not written down: swarm.init.coverage = 0.05 gives
+# 0.523 m at n = 10 and 1.170 m at n = 50, against 0.740 m at n = 20. Hard-coding
+# a radius would confound swarm size with initial density, which is the whole
+# reason the coverage rule exists.
+#
+# theta_m = 0.0 is the paired flat-ground baseline for the hold ratio, not a data
+# point. lambda is fixed at 0.10 m: this experiment varies n, and experiment 3
+# varies lambda.
+#
+# TAU. 600 s here. The pre-registration fixes a contingency with its trigger set
+# in advance: if any row's reach at n = 10, theta_m = 0.9 falls below 0.8, the
+# whole n = 10 block is re-run at tau = 3600 s and both trial lengths are
+# reported. A hold ratio measured before the swarm has finished aggregating is a
+# measurement of the clock -- which is how section 20's diagnosis went wrong.
+
+name = "terrain-capability-n"
+base = "../gauci_baseline.toml"
+runs_per_cell = 100
+
+[[axis]]
+path = "swarm.n"
+values = [10, 50]
+
+[[axis]]
+path = "terrain.friction_amplitude"
+values = [0.0, 0.9]
+
+[[rows]]
+label = "S2-gauci"
+# the enumerated reference; the only tight minimum here
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "gauci", constants = [-0.7, -1.0, 1.0, -1.0], provenance = "enumerated" }
+
+[[rows]]
+label = "S2-class-flat-s1"
+# §19/§21 class search, optimiser seed 1
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.432983, -0.882043] },
+  { wheels = [0.792395, -0.886538] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s2"
+# §21 class search, optimiser seed 2
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.542573, -0.980003] },
+  { wheels = [0.946660, -0.811344] },
+] }
+
+[[rows]]
+label = "S2-class-flat-s3"
+# §21 class search, optimiser seed 3
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.409734, -0.752740] },
+  { wheels = [0.732649, -0.606024] },
+] }
+
+[[rows]]
+label = "S2-searched"
+# §7's searched S = 2 row, from terrain_h3_capability.toml
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.285218, -0.949495] },
+  { wheels = [0.935379, -0.226159] },
+] }
+
+[[rows]]
+label = "S4-terrain"
+# §7's cold S = 4 row, from terrain_h3_capability.toml
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.236416, -0.519837] },
+  { wheels = [0.797842, -0.406434] },
+  { wheels = [-0.186302, -0.965739] },
+  { wheels = [0.930956, -0.450512] },
+] }
+
+[[rows]]
+label = "S4-warm"
+# §10's warm-started S = 4 row, from terrain_warm_s4.toml
+[rows.overrides]
+"terrain.correlation_length" = 0.1
+"sensor.encoding" = "binary_with_terrain"
+controller = { kind = "table", memory_bits = 0, provenance = "optimiser_found", entries = [
+  { wheels = [-0.250759, -0.693480] },
+  { wheels = [0.614411, -0.318877] },
+  { wheels = [-0.134207, -0.947583] },
+  { wheels = [0.829046, -0.279431] },
+] }
